@@ -9,12 +9,12 @@ SpinFlow is an experimental, open source NMR processing workbench. It provides a
 Ubuntu 24.04 and Python 3.12 or 3.13 are the initial Linux build targets. From a checkout:
 
 ```bash
-bash tools/bootstrap.sh --test
+bash tools/bootstrap.sh
 .venv/bin/python -m nmrnext doctor
 .venv/bin/python -m nmrnext formats
 ```
 
-`bootstrap.sh` creates a local environment, installs the project, and builds the native C++/PocketFFT extension. Setup downloads dependencies; processing itself runs offline. For the optional GUI, use `bash tools/bootstrap.sh --gui --test` and then `.venv/bin/python -m nmrnext gui` on a desktop with a display. See the [Linux build guide](docs/linux-build.md) for system packages, manual installation, wheel builds, and troubleshooting. The native backend must be reported available by `doctor` before choosing it in a recipe.
+`bootstrap.sh` creates a local environment, installs the project, and builds the native C++/PocketFFT extension. Setup downloads dependencies; processing itself runs offline. For the optional GUI, use `bash tools/bootstrap.sh --gui` and then `.venv/bin/spinflow gui` on a desktop with a display. Follow the [Linux user-testing guide](docs/linux-user-testing.md) for a synthetic walkthrough. See the [Linux build guide](docs/linux-build.md) for system packages, manual installation, wheel builds, and troubleshooting. The native backend must be reported available by `doctor` before choosing it in a recipe.
 
 ## Run a synthetic 2D workflow
 

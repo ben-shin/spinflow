@@ -4,10 +4,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from dataclasses import replace
 import gc
+import json
 import tempfile
 import time
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 from PySide6 import QtCore, QtWidgets
@@ -73,6 +75,162 @@ class WorkbenchTests(unittest.TestCase):
         np.testing.assert_array_equal(second.data, expected.data)
         self.assertFalse(np.array_equal(first.data, second.data))
 
+    def test_axis_settings_survive_selection_and_all_axes_edits(self):
+        w = self.window
+        w.demo2_button.click()
+        w.axis_combo.setCurrentIndex(1)
+        first_id = w.axis_combo.currentData()
+        w.lb_spin.setValue(1.5)
+        w.zf_combo.setCurrentIndex(0)
+        w.p0_spin.setValue(25)
+        w.p1_spin.setValue(-18)
+        w.pivot_spin.setValue(7.5)
+        w.axis_combo.setCurrentIndex(2)
+        second_id = w.axis_combo.currentData()
+        w.lb_spin.setValue(6)
+        w.p0_spin.setValue(-40)
+        w.p1_spin.setValue(32)
+        recipe = w.build_recipe()
+        w.axis_combo.setCurrentIndex(0)
+        self.assertEqual(w.build_recipe(), recipe)
+        self.assertIn("differ", w.axis_settings_label.text())
+        w.zf_combo.setCurrentIndex(2)
+        w.axis_combo.setCurrentIndex(1)
+        self.assertEqual(w.lb_spin.value(), 1.5)
+        self.assertEqual(w.p0_spin.value(), 25)
+        self.assertEqual(w.pivot_spin.value(), 7.5)
+        w.axis_combo.setCurrentIndex(2)
+        self.assertEqual(w.lb_spin.value(), 6)
+        self.assertEqual(w.p0_spin.value(), -40)
+        recipe = w.build_recipe()
+        phases = {op['axis']: op for op in recipe if op['op'] == 'phase'}
+        self.assertEqual(phases[first_id]['p0'], 25)
+        self.assertEqual(phases[second_id]['p1'], 32)
+        self.assertEqual([op['size'] for op in recipe if op['op'] == 'zero_fill'],
+                         [a.size * 4 for a in w.source.axes])
+        result = w.process_now()
+        # Independent NumPy reference, including the quadrature component pairing.
+        expected = w.source.data.copy()
+        for i, axis in enumerate(w.source.axes):
+            lb, p0, p1, pivot = ((1.5, 25, -18, 7.5) if axis.id == first_id else (6, -40, 32, 0))
+            shape = [1] * expected.ndim
+            shape[i + 1] = axis.size
+            expected *= np.exp(-np.pi * lb * np.arange(axis.size) * axis.step).reshape(shape)
+            padding = [(0, 0)] * expected.ndim
+            padding[i + 1] = (0, 3 * axis.size)
+            expected = np.pad(expected, padding)
+            mask = 1 << w.source.complex_axes.index(axis.id)
+            for r in range(expected.shape[0]):
+                if r & mask:
+                    continue
+                z = expected[r] + 1j * expected[r | mask]
+                z = np.fft.fftshift(np.fft.fft(z, axis=i), axes=i)
+                ramp_shape = [1] * z.ndim
+                ramp_shape[i] = axis.size * 4
+                angle = np.deg2rad(p0 + p1 * (np.arange(axis.size * 4) - pivot) / (axis.size * 4))
+                z *= np.exp(1j * angle).reshape(ramp_shape)
+                expected[r], expected[r | mask] = z.real, z.imag
+        np.testing.assert_allclose(result.data, expected, rtol=1e-11, atol=1e-11)
+
+    def test_reset_and_new_source_clear_axis_controls(self):
+        w = self.window
+        for reset in (w.reset, lambda: w.demo1_button.click()):
+            w.demo2_button.click()
+            w.axis_combo.setCurrentIndex(2)
+            w.p0_spin.setValue(85)
+            w.lb_spin.setValue(27)
+            w.pivot_spin.setValue(12)
+            reset()
+            self.assertEqual(w.p0_spin.value(), 0)
+            self.assertEqual(w.pivot_spin.value(), 0)
+            self.assertEqual(w.lb_spin.value(), 3)
+            self.assertFalse(any(op['op'] == 'phase' for op in w.build_recipe()))
+
+    def test_processed_real_crop_preserves_values_and_calibration(self):
+        w = self.window
+        raw = generate_demo(dimensions=1)
+        axis = replace(raw.axes[0], domain='frequency', unit='Hz', encoding='real', start=900, step=-4)
+        source = Dataset(raw.data[:1], (axis,), (), metadata={})
+        w.load_dataset_now(source, 'Real frequency')
+        self.assertTrue(w.crop_check.isEnabled())
+        self.assertIn('crop', w.plan_label.text().lower())
+        self.assertFalse(w.pivot_spin.isEnabled())
+        w.crop_start_spin.setValue(5)
+        w.crop_stop_spin.setValue(23)
+        self.assertEqual(w.build_recipe(), [])
+        w.crop_check.setChecked(True)
+        result = w.process_now()
+        np.testing.assert_array_equal(result.data, source.data[:, 5:23])
+        np.testing.assert_array_equal(result.coordinates(axis.id), source.coordinates(axis.id)[5:23])
+        np.testing.assert_allclose(result.coordinates(axis.id, unit='ppm'), source.coordinates(axis.id, unit='ppm')[5:23])
+        w.crop_start_spin.setValue(24)
+        with self.assertRaises(NMRNextError) as caught:
+            w.process_now()
+        self.assertEqual(caught.exception.code, 'INVALID_REGION')
+
+    def test_workflow_export_uses_applied_settings_and_dialog_cancel_errors(self):
+        w = self.window
+        w.demo1_button.click()
+        w.p0_spin.setValue(12)
+        w.process_now()
+        applied = w.last_operations.copy()
+        w.p0_spin.setValue(90)
+        temp_root = Path(__file__).resolve().parents[2] / '.artifacts' / 'gui-test-tmp'
+        temp_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temp_root) as folder:
+            destination = Path(folder) / 'workflow'
+            path = w.export_workflow_now(destination)
+            recipe = json.loads(path.read_text())
+            self.assertEqual(recipe['operations'], applied)
+            with patch.object(QtWidgets.QFileDialog, 'getSaveFileName', return_value=('', '')):
+                w._save_workflow_dialog()
+                w._save_recipe_dialog()
+            with patch.object(QtWidgets.QFileDialog, 'getSaveFileName', return_value=(str(destination), '')):
+                w._save_workflow_dialog()
+                deadline = time.monotonic() + 10
+                while w._busy and time.monotonic() < deadline:
+                    self.app.processEvents()
+                    time.sleep(0.01)
+            self.assertIn('OUTPUT_EXISTS', w.status.text())
+            self.assertEqual(json.loads(path.read_text())['operations'], applied)
+            audit = Path(folder) / 'audit.json'
+            with patch.object(QtWidgets.QFileDialog, 'getSaveFileName', return_value=(str(audit), '')):
+                w._save_recipe_dialog()
+                original = audit.read_bytes()
+                self.assertEqual(json.loads(original)['operations'], applied)
+                w._save_recipe_dialog()
+                self.assertIn('FileExistsError', w.status.text())
+                self.assertEqual(audit.read_bytes(), original)
+
+    def test_complex_frequency_crops_are_retained_per_axis_and_invalidate_preview(self):
+        w = self.window
+        raw = generate_demo(dimensions=2)
+        source = run_operations(raw, [{'op': 'fft', 'axis': a.id} for a in raw.axes], backend='native')
+        w.load_dataset_now(source)
+        w.axis_combo.setCurrentIndex(1)
+        w.crop_start_spin.setValue(3)
+        w.crop_stop_spin.setValue(20)
+        w.crop_check.setChecked(True)
+        w.axis_combo.setCurrentIndex(2)
+        w.crop_start_spin.setValue(7)
+        w.crop_stop_spin.setValue(40)
+        w.crop_check.setChecked(True)
+        w.axis_combo.setCurrentIndex(0)
+        w.axis_combo.setCurrentIndex(1)
+        self.assertEqual(w.crop_start_spin.value(), 3)
+        self.assertEqual(w.crop_stop_spin.value(), 20)
+        result = w.process_now()
+        np.testing.assert_array_equal(result.data, source.data[:, 3:20, 7:40])
+        w.process_now(preview=True)
+        w.crop_stop_spin.setValue(19)
+        self.assertIsNone(w.preview)
+        w.process_now(preview=True)
+        w.crop_check.setChecked(False)
+        self.assertIsNone(w.preview)
+        w.reset()
+        self.assertFalse(w.crop_check.isChecked())
+        self.assertEqual(w.build_recipe(), [])
+
     def test_save_roundtrip_and_loss_refusal(self):
         self.window.demo2_button.click()
         self.window.process_now()
@@ -131,6 +289,7 @@ class WorkbenchTests(unittest.TestCase):
         self.window.process_now(preview=True)
         self.assertFalse(self.window.export_button.isEnabled())
         self.assertFalse(self.window.recipe_button.isEnabled())
+        self.assertFalse(self.window.workflow_button.isEnabled())
         self.assertIs(self.window.current, self.window.source)
         self.window.process_now()
         self.assertTrue(self.window.export_button.isEnabled())
@@ -146,6 +305,7 @@ class WorkbenchTests(unittest.TestCase):
             ("transform", self.window.fft_check, lambda w: w.setChecked(False)),
             ("zero-order phase", self.window.p0_spin, lambda w: w.setValue(65)),
             ("first-order phase", self.window.p1_spin, lambda w: w.setValue(30)),
+            ("phase pivot", self.window.pivot_spin, lambda w: w.setValue(5)),
             ("backend", self.window.backend_combo, lambda w: w.setCurrentIndex(1)),
         ]
         for name, widget, change in controls:
@@ -214,6 +374,8 @@ class WorkbenchTests(unittest.TestCase):
 
     def test_failed_presentation_rolls_back_entire_previous_view(self):
         self.window.demo1_button.click()
+        self.window.p0_spin.setValue(47)
+        old_recipe = self.window.build_recipe()
         self.window.process_now(preview=True)
         old_source = self.window.source
         old_current = self.window.current
@@ -235,6 +397,8 @@ class WorkbenchTests(unittest.TestCase):
         self.assertIs(self.window.source, old_source)
         self.assertIs(self.window.current, old_current)
         self.assertIs(self.window.preview, old_preview)
+        self.assertEqual(self.window.build_recipe(), old_recipe)
+        self.assertEqual(self.window.p0_spin.value(), 47)
         self.assertEqual(self.window.dataset_title.text(), old_title)
         self.assertEqual(self.window.plot_caption.text(), old_caption)
         np.testing.assert_array_equal(self.window.plot.getPlotItem().items[0].getData()[1], old_curve)

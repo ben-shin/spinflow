@@ -31,7 +31,10 @@ workflows:
     processing: blocked-if-digital-filter-unknown-or-uncorrected
   - id: researcher-workbench
     status: experimental
-    evidence: tests/gui/test_workbench.py
+    current_increment: [per-axis-settings, frequency-source-index-crop, last-applied-workflow-bundle-for-cli-replay]
+    replay_scope: native-source-snapshot-and-strict-relative-path-json-recipe
+    evidence: [tests/gui/test_workbench.py, tests/test_workflow_bundle.py]
+    real_acquisition_validation: unavailable
     user_observation_sessions: not-yet-run
   - id: first-real-laboratory-raw-to-export
     status: unsupported

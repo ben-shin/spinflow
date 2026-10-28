@@ -1,6 +1,6 @@
 # Current implementation scope
 
-This increment targets a user-testable headless synthetic 1D/2D processing workflow: generation, inspection, planning, window, zero fill, FFT, phase, crop, reverse, transpose, native storage and declared interchange profiles. The [roadmap](../ROADMAP.md) and [compatibility inventories](../compatibility/functions.yaml) retain broader future scope.
+This increment targets a synthetic 1D/2D processing workflow through the headless CLI and optional Qt workbench: generation, inspection, planning, window, zero fill, FFT, phase, crop, reverse, transpose, native storage and declared interchange profiles. The GUI can save a native source plus a strict CLI recipe for replay of the last applied processing result. The [Linux user-testing guide](linux-user-testing.md), [roadmap](../ROADMAP.md) and [compatibility inventories](../compatibility/functions.yaml) retain the practical and broader future scope.
 
 The validated numerical encoding is an explicitly synthetic complex/States mathematical model with fully sampled axes. A controlled experimental Bruker 1D reader preserves raw fields, but real vendor data and correction semantics remain unvalidated; unresolved filtering blocks FFT. Digital filter correction, NUS reconstruction, automatic phase/baseline, LP, fitting, NEF and script translation remain visible future work. An optional Qt workbench uses the same engine. Unsupported requests fail. A synthetic demonstration does not meet the real laboratory workflow exit of Milestone 1.
 

@@ -4,7 +4,7 @@ The [current scope](docs/scope.md) is a synthetic 1D/2D processing slice with st
 
 ## Near-term validation
 
-- Exercise the Linux source build, native wheel and sdist on Ubuntu 24.04 and both supported Python versions in CI.
+- Extend the [passing Ubuntu 24.04 CI builds](docs/public-validation.md) with direct Linux desktop and researcher workflow checks. CI exercises the native wheel, sdist and source tests on Python 3.12 and 3.13, including Qt offscreen on 3.13.
 - Validate real acquisitions with known correction and referencing semantics, beginning with the Bruker raw 1D profile.
 - Reopen exported processed files in independent NMRPipe and Sparky/Poky consumers; record calibration and loss behavior.
 - Check researcher workflows in the Qt viewer and collect reproducible failures.

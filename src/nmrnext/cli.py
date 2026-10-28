@@ -147,7 +147,13 @@ def _dispatch(args):
         try:
             from .gui import main as gui_main
         except ImportError as exc:
-            raise NMRNextError("GUI_UNAVAILABLE", "Optional GUI dependencies are unavailable; install the gui extra with python -m pip install -e '.[gui]' or run tools/bootstrap.ps1 -WithGui") from exc
+            if sys.platform == "win32":
+                setup = "run tools/bootstrap.ps1 -WithGui"
+            elif sys.platform.startswith("linux"):
+                setup = "run bash tools/bootstrap.sh --gui"
+            else:
+                setup = "install the gui extra with python -m pip install -e '.[gui]'"
+            raise NMRNextError("GUI_UNAVAILABLE", f"Optional GUI dependencies are unavailable; {setup}") from exc
         return None,gui_main(["nmrnext"])
     if args.command == "doctor": return _doctor(),0
     if args.command == "compare": return _compare(args)

@@ -17,6 +17,7 @@ from .errors import NMRNextError
 from .io import export_preflight, read_dataset, write_dataset
 from .operations import run_operations
 from .planning import plan_operations
+from .workflow_bundle import export_workflow_bundle
 
 
 INK = "#14263a"
@@ -153,7 +154,7 @@ class Workbench(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         _ensure_font()
-        self.setWindowTitle("NMRNext · Spectrum workbench")
+        self.setWindowTitle("SpinFlow · Spectrum workbench")
         self.resize(1320, 840)
         self.setMinimumSize(950, 620)
         self.source = None
@@ -168,6 +169,7 @@ class Workbench(QtWidgets.QMainWindow):
         self._on_success = None
         self._busy = False
         self._suspend_preview_invalidation = False
+        self._axis_settings = {}
         self._build_ui()
         self._style()
         self._refresh()
@@ -183,7 +185,7 @@ class Workbench(QtWidgets.QMainWindow):
         top.setObjectName("topbar")
         bar = QtWidgets.QHBoxLayout(top)
         bar.setContentsMargins(22, 13, 22, 13)
-        title = QtWidgets.QLabel("NMRNext")
+        title = QtWidgets.QLabel("SpinFlow")
         title.setObjectName("brand")
         bar.addWidget(title)
         descriptor = QtWidgets.QLabel("Spectrum workbench")
@@ -302,39 +304,68 @@ class Workbench(QtWidgets.QMainWindow):
 
         layout.addWidget(QtWidgets.QLabel("Axis"))
         self.axis_combo = QtWidgets.QComboBox()
-        self.axis_combo.setToolTip("Select one spectral axis or all eligible spectral axes")
-        self.axis_combo.currentIndexChanged.connect(self._update_recipe)
+        self.axis_combo.setToolTip("Choose which axis settings to edit. Process always runs the complete recipe for every axis.")
+        self.axis_combo.currentIndexChanged.connect(self._axis_changed)
         layout.addWidget(self.axis_combo)
+        self.axis_settings_label = QtWidgets.QLabel()
+        self.axis_settings_label.setObjectName("caption")
+        self.axis_settings_label.setWordWrap(True)
+        layout.addWidget(self.axis_settings_label)
         layout.addWidget(QtWidgets.QLabel("Line broadening (Hz)"))
         self.lb_spin = QtWidgets.QDoubleSpinBox()
         self.lb_spin.setRange(0, 100000)
         self.lb_spin.setDecimals(3)
         self.lb_spin.setSingleStep(0.5)
         self.lb_spin.setValue(3.0)
-        self.lb_spin.valueChanged.connect(self._update_recipe)
+        self.lb_spin.valueChanged.connect(lambda: self._setting_changed('lb'))
         layout.addWidget(self.lb_spin)
         layout.addWidget(QtWidgets.QLabel("Zero fill"))
         self.zf_combo = QtWidgets.QComboBox()
         self.zf_combo.addItems(["1× original", "2× original", "4× original"])
         self.zf_combo.setCurrentIndex(1)
-        self.zf_combo.currentIndexChanged.connect(self._update_recipe)
+        self.zf_combo.currentIndexChanged.connect(lambda: self._setting_changed('zf'))
         layout.addWidget(self.zf_combo)
         self.fft_check = QtWidgets.QCheckBox("Fourier transform time axes")
         self.fft_check.setChecked(True)
-        self.fft_check.stateChanged.connect(self._update_recipe)
+        self.fft_check.stateChanged.connect(lambda: self._setting_changed('fft'))
         layout.addWidget(self.fft_check)
         layout.addWidget(QtWidgets.QLabel("Zero-order phase (°)"))
         self.p0_spin = QtWidgets.QDoubleSpinBox()
         self.p0_spin.setRange(-3600, 3600)
         self.p0_spin.setDecimals(2)
-        self.p0_spin.valueChanged.connect(self._update_recipe)
+        self.p0_spin.valueChanged.connect(lambda: self._setting_changed('p0'))
         layout.addWidget(self.p0_spin)
         layout.addWidget(QtWidgets.QLabel("First-order phase (°)"))
         self.p1_spin = QtWidgets.QDoubleSpinBox()
         self.p1_spin.setRange(-3600, 3600)
         self.p1_spin.setDecimals(2)
-        self.p1_spin.valueChanged.connect(self._update_recipe)
+        self.p1_spin.valueChanged.connect(lambda: self._setting_changed('p1'))
         layout.addWidget(self.p1_spin)
+        layout.addWidget(QtWidgets.QLabel("Phase pivot (zero-based point)"))
+        self.pivot_spin = QtWidgets.QDoubleSpinBox()
+        self.pivot_spin.setRange(-1e9, 1e9)
+        self.pivot_spin.setDecimals(3)
+        self.pivot_spin.setToolTip("Phase = p0 + p1 × (point − pivot) / point count; before cropping.")
+        self.pivot_spin.valueChanged.connect(lambda: self._setting_changed('pivot'))
+        layout.addWidget(self.pivot_spin)
+        self.crop_check = QtWidgets.QCheckBox("Crop frequency region")
+        self.crop_check.setToolTip("Available for an already processed frequency axis. Original source is retained.")
+        self.crop_check.stateChanged.connect(lambda: self._setting_changed('crop'))
+        layout.addWidget(self.crop_check)
+        layout.addWidget(QtWidgets.QLabel("Crop start (point, included)"))
+        self.crop_start_spin = QtWidgets.QSpinBox()
+        self.crop_start_spin.setRange(0, 2147483647)
+        self.crop_start_spin.valueChanged.connect(lambda: self._setting_changed('start'))
+        layout.addWidget(self.crop_start_spin)
+        layout.addWidget(QtWidgets.QLabel("Crop stop (point, excluded)"))
+        self.crop_stop_spin = QtWidgets.QSpinBox()
+        self.crop_stop_spin.setRange(1, 2147483647)
+        self.crop_stop_spin.valueChanged.connect(lambda: self._setting_changed('stop'))
+        layout.addWidget(self.crop_stop_spin)
+        crop_tip = QtWidgets.QLabel("Zero-based source points; 0 ≤ start < stop ≤ axis size. Calibration is retained.")
+        crop_tip.setObjectName("caption")
+        crop_tip.setWordWrap(True)
+        layout.addWidget(crop_tip)
         layout.addWidget(QtWidgets.QLabel("Compute with"))
         self.backend_combo = QtWidgets.QComboBox()
         self.backend_combo.addItem("Native C++ / PocketFFT", "native")
@@ -357,14 +388,16 @@ class Workbench(QtWidgets.QMainWindow):
         self.process_button.clicked.connect(lambda: self._process_async(preview=False))
         row.addWidget(self.preview_button)
         row.addWidget(self.process_button)
-        layout.addLayout(row)
         self.reset_button = QtWidgets.QPushButton("Reset to original")
         self.reset_button.clicked.connect(self.reset)
-        layout.addWidget(self.reset_button)
         layout.addSpacing(15)
         layout.addWidget(self._heading("Export"))
+        export_tip = QtWidgets.QLabel("Exports use the applied current result. Pending control edits are excluded.")
+        export_tip.setObjectName("caption")
+        export_tip.setWordWrap(True)
+        layout.addWidget(export_tip)
         self.export_combo = QtWidgets.QComboBox()
-        self.export_combo.addItem("NMRNext native · all channels", "native")
+        self.export_combo.addItem("SpinFlow native · all channels", "native")
         self.export_combo.addItem("NMRPipe · component 0", "nmrpipe")
         self.export_combo.addItem("UCSF · component 0 · 2D", "ucsf")
         layout.addWidget(self.export_combo)
@@ -372,11 +405,27 @@ class Workbench(QtWidgets.QMainWindow):
         self.export_button.setToolTip("Preview is not exported. NMRPipe and UCSF write component 0 only.")
         self.export_button.clicked.connect(self._export_dialog)
         layout.addWidget(self.export_button)
-        self.recipe_button = QtWidgets.QPushButton("Save recipe and provenance…")
+        self.workflow_button = QtWidgets.QPushButton("Save runnable workflow…")
+        self.workflow_button.setToolTip("Save a new folder with the original source snapshot and CLI recipe for the applied current result. Unapplied controls are excluded.")
+        self.workflow_button.clicked.connect(self._save_workflow_dialog)
+        layout.addWidget(self.workflow_button)
+        self.recipe_button = QtWidgets.QPushButton("Save audit report…")
+        self.recipe_button.setToolTip("Applied operations, plan and provenance for inspection. This report is not a CLI recipe.")
         self.recipe_button.clicked.connect(self._save_recipe_dialog)
         layout.addWidget(self.recipe_button)
         layout.addStretch()
-        return scroll
+        # Keep actions reachable while the axis controls scroll on small screens.
+        container = QtWidgets.QFrame()
+        container.setObjectName("controlpanel")
+        controls = QtWidgets.QVBoxLayout(container)
+        controls.setContentsMargins(0, 0, 0, 0)
+        controls.addWidget(scroll, 1)
+        actions = QtWidgets.QVBoxLayout()
+        actions.setContentsMargins(19, 8, 19, 12)
+        actions.addLayout(row)
+        actions.addWidget(self.reset_button)
+        controls.addLayout(actions)
+        return container
 
     @staticmethod
     def _heading(text):
@@ -398,12 +447,12 @@ class Workbench(QtWidgets.QMainWindow):
             QLabel#recipe {{ color: {INK}; background: #e8f0f6; border-left: 3px solid {ACCENT}; padding: 9px; }}
             QLabel#status {{ background: #e8f0f6; border-top: 1px solid {BORDER}; padding: 7px 18px; }}
             QTextBrowser#details {{ background: transparent; color: {INK}; }}
-            QPushButton, QComboBox, QDoubleSpinBox {{ background: white; border: 1px solid #bacbd7; border-radius: 4px; min-height: 30px; padding: 2px 8px; }}
+            QPushButton, QComboBox, QDoubleSpinBox, QSpinBox {{ background: white; border: 1px solid #bacbd7; border-radius: 4px; min-height: 30px; padding: 2px 8px; }}
             QPushButton:hover {{ border-color: {ACCENT}; background: #eef7fd; }}
             QPushButton#primary {{ background: {ACCENT}; color: white; border-color: {ACCENT}; font-weight: 650; }}
             QPushButton#primary:hover {{ background: #0e568a; }}
             QPushButton:disabled {{ color: #8899a5; background: #edf1f4; }}
-            QComboBox:focus, QDoubleSpinBox:focus, QPushButton:focus, QCheckBox:focus {{ border: 2px solid {ACCENT}; }}
+            QComboBox:focus, QDoubleSpinBox:focus, QSpinBox:focus, QPushButton:focus, QCheckBox:focus {{ border: 2px solid {ACCENT}; }}
             QSplitter::handle {{ background: {BORDER}; width: 2px; }}
         """)
 
@@ -482,7 +531,7 @@ class Workbench(QtWidgets.QMainWindow):
                     self.last_operations, self.last_plan, self.last_backend,
                     self.dataset_title.text(), self.view_combo.currentIndex(),
                     self.axis_combo.currentIndex(), self.component_combo.currentIndex(),
-                    self.status.text(), self.status.styleSheet())
+                    self.status.text(), self.status.styleSheet(), self._axis_settings)
         self._suspend_preview_invalidation = True
         try:
             self.source = dataset
@@ -492,6 +541,7 @@ class Workbench(QtWidgets.QMainWindow):
             self.last_operations = []
             self.last_plan = None
             self.last_backend = None
+            self._reset_axis_settings()
             self.dataset_title.setText(name)
             self.view_combo.blockSignals(True)
             self.view_combo.setCurrentIndex(0)
@@ -502,7 +552,7 @@ class Workbench(QtWidgets.QMainWindow):
             (self.source, self.current, self.preview, self.source_name,
              self.last_operations, self.last_plan, self.last_backend,
              title, view_index, axis_index, component_index,
-             status, status_style) = previous
+             status, status_style, self._axis_settings) = previous
             self.dataset_title.setText(title)
             self.view_combo.blockSignals(True)
             self.view_combo.setCurrentIndex(view_index)
@@ -524,8 +574,8 @@ class Workbench(QtWidgets.QMainWindow):
         self.last_operations = []
         self.last_plan = None
         self.last_backend = None
-        self._render()
-        self._refresh_buttons()
+        self._reset_axis_settings()
+        self._refresh()
         self._set_status("Reset to original data. The source has not changed.")
 
     def _selected_axes(self):
@@ -540,20 +590,69 @@ class Workbench(QtWidgets.QMainWindow):
         if self.source is None:
             return []
         ops = []
-        factor = (1, 2, 4)[self.zf_combo.currentIndex()]
-        for axis in self._selected_axes():
+        for axis in self.source.axes:
+            if axis.role != 'spectral':
+                continue
+            settings = self._axis_settings[axis.id]
+            factor = (1, 2, 4)[settings['zf']]
             if axis.domain == "time":
-                if self.lb_spin.value() > 0:
+                if settings['lb'] > 0:
                     ops.append({"op": "window", "axis": axis.id, "kind": "exponential",
-                                "lb_hz": self.lb_spin.value(), "first_point_scale": 1.0})
+                                "lb_hz": settings['lb'], "first_point_scale": 1.0})
                 if factor > 1:
                     ops.append({"op": "zero_fill", "axis": axis.id, "size": axis.size * factor})
-                if self.fft_check.isChecked():
+                if settings['fft']:
                     ops.append({"op": "fft", "axis": axis.id})
-            if (self.p0_spin.value() or self.p1_spin.value()) and axis.id in self.source.complex_axes:
-                ops.append({"op": "phase", "axis": axis.id, "p0": self.p0_spin.value(),
-                            "p1": self.p1_spin.value(), "pivot": 0.0})
+            if (settings['p0'] or settings['p1']) and axis.id in self.source.complex_axes:
+                ops.append({"op": "phase", "axis": axis.id, "p0": settings['p0'],
+                            "p1": settings['p1'], "pivot": settings['pivot']})
+            if axis.domain == 'frequency' and settings['crop']:
+                ops.append({'op': 'crop', 'axis': axis.id, 'start': settings['start'], 'stop': settings['stop']})
         return ops
+
+    def _reset_axis_settings(self):
+        self._axis_settings = {
+            a.id: dict(lb=3.0, zf=1, fft=True, p0=0.0, p1=0.0, pivot=0.0,
+                       crop=False, start=0, stop=a.size)
+            for a in self.source.axes if a.role == 'spectral'
+        }
+
+    def _setting_controls(self):
+        return {'lb': self.lb_spin, 'zf': self.zf_combo, 'fft': self.fft_check,
+                'p0': self.p0_spin, 'p1': self.p1_spin, 'pivot': self.pivot_spin,
+                'crop': self.crop_check, 'start': self.crop_start_spin, 'stop': self.crop_stop_spin}
+
+    def _eligible_setting_axes(self, key, axes):
+        if key in ('lb', 'zf', 'fft'):
+            return [a for a in axes if a.domain == 'time']
+        if key in ('crop', 'start', 'stop'):
+            return [a for a in axes if a.domain == 'frequency']
+        return [a for a in axes if a.id in self.source.complex_axes]
+
+    def _setting_changed(self, key):
+        widget = self._setting_controls()[key]
+        value = (widget.currentIndex() if key == 'zf' else widget.isChecked()
+                 if key in ('fft', 'crop') else widget.value())
+        for axis in self._eligible_setting_axes(key, self._selected_axes()):
+            self._axis_settings[axis.id][key] = value
+        self._update_recipe()
+
+    def _axis_changed(self):
+        selected = self._selected_axes()
+        if selected:
+            for key, widget in self._setting_controls().items():
+                # In a mixed-domain selection show the first eligible axis.
+                eligible = self._eligible_setting_axes(key, selected)
+                settings = self._axis_settings[(eligible or selected)[0].id]
+                widget.blockSignals(True)
+                if key == 'zf':
+                    widget.setCurrentIndex(settings[key])
+                elif key in ('fft', 'crop'):
+                    widget.setChecked(settings[key])
+                else:
+                    widget.setValue(settings[key])
+                widget.blockSignals(False)
+        self._update_recipe()
 
     def _update_recipe(self):
         if self.source is None:
@@ -565,18 +664,28 @@ class Workbench(QtWidgets.QMainWindow):
             self._set_status("Processing settings changed. Preview cleared; run Preview again to see these settings.")
             self._render()
         ops = self.build_recipe()
+        selected = self._selected_axes()
+        if self.axis_combo.currentData() is None:
+            mixed = any(len({self._axis_settings[a.id][key]
+                             for a in self._eligible_setting_axes(key, selected)}) > 1
+                        for key in self._setting_controls())
+            self.axis_settings_label.setText(
+                ("Settings differ; showing the first eligible axis. " if mixed else "") +
+                "All axes: each edit applies that field to every eligible axis. Process runs the complete recipe.")
+        else:
+            self.axis_settings_label.setText("Edits are retained for this axis. Process runs the complete recipe for all axes.")
         if not ops:
             self.recipe_label.setText("No operations · current data can still be inspected and saved.")
         else:
             names = []
             for op in ops:
-                name = {"window": "Window", "zero_fill": "Zero fill", "fft": "Fourier transform", "phase": "Phase"}[op["op"]]
+                name = {"window": "Window", "zero_fill": "Zero fill", "fft": "Fourier transform", "phase": "Phase", "crop": "Crop"}[op["op"]]
                 names.append(f"{name} ({op['axis']})")
             self.recipe_label.setText(" → ".join(names))
         if any(a.domain == "time" and a.id not in self.source.complex_axes for a in self._selected_axes()) and self.fft_check.isChecked():
             self.plan_label.setText("Fourier transform requires complex components on each selected time axis.")
         elif any(a.domain == "frequency" and a.id not in self.source.complex_axes for a in self._selected_axes()):
-            self.plan_label.setText("Processed real data has no imaginary channel. Phase is unavailable; view and export remain available.")
+            self.plan_label.setText("Processed real data has no imaginary channel. Phase is unavailable; crop, view and export remain available.")
         elif _digital_filter_info(self.source.metadata)[0] == "uncorrected_or_unknown":
             self.plan_label.setText("Digital-filter correction is unresolved. Fourier transform will be refused until a validated correction workflow is available.")
         elif _digital_filter_info(self.source.metadata)[1]:
@@ -653,7 +762,7 @@ class Workbench(QtWidgets.QMainWindow):
                     self.axis_combo.addItem(f"{axis.label or axis.id} ({axis.id})", axis.id)
         self.axis_combo.blockSignals(False)
         self._update_details()
-        self._update_recipe()
+        self._axis_changed()
         self._refresh_buttons()
         self._render()
 
@@ -661,7 +770,7 @@ class Workbench(QtWidgets.QMainWindow):
         has = self.source is not None
         for button in (self.open_button, self.bruker_button, self.demo1_button, self.demo2_button,
                        self.process_button, self.preview_button, self.reset_button,
-                       self.export_button, self.recipe_button):
+                       self.export_button, self.recipe_button, self.workflow_button):
             button.setEnabled(not self._busy and (has or button in (
                 self.open_button, self.bruker_button, self.demo1_button, self.demo2_button)))
         selected = self._selected_axes() if has else []
@@ -671,16 +780,20 @@ class Workbench(QtWidgets.QMainWindow):
             control.setEnabled(has and not self._busy)
         for control in (self.lb_spin, self.zf_combo, self.fft_check):
             control.setEnabled(has_time and not self._busy)
-        for control in (self.p0_spin, self.p1_spin):
+        for control in (self.p0_spin, self.p1_spin, self.pivot_spin):
             control.setEnabled(has_complex and not self._busy)
+        has_frequency = any(a.domain == 'frequency' for a in selected)
+        for control in (self.crop_check, self.crop_start_spin, self.crop_stop_spin):
+            control.setEnabled(has_frequency and not self._busy)
         self.process_button.setEnabled(has and bool(self.build_recipe()) and not self._busy)
         self.preview_button.setEnabled(has and bool(self.build_recipe()) and not self._busy)
         self.export_button.setEnabled(has and self.preview is None and not self._busy)
         self.recipe_button.setEnabled(has and self.preview is None and not self._busy)
+        self.workflow_button.setEnabled(has and self.preview is None and not self._busy)
 
     def _update_details(self):
         if self.source is None:
-            self.details.setHtml("<p>Open NMRNext native data, a supported processed spectrum, or a Bruker 1D FID.</p><p>Try a synthetic example to explore the workflow.</p>")
+            self.details.setHtml("<p>Open SpinFlow native data, a supported processed spectrum, or a Bruker 1D FID.</p><p>Try a synthetic example to explore the workflow.</p>")
             return
         d = self.source
         rows = [f"<p><b>{len(d.axes)}D · {d.data.dtype.name} · {d.data.shape[0]} component(s)</b></p>"]
@@ -817,7 +930,7 @@ class Workbench(QtWidgets.QMainWindow):
         if self.source is None:
             raise NMRNextError("NO_DATASET", "Open a dataset first")
         ops = self.last_operations if self.current is not self.source else []
-        return {"schema_version": "1", "source_name": self.source_name,
+        return {"schema_version": "1", "report_type": "spinflow-applied-workflow-audit", "source_name": self.source_name,
                 "operations": ops, "backend": self.last_backend,
                 "plan": self.last_plan, "result_provenance": self.current.provenance,
                 "source_axes": [a.to_dict() for a in self.source.axes],
@@ -826,7 +939,7 @@ class Workbench(QtWidgets.QMainWindow):
     def _save_recipe_dialog(self):
         if self.source is None:
             return
-        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save recipe and provenance", "nmrnext-recipe.json",
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Save audit report (not a CLI recipe)", "spinflow-audit.json",
                                                          "JSON (*.json)")
         if not path:
             return
@@ -834,14 +947,34 @@ class Workbench(QtWidgets.QMainWindow):
             with open(path, "x", encoding="utf-8") as file:
                 json.dump(self.recipe_record(), file, indent=2, allow_nan=False)
                 file.write("\n")
-            self._set_status(f"Saved recipe and provenance to {path}.")
+            self._set_status(f"Saved audit report to {path}. Use Save runnable workflow for CLI replay.")
         except Exception as exc:
             self._show_error(exc)
+
+    def export_workflow_now(self, directory):
+        """Export the applied current result, excluding preview and pending edits."""
+        if self.source is None:
+            raise NMRNextError('NO_DATASET', 'Open a dataset first')
+        return export_workflow_bundle(self.source, self.last_operations, directory,
+                                      backend=self.last_backend or 'native')
+
+    def _save_workflow_dialog(self):
+        if self.source is None:
+            return
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, 'Save applied workflow to a NEW folder', 'spinflow-workflow',
+            options=QtWidgets.QFileDialog.Option.DontConfirmOverwrite)
+        if not path:
+            return
+        self._start_job(lambda: self.export_workflow_now(path),
+                        lambda recipe: self._set_status(
+                            f'Saved applied workflow: {recipe}. Run spinflow run "{recipe}" to reproduce it.'),
+                        'Saving applied workflow and source snapshot…')
 
 
 def main(argv=None):
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv if argv is None else argv)
-    app.setApplicationName("NMRNext")
+    app.setApplicationName("SpinFlow")
     app.setStyle("Fusion")
     window = Workbench()
     window.show()

@@ -11,6 +11,8 @@ SpinFlow is currently an experimental processing workbench. Linux is the primary
 
 On Ubuntu 24.04, the system packages are typically `python3-venv`, `python3-dev`, and `build-essential`. Install them with your usual package manager before running the script if they are missing. The script does not modify system packages.
 
+For a minimal X11 desktop, Qt's `xcb` plugin may also need `libgl1`, `libegl1`, `libopengl0`, `libxkbcommon0`, `libxkbcommon-x11-0`, `libxcb-cursor0`, `libxcb-icccm4`, `libxcb-keysyms1`, `libxcb-shape0`, `libxcb-xinerama0`, `libxcb-xkb1`, `libdbus-1-3`, and `fonts-dejavu-core`. The Ubuntu X11 validation guest has this package set. A regular desktop installation may already provide them; Wayland has not been validated directly.
+
 From the repository root:
 
 ```bash
@@ -21,12 +23,19 @@ bash tools/bootstrap.sh
 
 The bootstrap creates `.venv`, installs the project and its pinned runtime dependencies, compiles the C++ PocketFFT extension, and checks the resulting environment. It installs a normal local package; run it again after changing source. Select a Python version with `PYTHON=python3.13 bash tools/bootstrap.sh` if several versions are installed.
 
-For the optional GUI and source test dependencies (pytest, pybind11, CMake and Ninja):
+For normal desktop use of the optional GUI:
+
+```bash
+bash tools/bootstrap.sh --gui
+.venv/bin/spinflow gui
+```
+
+For GUI development and the source test dependencies (pytest, pybind11, CMake and Ninja):
 
 ```bash
 bash tools/bootstrap.sh --gui --test
 .venv/bin/python tools/build_native.py
-.venv/bin/python -m pytest -q
+QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q
 .venv/bin/spinflow gui
 ```
 

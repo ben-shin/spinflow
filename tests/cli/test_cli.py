@@ -7,6 +7,7 @@ import sys
 import os
 from pathlib import Path
 import unittest
+from unittest import mock
 
 try:
     from nmrnext.cli import main
@@ -211,7 +212,21 @@ raise SystemExit(main(['gui']))
         self.assertEqual(result.returncode,2)
         error=json.loads(result.stderr)['error']
         self.assertEqual(error['code'],'GUI_UNAVAILABLE')
-        self.assertIn('gui',error['message'])
+        self.assertIn('gui',error['message'].lower())
+        expected = 'bash tools/bootstrap.sh --gui' if sys.platform.startswith('linux') else 'tools/bootstrap.ps1 -WithGui' if sys.platform == 'win32' else "pip install -e '.[gui]'"
+        self.assertIn(expected,error['message'])
+
+    def test_missing_gui_remedy_matches_linux_and_windows_setup(self):
+        for platform, command in (('linux', 'bash tools/bootstrap.sh --gui'),
+                                  ('win32', 'tools/bootstrap.ps1 -WithGui')):
+            with self.subTest(platform=platform):
+                with mock.patch.object(sys, 'platform', platform), mock.patch.dict(sys.modules, {'nmrnext.gui': None}):
+                    code, out, err = self.invoke(['gui'])
+                self.assertEqual(code, 2)
+                self.assertEqual(out, '')
+                error = json.loads(err)['error']
+                self.assertEqual(error['code'], 'GUI_UNAVAILABLE')
+                self.assertIn(command, error['message'])
 
     def test_native_commit_is_recorded_in_processing_provenance(self):
         from nmrnext.operations import apply_operation
