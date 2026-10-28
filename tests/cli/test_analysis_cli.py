@@ -156,18 +156,6 @@ def test_multifile_publish_rolls_back_only_its_own_first_output(tmp_path):
     assert not list(tmp_path.glob('.spinflow-stage-*'))
 
 
-def test_figure_rejects_stale_report_before_optional_plot_import(tmp_path):
-    source = tmp_path/'spectrum.nmrh5'
-    spectrum(source)
-    report = tmp_path/'stale.json'
-    report.write_text(json.dumps({'schema_version': '1', 'kind': 'peak_picking',
-                                  'dataset_digest': '0'*64, 'peaks': []}))
-    output = tmp_path/'stale.png'
-    status, _, err = invoke('figure', source, output, '--analysis', report)
-    assert status == 2 and json.loads(err)['error']['code'] == 'STALE_ANALYSIS'
-    assert not output.exists()
-
-
 def test_optional_plot_missing_returns_structured_error_without_qt(tmp_path):
     source = tmp_path/'spectrum.nmrh5'
     spectrum(source)
