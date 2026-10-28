@@ -26,19 +26,34 @@ workflows:
   - id: bruker-raw-1d-inspection
     status: experimental
     profile: controlled-acqus-fid
-    evidence: tests/io/test_codecs.py
-    real_vendor_fixture: unavailable
-    processing: blocked-if-digital-filter-unknown-or-uncorrected
+    evidence: [tests/io/test_codecs.py, tests/io/test_bruker_public.py]
+    real_vendor_fixture: hash-pinned-public-bmse000001-1H
+    processing: "explicit positive recorded GRPDLY correction before FFT; unknown/zero delay blocked"
+  - id: public-bruker-1d-to-native
+    status: experimental
+    input_profile: controlled-complex-bruker-raw-1d
+    output_profile: nmrnext-hdf5
+    recipe: examples/bruker-1d-public.json
+    evidence: [tests/fixtures/bruker_public_manifest.json, tests/io/test_bruker_public.py, tools/validate_public_bruker.py]
+    independent_reference: eight-archived-topspin-peak-positions-only
+    nmrpipe_parity: unverified
+    independent_export_consumer: unverified
+  - id: bounded-frequency-analysis
+    status: experimental
+    input_profile: fully-frequency-domain-1d-or-2d
+    features: [complex-1d-automatic-phase, signed-1d-2d-peak-extrema, rectangular-relative-integrals, optional-figures]
+    evidence: [tests/test_analysis.py, tests/cli/test_analysis_cli.py, tests/cli/test_plot_cli.py, tests/plot/test_figures.py]
+    real_quantitative_validation: unverified
   - id: researcher-workbench
     status: experimental
-    current_increment: [per-axis-settings, frequency-source-index-crop, last-applied-workflow-bundle-for-cli-replay]
+    current_increment: [per-axis-settings, frequency-source-index-crop, last-applied-workflow-bundle-for-cli-replay, bounded-analysis-and-optional-figures]
     replay_scope: native-source-snapshot-and-strict-relative-path-json-recipe
     evidence: [tests/gui/test_workbench.py, tests/test_workflow_bundle.py]
-    real_acquisition_validation: unavailable
+    real_acquisition_validation: public-1d-demonstration-only
     user_observation_sessions: not-yet-run
   - id: first-real-laboratory-raw-to-export
     status: unsupported
-    blockers: [permitted-real-fixture, validated-vendor-encoding-and-filter, pinned-reference, independent-consumer]
+    blockers: [broader-permitted-real-fixtures, quantitative-phase-and-integral-reference, independent-export-consumer, nmrpipe-parity]
   - id: legacy-script-migration
     status: unsupported
   - id: complete-native-nmrpipe-suite

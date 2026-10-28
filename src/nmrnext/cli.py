@@ -1,11 +1,15 @@
 """Headless CLI. Structured results on stdout, structured failures on stderr."""
 import argparse
+import csv
 import importlib.metadata
+import io
 import json
 import math
+import os
 from pathlib import Path
 import re
 import sys
+import tempfile
 import time
 
 import numpy as np
@@ -29,23 +33,36 @@ def _memory(text):
     return int(match[1])*{"B":1,"KiB":1024,"MiB":1024**2,"GiB":1024**3,None:1}[match[2]]
 
 
-def _json_file(path):
+def _json_file(path, *, analysis=False):
+    limit = 8*1024*1024 if analysis else 1024*1024
+    invalid = "INVALID_ANALYSIS_REPORT" if analysis else "INVALID_RECIPE"
     if path.suffix.lower() not in (".json",):
-        raise NMRNextError("UNSUPPORTED_RECIPE_FORMAT","Recipes must be JSON; YAML/script execution is not supported")
+        code = "UNSUPPORTED_ANALYSIS_FORMAT" if analysis else "UNSUPPORTED_RECIPE_FORMAT"
+        raise NMRNextError(code,"Input must be JSON; YAML/script execution is not supported")
     try:
-        if path.stat().st_size > 1024*1024:
+        with path.open("rb") as stream:
+            payload = stream.read(limit+1)
+        if len(payload) > limit:
+            if analysis:
+                raise NMRNextError("ANALYSIS_TOO_LARGE", "Analysis JSON exceeds 8 MiB")
             raise NMRNextError("RECIPE_TOO_LARGE","Recipe exceeds 1 MiB")
         def pairs(items):
             result={}
             for key,value in items:
                 if key in result:
-                    raise NMRNextError("INVALID_RECIPE",f"Duplicate JSON key {key!r}")
+                    raise NMRNextError(invalid,f"Duplicate JSON key {key!r}")
                 result[key]=value
             return result
-        return json.loads(path.read_text(encoding="utf-8"),object_pairs_hook=pairs,
-                          parse_constant=lambda value: (_ for _ in ()).throw(NMRNextError("INVALID_RECIPE",f"Nonfinite JSON number {value}")))
+        def finite_float(value):
+            parsed = float(value)
+            if not math.isfinite(parsed):
+                raise NMRNextError(invalid, f"Nonfinite JSON number {value}")
+            return parsed
+        return json.loads(payload.decode("utf-8"),object_pairs_hook=pairs,
+                          parse_float=finite_float,
+                          parse_constant=lambda value: (_ for _ in ()).throw(NMRNextError(invalid,f"Nonfinite JSON number {value}")))
     except json.JSONDecodeError as exc:
-        raise NMRNextError("INVALID_RECIPE",f"JSON error at line {exc.lineno}: {exc.msg}") from exc
+        raise NMRNextError(invalid,f"JSON error at line {exc.lineno}: {exc.msg}") from exc
 
 
 def _load_recipe(args):
@@ -142,6 +159,222 @@ def _compare(args):
     return {"match":passed,"coordinate_mismatches":mismatches,"metrics":metrics,"alignment":"none","rescaling":"none"},0 if passed else 1
 
 
+def _json_bytes(value):
+    return (json.dumps(value, indent=2, allow_nan=False) + "\n").encode("utf-8")
+
+
+def _publish_staged_file(temporary, path):
+    try:
+        if os.name == "nt":
+            os.rename(temporary, path)
+        else:
+            os.link(temporary, path)
+    except FileExistsError as exc:
+        raise NMRNextError("OUTPUT_EXISTS", f"Output already exists: {path}") from exc
+
+
+def _save_new_files(outputs):
+    """Publish several new files, removing only files this call actually created.
+
+    Each payload is prepared in a private directory on the destination filesystem.
+    A failed later publication leaves existing or concurrently replaced paths alone.
+    """
+    paths = [Path(path) for path, _ in outputs]
+    if len({path.resolve() for path in paths}) != len(paths):
+        raise NMRNextError("INVALID_OUTPUT", "Output paths must be distinct")
+    for path in paths:
+        if path.exists() or path.is_symlink():
+            raise NMRNextError("OUTPUT_EXISTS", f"Output already exists: {path}")
+    staged, published, cleanup_warnings = [], [], []
+    complete = False
+    try:
+        for path, writer in outputs:
+            path = Path(path)
+            directory = Path(tempfile.mkdtemp(prefix=".spinflow-stage-", dir=path.parent))
+            temporary = directory / "payload"
+            staged.append((temporary, path))
+            writer(temporary)
+        for temporary, path in staged:
+            info = temporary.stat(follow_symlinks=False)
+            identity = (info.st_dev, info.st_ino)
+            _publish_staged_file(temporary, path)
+            published.append((path, identity))
+        complete = True
+    finally:
+        if not complete:
+            for path, identity in reversed(published):
+                try:
+                    info = path.stat(follow_symlinks=False)
+                    if (info.st_dev, info.st_ino) == identity:
+                        path.unlink()
+                except OSError:
+                    # Keep the publication/writer failure as the primary error.
+                    pass
+        for temporary, path in staged:
+            try:
+                temporary.unlink(missing_ok=True)
+                temporary.parent.rmdir()
+            except OSError:
+                if complete:
+                    cleanup_warnings.append({"code": "TEMPORARY_CLEANUP_FAILED",
+                                             "output": str(path),
+                                             "message": "Private staging cleanup failed after publication"})
+                # Before publication, preserve the original writer/link error.
+    return cleanup_warnings
+
+
+def _write_bytes(payload):
+    return lambda path: path.write_bytes(payload)
+
+
+def _report_paths(output, csv_path=None):
+    if Path(output).suffix.lower() != ".json":
+        raise NMRNextError("REPORT_FORMAT", "Analysis report output must end in .json")
+    if csv_path is not None and Path(csv_path).suffix.lower() != ".csv":
+        raise NMRNextError("REPORT_FORMAT", "CSV table output must end in .csv")
+
+
+def _analysis_csv(report):
+    """Flat, signed peak/region table with explicit axis units and flags."""
+    if "peaks" in report and "integrals" in report:
+        peaks, integrals = report["peaks"], report["integrals"]
+    elif report.get("kind") == "peak_picking":
+        peaks, integrals = report, None
+    elif report.get("kind") == "integration":
+        peaks, integrals = None, report
+    else:
+        raise NMRNextError("CSV_UNSUPPORTED", "CSV output requires a peak or integration report")
+    axes = (peaks or integrals)["axes"]
+    ids = [axis["id"] for axis in axes]
+    fields = ["peak_id", "region_id", "sign", "intensity", "height_above_baseline",
+              "integral", "integral_unit", "flags", "overlaps", "noise_sigma", "threshold"]
+    for identity in ids:
+        fields += [f"{identity}_point", f"{identity}_Hz", f"{identity}_ppm",
+                   f"{identity}_start_point", f"{identity}_stop_point",
+                   f"{identity}_start_Hz", f"{identity}_stop_Hz",
+                   f"{identity}_start_ppm", f"{identity}_stop_ppm"]
+    stream = io.StringIO(newline="")
+    writer = csv.DictWriter(stream, fields, lineterminator="\n")
+    writer.writeheader()
+    peak_rows = peaks["peaks"] if peaks else []
+    region_rows = integrals["regions"] if integrals else []
+    for index in range(max(len(peak_rows), len(region_rows))):
+        row = {}
+        if index < len(peak_rows):
+            peak = peak_rows[index]
+            row.update(peak_id=peak["id"], sign=peak["sign"], intensity=peak["intensity"],
+                       height_above_baseline=peak["height_above_baseline"],
+                       flags=";".join(peak["flags"]), noise_sigma=peaks["noise"]["sigma"],
+                       threshold=peaks["threshold"])
+            for identity in ids:
+                row[f"{identity}_point"] = peak["points"][identity]
+                for unit, value in peak["coordinates"][identity].items():
+                    row[f"{identity}_{unit}"] = value
+        if index < len(region_rows):
+            region = region_rows[index]
+            row.update(region_id=region["id"], integral=region["integral"],
+                       integral_unit=region["integral_unit"], overlaps=";".join(region["overlaps"]))
+            row["flags"] = ";".join(dict.fromkeys([*(row.get("flags", "").split(";") if row.get("flags") else []),
+                                                      *region["flags"]]))
+            for identity in ids:
+                low, high = region["point_bounds"][identity]
+                row[f"{identity}_start_point"], row[f"{identity}_stop_point"] = low, high
+                for unit, bounds in region["coordinate_bounds"][identity].items():
+                    row[f"{identity}_start_{unit}"], row[f"{identity}_stop_{unit}"] = bounds
+        writer.writerow(row)
+    return stream.getvalue().encode("utf-8")
+
+
+def _analysis_input(path, memory):
+    from .io import read_dataset
+    return read_dataset(path, max_bytes=(_memory(memory) or 256 * 1024**2) // 8)
+
+
+def _analysis_report(path):
+    report = _json_file(Path(path), analysis=True)
+    if not isinstance(report, dict):
+        raise NMRNextError("INVALID_ANALYSIS_REPORT", "Analysis JSON must contain a report object")
+    reports = [report] if "dataset_digest" in report else list(report.values())
+    if not reports or not all(isinstance(item, dict) and item.get("schema_version") == "1" and
+                              isinstance(item.get("dataset_digest"), str) for item in reports):
+        raise NMRNextError("INVALID_ANALYSIS_REPORT", "Analysis reports require schema version 1 and a dataset digest")
+    return report
+
+
+def _analysis_dispatch(args):
+    from .analysis import (autophase, dataset_digest, integrate_regions, pick_peaks,
+                           propose_regions)
+    dataset = _analysis_input(args.input, args.memory)
+    if args.command == "autophase":
+        from .io import write_dataset
+        _report_paths(args.report)
+        result, report = autophase(dataset, pivot=args.pivot,
+                                   first_order=args.first_order, max_p1=args.max_p1,
+                                   max_peaks=args.max_peaks, min_snr=args.min_snr,
+                                   backend=args.backend, threads=args.threads)
+        cleanup_warnings = _save_new_files([(args.output, lambda path: write_dataset(result, path, format="native")),
+                                            (args.report, _write_bytes(_json_bytes(report)))])
+        return {"output": str(args.output), "report": str(args.report),
+                "result_dataset_digest": report["result_dataset_digest"],
+                "cleanup_warnings": cleanup_warnings}, 0
+    if args.command == "peaks":
+        _report_paths(args.output, args.csv)
+        if args.allow_overlap and not args.integrate:
+            raise NMRNextError("INVALID_PARAMETER", "--allow-overlap requires --integrate")
+        report = pick_peaks(dataset, channel=args.channel, sign=args.sign,
+                            threshold=args.threshold, snr=args.snr,
+                            min_separation=args.min_separation,
+                            separation_unit=args.separation_unit,
+                            baseline=args.baseline, baseline_value=args.baseline_value,
+                            max_peaks=args.max_peaks)
+        if args.integrate:
+            if not report["peaks"]:
+                raise NMRNextError("NO_PEAKS", "No peaks met the threshold; no regions were integrated")
+            proposal = propose_regions(dataset, report, half_width=args.half_width,
+                                       unit=args.half_width_unit)
+            integrated = integrate_regions(dataset, proposal["regions"], channel=args.channel,
+                                           baseline=args.integral_baseline,
+                                           baseline_value=args.integral_baseline_value,
+                                           allow_overlap=args.allow_overlap)
+            report = {"peaks": report, "proposal": proposal, "integrals": integrated}
+        outputs = [(args.output, _write_bytes(_json_bytes(report)))]
+        if args.csv:
+            outputs.append((args.csv, _write_bytes(_analysis_csv(report))))
+        cleanup_warnings = _save_new_files(outputs)
+        return {"output": str(args.output), "csv": str(args.csv) if args.csv else None,
+                "dataset_digest": dataset_digest(dataset), "cleanup_warnings": cleanup_warnings}, 0
+    if args.command == "integrate":
+        _report_paths(args.output, args.csv)
+        source = _json_file(Path(args.regions), analysis=True)
+        if isinstance(source, dict) and "proposal" in source:
+            source = source["proposal"]
+        if isinstance(source, dict):
+            if source.get("schema_version") != "1" or source.get("kind") != "region_proposal" or source.get("dataset_digest") != dataset_digest(dataset):
+                raise NMRNextError("STALE_ANALYSIS", "Region proposal must match the current dataset")
+            source = source.get("regions")
+        report = integrate_regions(dataset, source, channel=args.channel,
+                                   baseline=args.baseline, baseline_value=args.baseline_value,
+                                   allow_overlap=args.allow_overlap)
+        outputs = [(args.output, _write_bytes(_json_bytes(report)))]
+        if args.csv:
+            outputs.append((args.csv, _write_bytes(_analysis_csv(report))))
+        cleanup_warnings = _save_new_files(outputs)
+        return {"output": str(args.output), "csv": str(args.csv) if args.csv else None,
+                "dataset_digest": dataset_digest(dataset), "cleanup_warnings": cleanup_warnings}, 0
+    if args.command == "figure":
+        from .figures import export_figure
+        analysis = _analysis_report(args.analysis) if args.analysis else None
+        try:
+            return export_figure(dataset, args.output, component=args.component,
+                                 analysis=analysis, title=args.title,
+                                 contour_level=args.contour_level), 0
+        except (KeyError, TypeError, IndexError) as exc:
+            if analysis is None:
+                raise
+            raise NMRNextError("INVALID_ANALYSIS_REPORT", "Analysis JSON has malformed peak or region fields") from exc
+    raise NMRNextError("UNKNOWN_COMMAND", "Unknown analysis command")
+
+
 def _dispatch(args):
     if args.command == "gui":
         try:
@@ -157,6 +390,8 @@ def _dispatch(args):
         return None,gui_main(["nmrnext"])
     if args.command == "doctor": return _doctor(),0
     if args.command == "compare": return _compare(args)
+    if args.command in ("autophase", "peaks", "integrate", "figure"):
+        return _analysis_dispatch(args)
     # Validate recipe schema before importing codecs or reading sample arrays.
     config=_load_recipe(args) if args.command in ("plan","run") else None
     from .io import capabilities,export_preflight,inspect_dataset,read_dataset,write_dataset
@@ -215,6 +450,38 @@ def _parser():
     compare=sub.add_parser("compare",help="Compare coordinates and numeric arrays without alignment")
     compare.add_argument("candidate");compare.add_argument("reference");compare.add_argument("--json",action="store_true")
     compare.add_argument("--rtol",type=float,default=1e-5);compare.add_argument("--atol",type=float,default=1e-5);compare.add_argument("--memory")
+    auto=sub.add_parser("autophase",help="Estimate bounded 1D phase and save a native result plus JSON report")
+    auto.add_argument("input");auto.add_argument("output");auto.add_argument("--report",required=True)
+    auto.add_argument("--pivot",type=float);auto.add_argument("--first-order",action="store_true")
+    auto.add_argument("--max-p1",type=float,default=180.);auto.add_argument("--max-peaks",type=int,default=8)
+    auto.add_argument("--min-snr",type=float,default=15.)
+    auto.add_argument("--backend",choices=["native","numpy"],default="native")
+    auto.add_argument("--threads",type=int,default=1);auto.add_argument("--memory")
+    peaks=sub.add_parser("peaks",help="Pick signed 1D/2D peaks and optionally integrate proposed regions")
+    peaks.add_argument("input");peaks.add_argument("--output",required=True);peaks.add_argument("--csv")
+    peaks.add_argument("--channel",type=int,default=0);peaks.add_argument("--sign",choices=["positive","negative","both"],default="positive")
+    peaks.add_argument("--threshold",type=float);peaks.add_argument("--snr",type=float,default=5.)
+    peaks.add_argument("--min-separation",type=float,default=1.)
+    peaks.add_argument("--separation-unit",choices=["points","Hz","ppm"],default="points")
+    peaks.add_argument("--baseline",choices=["median","none","constant"],default="median")
+    peaks.add_argument("--baseline-value",type=float);peaks.add_argument("--max-peaks",type=int,default=1000)
+    peaks.add_argument("--integrate",action="store_true")
+    peaks.add_argument("--half-width",type=float,default=8.)
+    peaks.add_argument("--half-width-unit",choices=["points","Hz","ppm"],default="points")
+    peaks.add_argument("--integral-baseline",choices=["none","constant","edge_linear"],default="none")
+    peaks.add_argument("--integral-baseline-value",type=float)
+    peaks.add_argument("--allow-overlap",action="store_true");peaks.add_argument("--memory")
+    integrate=sub.add_parser("integrate",help="Integrate explicitly bounded 1D/2D regions")
+    integrate.add_argument("input");integrate.add_argument("regions")
+    integrate.add_argument("--output",required=True);integrate.add_argument("--csv")
+    integrate.add_argument("--channel",type=int,default=0)
+    integrate.add_argument("--baseline",choices=["none","constant","edge_linear"],default="none")
+    integrate.add_argument("--baseline-value",type=float)
+    integrate.add_argument("--allow-overlap",action="store_true");integrate.add_argument("--memory")
+    figure=sub.add_parser("figure",help="Save an optional Matplotlib SVG, PDF or PNG from frequency data")
+    figure.add_argument("input");figure.add_argument("output");figure.add_argument("--analysis")
+    figure.add_argument("--component",type=int,default=0);figure.add_argument("--title",default="SpinFlow spectrum")
+    figure.add_argument("--contour-level",type=float);figure.add_argument("--memory")
     return parser
 
 

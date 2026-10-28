@@ -4,6 +4,7 @@ import math
 from .errors import NMRNextError
 from .model import Dataset, positive_int
 from .operations import _transition, validate_backend
+from .bruker import correction_spec, corrected_metadata
 
 
 def plan_operations(dataset, operations, *, backend="numpy", threads=1, memory_bytes=None):
@@ -15,11 +16,15 @@ def plan_operations(dataset, operations, *, backend="numpy", threads=1, memory_b
     if memory_bytes is not None:
         positive_int(memory_bytes, "memory_bytes")
     axes = dataset.axes
+    metadata = dataset.metadata
     sizes = [dataset.data.nbytes]
     steps = []
     for index, operation in enumerate(operations):
         try:
-            axes, resolved = _transition(axes, dataset.complex_axes, dataset.metadata, operation)
+            previous_axes = axes
+            axes, resolved = _transition(axes, dataset.complex_axes, metadata, operation)
+            if resolved["op"] == "digital_filter":
+                metadata = corrected_metadata(metadata, correction_spec(previous_axes, dataset.complex_axes, metadata))
         except NMRNextError as exc:
             raise NMRNextError(exc.code, f"Operation {index+1}: {exc}", details={"operation_index":index, **exc.details}) from exc
         shape = [2**len(dataset.complex_axes), *(a.size for a in axes)]

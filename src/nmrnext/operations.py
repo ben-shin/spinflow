@@ -8,9 +8,12 @@ import numpy as np
 
 from .errors import NMRNextError
 from .model import Dataset, finite, positive_int
+from .bruker import correction_spec, corrected_metadata, correct_samples
 
 
 _FIELDS = {
+    "digital_filter": {"axis"},
+    "reference": {"axis", "reference_ppm", "reference_hz", "observation_mhz"},
     "window": {"axis", "kind", "lb_hz", "power", "first_point_scale"},
     "zero_fill": {"axis", "size"}, "fft": {"axis", "inverse"},
     "phase": {"axis", "p0", "p1", "pivot"},
@@ -54,6 +57,11 @@ def _transition(axes, complex_axes, metadata, operation):
         raise NMRNextError("UNSUPPORTED_OPERATION_VERSION", "Operation version must be '1'")
     op = dict(operation)
     op["version"] = "1"
+    imported = metadata.get("import", {})
+    filter_state = imported.get("digital_filter") if isinstance(imported, dict) else None
+    if name != "digital_filter" and filter_state is not None and (
+            not isinstance(filter_state, dict) or filter_state.get("state") != "corrected"):
+        raise NMRNextError("DIGITAL_FILTER_UNRESOLVED", "Imported digital filter is unresolved; apply explicit digital_filter correction to the original acquisition before other processing")
     ids = [a.id for a in axes]
     if name == "transpose":
         order = op.get("order")
@@ -72,7 +80,19 @@ def _transition(axes, complex_axes, metadata, operation):
         raise NMRNextError("INVALID_DOMAIN", f"{name} requires a time-domain axis")
     if name in {"fft", "phase"} and a.id not in complex_axes:
         raise NMRNextError("QUADRATURE_REQUIRED", f"{name} needs explicit complex components for {a.id}")
-    if name == "window":
+    if name == "reference":
+        if a.role != "spectral" or a.domain != "frequency":
+            raise NMRNextError("INVALID_DOMAIN", "Reference requires a frequency-domain spectral axis")
+        op["reference_ppm"] = finite(op.get("reference_ppm"), "reference_ppm")
+        op["reference_hz"] = finite(op.get("reference_hz"), "reference_hz")
+        op["observation_mhz"] = finite(op.get("observation_mhz", a.observation_mhz), "observation_mhz")
+        if op["observation_mhz"] <= 0:
+            raise NMRNextError("INVALID_PARAMETER", "Reference observation_mhz must be positive")
+        new = replace(a, reference_ppm=op["reference_ppm"], reference_hz=op["reference_hz"], observation_mhz=op["observation_mhz"])
+    elif name == "digital_filter":
+        spec = correction_spec(axes, complex_axes, metadata)
+        new = replace(a, size=spec["output_complex_points"])
+    elif name == "window":
         kind = op.get("kind", "exponential")
         if a.step <= 0:
             raise NMRNextError("INVALID_TIME_GRID", "Window requires a forward time grid")
@@ -98,10 +118,6 @@ def _transition(axes, complex_axes, metadata, operation):
             raise NMRNextError("INVALID_SIZE", "Zero fill cannot crop acquired samples")
         new = replace(a, size=n, acquired_size=a.acquired_size or a.size)
     elif name == "fft":
-        imported = metadata.get("import", {})
-        filter_state = imported.get("digital_filter") if isinstance(imported, dict) else None
-        if filter_state is not None and (not isinstance(filter_state, dict) or filter_state.get("state") != "corrected"):
-            raise NMRNextError("DIGITAL_FILTER_UNRESOLVED", "Imported digital-filter state is uncorrected or unknown; use a validated correction workflow before FFT (correction is not implemented here)")
         inv = op.get("inverse", False)
         if not isinstance(inv, bool):
             raise NMRNextError("INVALID_PARAMETER", "inverse must be a Boolean")
@@ -153,7 +169,20 @@ def _pairs(dataset, axis_id):
 def _execute(dataset, op, new_axes, backend, threads, backend_info):
     name = op["op"]
     data = dataset.data
-    if name == "transpose":
+    metadata = dataset.metadata
+    spec = None
+    if name == "reference":
+        result = data
+    elif name == "digital_filter":
+        spec = correction_spec(dataset.axes, dataset.complex_axes, metadata)
+        z = data[0].astype(np.complex128) + 1j*data[1]
+        def transform(values, inverse):
+            if backend == "native":
+                return importlib.import_module("nmrnext._native").fft_complex(values, 0, inverse=inverse, threads=threads)
+            return (np.fft.ifft if inverse else np.fft.fft)(values)
+        corrected = correct_samples(z, spec, transform)
+        result = np.stack((corrected.real, corrected.imag)).astype(data.dtype)
+    elif name == "transpose":
         order = [dataset.axis_index(i) + 1 for i in op["order"]]
         result = np.transpose(data, (0, *order))
     else:
@@ -202,7 +231,10 @@ def _execute(dataset, op, new_axes, backend, threads, backend_info):
         raise NMRNextError("NUMERICAL_OVERFLOW", f"Operation {name} produced nonfinite values")
     entry = {"operation": op, "backend": backend_info, "input_shape": list(data.shape),
              "output_shape": list(result.shape), "dtype": str(result.dtype)}
-    return Dataset(result, new_axes, dataset.complex_axes, dataset.metadata, dataset.provenance+[entry])
+    if spec is not None:
+        metadata = corrected_metadata(metadata, spec)
+        entry["digital_filter"] = spec
+    return Dataset(result, new_axes, dataset.complex_axes, metadata, dataset.provenance+[entry])
 
 
 def run_operations(dataset, operations, *, backend="numpy", threads=1, memory_bytes=None):

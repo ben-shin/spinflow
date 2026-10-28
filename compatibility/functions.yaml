@@ -151,6 +151,18 @@ functions:
     status: unsupported
     evidence: []
 modern_operations:
+  - id: digital_filter
+    status: experimental
+    contract: docs/numerical-conventions.md
+    tests: tests/unit/test_bruker_filter.py
+    scope: "raw complex Bruker 1D with recorded positive GRPDLY only"
+    legacy_option_equivalence: unverified
+  - id: reference
+    status: experimental
+    contract: docs/numerical-conventions.md
+    tests: tests/unit/test_bruker_filter.py
+    scope: "explicit frequency anchor after FFT"
+    legacy_option_equivalence: unverified
   - id: window
     status: experimental
     contract: docs/numerical-conventions.md
@@ -185,6 +197,22 @@ modern_operations:
     status: experimental
     contract: docs/numerical-conventions.md
     tests: tests/unit/test_operations.py
+    legacy_option_equivalence: unverified
+modern_analysis:
+  - id: autophase
+    status: experimental
+    scope: "bounded complex frequency-domain 1D with identifiable positive lines"
+    evidence: [tests/test_analysis.py, tests/cli/test_analysis_cli.py]
+    legacy_option_equivalence: unverified
+  - id: peak_picking
+    status: experimental
+    scope: "signed local extrema on fully frequency-domain 1D/2D spectra"
+    evidence: [tests/test_analysis.py, tests/cli/test_analysis_cli.py]
+    legacy_option_equivalence: unverified
+  - id: region_integration
+    status: experimental
+    scope: "signed relative intensity times physical Hz measure; explicit baselines and bounds"
+    evidence: [tests/test_analysis.py, tests/cli/test_analysis_cli.py]
     legacy_option_equivalence: unverified
 notes:
   - "Modern operations have restricted explicit contracts; names do not establish legacy option compatibility."

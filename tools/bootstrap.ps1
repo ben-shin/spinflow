@@ -1,4 +1,4 @@
-param([switch]$WithZig, [switch]$WithGui)
+param([switch]$WithZig, [switch]$WithGui, [switch]$WithPlot)
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -30,6 +30,11 @@ if ($WithGui) {
         & $venvPython -m pip install --only-binary=:all: -r (Join-Path $root 'requirements-gui.lock')
     }
     if ($LASTEXITCODE -ne 0) { throw 'Pinned GUI dependency installation failed.' }
+}
+
+if ($WithPlot) {
+    & $venvPython -m pip install --only-binary=:all: 'matplotlib==3.11.2'
+    if ($LASTEXITCODE -ne 0) { throw 'Optional plotting dependency installation failed.' }
 }
 
 # The Windows source-tree workflow continues to build its local Zig extension

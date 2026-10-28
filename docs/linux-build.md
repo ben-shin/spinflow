@@ -30,10 +30,17 @@ bash tools/bootstrap.sh --gui
 .venv/bin/spinflow gui
 ```
 
-For GUI development and the source test dependencies (pytest, pybind11, CMake and Ninja):
+Add `--plot` to install optional Matplotlib figure export for the GUI or the headless `spinflow figure` command, without installing Qt for headless use:
 
 ```bash
-bash tools/bootstrap.sh --gui --test
+bash tools/bootstrap.sh --plot
+.venv/bin/spinflow figure --help
+```
+
+For complete GUI and figure development with source test dependencies (pytest, pybind11, CMake and Ninja):
+
+```bash
+bash tools/bootstrap.sh --gui --plot --test
 .venv/bin/python tools/build_native.py
 QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q
 .venv/bin/spinflow gui

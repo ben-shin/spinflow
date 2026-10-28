@@ -284,6 +284,138 @@ class WorkbenchTests(unittest.TestCase):
         self.assertEqual(component_name(1, ("indirect", "direct")),
                          "indirect: imaginary  /  direct: real")
 
+    def test_analysis_uses_applied_result_and_clears_after_processing(self):
+        from nmrnext.model import Axis
+        w = self.window
+        source = Dataset(np.array([[0., 1., 3., 1., 0., -2., 0.]]),
+                         (Axis('f', 7, domain='frequency', unit='Hz', step=2, encoding='real'),))
+        w.load_dataset_now(source)
+        w.threshold_check.setChecked(True)
+        w.threshold_spin.setValue(0.5)
+        w.sign_combo.setCurrentText('both')
+        peaks = w.analyze_now('peaks')
+        self.assertEqual({p['sign'] for p in peaks['peaks']}, {'positive', 'negative'})
+        w.region_bounds['f'][0].setValue(0)
+        w.region_bounds['f'][1].setValue(4)
+        report = w.analyze_now('integrate')
+        self.assertAlmostEqual(report['regions'][0]['integral'], 10)
+        w.baseline_combo.setCurrentText('constant')
+        w.baseline_value_spin.setValue(1)
+        report = w.analyze_now('integrate')
+        self.assertAlmostEqual(report['regions'][0]['integral'], 2)
+        self.assertGreater(w.analysis_table.rowCount(), 0)
+        w.crop_check.setChecked(True)
+        w.crop_stop_spin.setValue(5)
+        self.assertTrue(w.analysis_reports)  # Pending controls do not alter applied data.
+        w.process_now()
+        self.assertEqual(w.analysis_reports, {})
+        self.assertEqual(w.analysis_table.rowCount(), 0)
+
+    def test_explicit_bruker_filter_precedes_other_operations_and_unknown_refuses(self):
+        from nmrnext.model import Axis
+        w = self.window
+        z = np.exp(2j * np.pi * np.arange(64) / 8)
+        metadata = {'import': {'format': 'bruker-raw-1d', 'acquisition_parameters':
+                    {'AQ_mod': 3, 'TD': 128, 'SW_h': 1000}, 'digital_filter':
+                    {'state': 'uncorrected_or_unknown', 'GRPDLY': 4.25, 'DECIM': 3080, 'DSPFVS': 20}}}
+        source = Dataset(np.stack((z.real, z.imag)), (Axis('a0', 64, step=.001, dwell_seconds=.001),), ('a0',), metadata)
+        w.load_dataset_now(source)
+        self.assertFalse(w.filter_check.isChecked())
+        with self.assertRaises(NMRNextError):
+            w.process_now()
+
+        w.filter_check.setChecked(True)
+        self.assertEqual(w.build_recipe()[0]['op'], 'digital_filter')
+        result = w.process_now()
+        self.assertEqual(result.axes[0].domain, 'frequency')
+        self.assertEqual(source.metadata['import']['digital_filter']['state'], 'uncorrected_or_unknown')
+        w.reset()
+        self.assertFalse(w.filter_check.isChecked())
+        metadata['import']['digital_filter']['GRPDLY'] = -1
+        w.load_dataset_now(Dataset(source.data, source.axes, source.complex_axes, metadata))
+        w.filter_check.setChecked(True)
+        with self.assertRaises(NMRNextError):
+            w.process_now()
+
+
+    def test_reference_controls_calibrate_without_changing_intensities(self):
+        from nmrnext.model import Axis
+        w = self.window
+        source = Dataset(np.array([[0., 1., 2., 1.]]),
+                         (Axis('f', 4, domain='frequency', unit='Hz', start=-100, step=50, encoding='real'),))
+        w.load_dataset_now(source)
+        w.reference_mhz_spin.setValue(100)
+        w.reference_ppm_spin.setValue(4.7)
+        w.reference_hz_spin.setValue(0)
+        w.reference_check.setChecked(True)
+        result = w.process_now()
+        np.testing.assert_array_equal(result.data, source.data)
+        np.testing.assert_allclose(result.coordinates('f', 'ppm'), [3.7, 4.2, 4.7, 5.2])
+
+    def test_automatic_phase_preserves_applied_crop_recipe_and_invalidates_on_process(self):
+        from nmrnext.model import Axis
+        w = self.window
+        x = np.arange(1024)
+        z = (1 / (1 + 1j * (x-250)/5) + .7 / (1 + 1j * (x-700)/6)) * np.exp(.4j)
+        source = Dataset(np.stack((z.real, z.imag)),
+                         (Axis('f', 1024, domain='frequency', unit='Hz', step=2),), ('f',))
+        w.load_dataset_now(source)
+        w.crop_start_spin.setValue(20)
+        w.crop_stop_spin.setValue(1000)
+        w.crop_check.setChecked(True)
+        applied = w.process_now()
+        operations = w.last_operations.copy()
+        w.p0_spin.setValue(90)  # Pending edit must not leak into automatic analysis.
+        result, report = w.analyze_now('autophase')
+        self.assertEqual(w.last_operations, operations + [report['operation']])
+        expected = run_operations(source, w.last_operations, backend='native')
+        np.testing.assert_array_equal(result.data, expected.data)
+        self.assertEqual(result.to_metadata(), expected.to_metadata())
+        self.assertIsNot(w.current, applied)
+        self.assertIn('Next Process', w.analysis_summary.text())
+        self.assertIn('autophase', w._current_analysis())
+        w.threshold_check.setChecked(True)
+        w.threshold_spin.setValue(.1)
+        w.analyze_now('peaks')
+        w.region_bounds['f'][0].setValue(220)
+        w.region_bounds['f'][1].setValue(240)
+        w.analyze_now('integrate')
+        reports = w._current_analysis()
+        rows = w.analysis_table.rowCount()
+        summary = w.analysis_summary.text()
+        temp_root = Path(__file__).resolve().parents[2] / '.artifacts' / 'gui-test-tmp'
+        temp_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temp_root) as folder:
+            destination = Path(folder) / 'reports.json'
+            for component in (1, 0, 1):
+                w.component_combo.setCurrentIndex(component)
+                self.assertIs(w.current, result)
+                self.assertEqual(w._current_analysis(), reports)
+                self.assertEqual(w.analysis_table.rowCount(), rows)
+                self.assertEqual(w.analysis_summary.text(), summary)
+                # Live plot is the selected signed component, with no analysis overlays.
+                curves = w.plot.listDataItems()
+                self.assertEqual(len(curves), 1)
+                np.testing.assert_array_equal(curves[0].getData()[1], result.data[component])
+            with patch.object(QtWidgets.QFileDialog, 'getSaveFileName', return_value=(str(destination), '')):
+                w._save_analysis_dialog()
+            self.assertEqual(json.loads(destination.read_text()), reports)
+        w.process_now()
+        self.assertEqual(w.analysis_reports, {})
+
+    def test_analysis_preview_refuses_but_component_changes_preserve_reports(self):
+        w = self.window
+        w.demo1_button.click()
+        w.process_now()
+        w.analyze_now('peaks')
+        reports = w._current_analysis()
+        w.component_combo.setCurrentIndex(1)
+        self.assertEqual(w._current_analysis(), reports)
+        w.process_now(preview=True)
+        self.assertFalse(w.analysis_panel.isEnabled())
+        with self.assertRaises(NMRNextError):
+            w.analyze_now('peaks')
+
     def test_preview_is_not_savable_until_committed(self):
         self.window.demo1_button.click()
         self.window.process_now(preview=True)

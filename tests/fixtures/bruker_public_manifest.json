@@ -1,0 +1,107 @@
+{
+  "id": "bmse000001-set01-1H",
+  "doi": "10.13018/BMSE000001",
+  "compound": "1,3-diaminopropane",
+  "authors": [
+    "Francisca Jofre",
+    "Mark E. Anderson",
+    "John L. Markley"
+  ],
+  "retrieved": "2026-10-28",
+  "source": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/",
+  "access_policy": "https://bmrb.io/metabolomics/data_policy.shtml",
+  "access_terms": "BMRB states community data are publicly available free of charge. No explicit redistribution license assumed; fetch locally, do not commit original data.",
+  "acquisition": {
+    "TD": 19478,
+    "AQ_mod": 3,
+    "SW_h": 6493.50649350649,
+    "SFO1": 499.842349248,
+    "BF1": 499.84,
+    "O1": 2349.248,
+    "GRPDLY": 67.985595703125,
+    "DECIM": 3080,
+    "DSPFVS": 20,
+    "date": "2011-04-14",
+    "software": "TopSpin 2.1"
+  },
+  "independent_reference": {
+    "software": "TopSpin 2.1",
+    "files": [
+      "1H/pdata/1/1r",
+      "1H/pdata/1/1i",
+      "1H/pdata/1/procs",
+      "1H/pdata/1/peaklist.xml",
+      "1H/pdata/1/auditp.txt"
+    ],
+    "SF_mhz": 499.839931909633,
+    "carrier_ppm": 4.8362249846447805,
+    "peak_ppm": [
+      3.1207,
+      3.1051,
+      3.0894,
+      2.1085,
+      2.0927,
+      2.0772,
+      2.0616,
+      2.046
+    ],
+    "peak_tolerance_ppm": 0.002,
+    "comparison_scope": "Physical peak positions only, no amplitude, phase, baseline, integral or NMRPipe parity claim"
+  },
+  "files": [
+    {
+      "path": "1H/acqus",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H/acqus",
+      "bytes": 9210,
+      "sha256": "286752f5b2b2f9067339b7533480e4d3a50d8f2bcb45a179fb7ec8834b5a509e"
+    },
+    {
+      "path": "1H/fid",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H/fid",
+      "bytes": 78848,
+      "sha256": "e9fc158f55032b26dcb0b1df00eff71ff36b6033e78bcb8fcb5b3d0850022681"
+    },
+    {
+      "path": "1H/pdata/1/1i",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H/pdata/1/1i",
+      "bytes": 131072,
+      "sha256": "a0c6961780a5f670613dce4b227c9755c967aae6fe54db4e55b7b22990a1fe0d"
+    },
+    {
+      "path": "1H/pdata/1/1r",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H/pdata/1/1r",
+      "bytes": 131072,
+      "sha256": "c7760ba0d5c1ff2963691952a13fc78fcd3d6e92d511c5e6c76aefbfe4031bd2"
+    },
+    {
+      "path": "1H/pdata/1/auditp.txt",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H/pdata/1/auditp.txt",
+      "bytes": 960,
+      "sha256": "94962f506160330b77652a72c0a8f99a654f562fd6f8971b48c5a31d079d725b"
+    },
+    {
+      "path": "1H/pdata/1/peaklist.xml",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H/pdata/1/peaklist.xml",
+      "bytes": 2346,
+      "sha256": "9e53fced988520dd8d8bf5a2b64073bbbd87d7ca7ad0c36b676e3bdfa06c79bb"
+    },
+    {
+      "path": "1H/pdata/1/procs",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H/pdata/1/procs",
+      "bytes": 1769,
+      "sha256": "33a896a9631df170eb53b5a6c8922f1cf595e630539f138b8dccccc015bbae78"
+    },
+    {
+      "path": "1H/pdata/1/title",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H/pdata/1/title",
+      "bytes": 59,
+      "sha256": "5f7c2603b99339cacf34ca32e02d0d0ca5abd7aacce831d6d122d144f01013a2"
+    },
+    {
+      "path": "bmse000001.str",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/bmse000001.str",
+      "bytes": 62951,
+      "sha256": "cf191fe8a161019b5340022ea540cf64f2bbd6d53cb1b7a6118a04844c212bab"
+    }
+  ]
+}

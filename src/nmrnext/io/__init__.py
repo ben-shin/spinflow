@@ -389,6 +389,8 @@ def _bruker_header(path, max_bytes):
                 "shape": [2, td//2], "dtype": "float64", "header": {
                     "TD": td, "AQ_mod": mode, "BYTORDA": endian, "DTYPA": dtype,
                     "SW_h": sw, "SFO1": obs, "NUC1": nucleus,
+                    "acquisition_parameters": _jsonable_header({name: dic.get(name) for name in
+                        ("TD", "AQ_mod", "DTYPA", "BYTORDA", "SW_h", "SFO1", "BF1", "O1", "NUC1", "DIGMOD", "DECIM", "DSPFVS", "GRPDLY")}),
                     "padded_real_points": padded_points, "digital_filter": digital_filter,
                     "raw_acqus_text": text, "acqus_sha256": hashlib.sha256(acqus_bytes).hexdigest()}}
     except (OSError, KeyError, TypeError, ValueError, IndexError, OverflowError, UnicodeError, struct.error) as exc:
@@ -457,6 +459,7 @@ def read_dataset(path, *, format=None, max_bytes=MAX_BYTES):
                 "format": fmt, "source_sha256": {"fid": _hash_file(path/"fid"),
                                                   "acqus": header["acqus_sha256"]},
                 "raw_acqus_text": header["raw_acqus_text"],
+                "acquisition_parameters": header["acquisition_parameters"],
                 "padding_complex_points": raw.size-n,
                 "digital_filter": header["digital_filter"]}})
         if fmt == "nmrpipe-real":

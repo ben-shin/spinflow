@@ -1,0 +1,15 @@
+{
+  "schema_version": "1",
+  "input": "../.artifacts/science11-realdata/bmse000001/1H",
+  "output": "../.artifacts/science11-realdata/bmse000001/spinflow-processed.nmrh5",
+  "backend": "native",
+  "threads": 1,
+  "memory_bytes": 268435456,
+  "operations": [
+    {"op": "digital_filter", "axis": "a0"},
+    {"op": "zero_fill", "axis": "a0", "size": 32768},
+    {"op": "fft", "axis": "a0"},
+    {"op": "reference", "axis": "a0", "reference_ppm": 4.8362249846447805,
+     "reference_hz": 0.0, "observation_mhz": 499.839931909633}
+  ]
+}

@@ -5,8 +5,10 @@ Run with ``python -m nmrnext.gui``. Qt is deliberately optional for headless use
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import sys
+import tempfile
 
 import numpy as np
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -27,6 +29,42 @@ SURFACE = "#f4f8fb"
 PAPER = "#ffffff"
 BORDER = "#d6e1e9"
 _font_loaded = False
+
+
+def _save_json_report(path, report):
+    """Publish complete JSON without replacing a destination; return cleanup advice."""
+    payload = json.dumps(report, indent=2, allow_nan=False) + '\n'
+    target = Path(path)
+    fd, name = tempfile.mkstemp(prefix='.spinflow-json-', suffix='.tmp', dir=target.parent)
+    temporary = Path(name)
+    published = False
+    failure = None
+    warning = ''
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            if stream.write(payload) != len(payload):
+                raise OSError('Incomplete JSON write')
+            stream.flush()
+            os.fsync(stream.fileno())
+        # Windows rename refuses existing paths; POSIX link provides no-replace.
+        if os.name == 'nt':
+            os.rename(temporary, target)
+        else:
+            os.link(temporary, target)
+        published = True
+    except BaseException as exc:
+        failure = exc
+        raise
+    finally:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError as exc:
+            warning = f'Temporary cleanup failed for {temporary}: {exc}'
+            if failure is not None:
+                failure.add_note(warning)
+            elif not published:
+                raise
+    return warning
 
 
 def _ensure_font():
@@ -170,6 +208,7 @@ class Workbench(QtWidgets.QMainWindow):
         self._busy = False
         self._suspend_preview_invalidation = False
         self._axis_settings = {}
+        self.analysis_reports = {}
         self._build_ui()
         self._style()
         self._refresh()
@@ -270,7 +309,7 @@ class Workbench(QtWidgets.QMainWindow):
         self.component_combo = QtWidgets.QComboBox()
         self.component_combo.setMinimumWidth(150)
         self.component_combo.setToolTip("Choose a signed quadrature component to display")
-        self.component_combo.currentIndexChanged.connect(self._render)
+        self.component_combo.currentIndexChanged.connect(self._component_changed)
         sub.addWidget(self.component_combo)
         layout.addLayout(sub)
         pg.setConfigOptions(antialias=True, background=PAPER, foreground=INK)
@@ -301,6 +340,11 @@ class Workbench(QtWidgets.QMainWindow):
         tip.setObjectName("caption")
         tip.setWordWrap(True)
         layout.addWidget(tip)
+
+        self.filter_check = QtWidgets.QCheckBox('Correct Bruker digital filter')
+        self.filter_check.setToolTip('Explicit first operation. Only the supported GRPDLY acquisition profile is accepted; unknown profiles are refused.')
+        self.filter_check.stateChanged.connect(self._processing_changed)
+        layout.addWidget(self.filter_check)
 
         layout.addWidget(QtWidgets.QLabel("Axis"))
         self.axis_combo = QtWidgets.QComboBox()
@@ -366,6 +410,19 @@ class Workbench(QtWidgets.QMainWindow):
         crop_tip.setObjectName("caption")
         crop_tip.setWordWrap(True)
         layout.addWidget(crop_tip)
+        self.reference_check = QtWidgets.QCheckBox('Apply explicit frequency reference')
+        self.reference_check.stateChanged.connect(lambda: self._setting_changed('reference'))
+        layout.addWidget(self.reference_check)
+        for key, attr, label in [('reference_ppm', 'reference_ppm_spin', 'Anchor shift (ppm)'),
+                                 ('reference_hz', 'reference_hz_spin', 'Anchor frequency (Hz)'),
+                                 ('reference_mhz', 'reference_mhz_spin', 'Observation frequency (MHz)')]:
+            layout.addWidget(QtWidgets.QLabel(label))
+            field = QtWidgets.QDoubleSpinBox()
+            field.setRange(-1e9 if key != 'reference_mhz' else 0, 1e9)
+            field.setDecimals(9)
+            field.valueChanged.connect(lambda value, k=key: self._setting_changed(k))
+            setattr(self, attr, field)
+            layout.addWidget(field)
         layout.addWidget(QtWidgets.QLabel("Compute with"))
         self.backend_combo = QtWidgets.QComboBox()
         self.backend_combo.addItem("Native C++ / PocketFFT", "native")
@@ -425,7 +482,224 @@ class Workbench(QtWidgets.QMainWindow):
         actions.addLayout(row)
         actions.addWidget(self.reset_button)
         controls.addLayout(actions)
-        return container
+        tabs = QtWidgets.QTabWidget()
+        tabs.addTab(container, 'Processing')
+        tabs.addTab(self._analysis_panel(), 'Analysis / figures')
+        return tabs
+
+    def _analysis_panel(self):
+        panel = QtWidgets.QWidget()
+        layout = QtWidgets.QVBoxLayout(panel)
+        tip = QtWidgets.QLabel('Analyze the applied current result, component 0 (all-real). Pending processing edits and previews are excluded. Inspect all automatic results.')
+        tip.setWordWrap(True)
+        layout.addWidget(tip)
+        self.autophase_button = QtWidgets.QPushButton('Apply automatic phase (1D)…')
+        self.autophase_button.setToolTip('Restricted positive isolated Lorentzian peaks; mixed-sign, crowded or underdetermined spectra may be refused. Adds an explicit phase operation to the applied recipe.')
+        self.autophase_button.clicked.connect(lambda: self._analysis_job('autophase'))
+        layout.addWidget(self.autophase_button)
+        self.first_order_check = QtWidgets.QCheckBox('Estimate first-order phase')
+        self.first_order_check.setToolTip('Requires sufficiently separated usable peaks; underdetermined fits are refused.')
+        layout.addWidget(self.first_order_check)
+        form = QtWidgets.QFormLayout()
+        self.sign_combo = QtWidgets.QComboBox()
+        self.sign_combo.addItems(['positive', 'negative', 'both'])
+        self.sign_combo.setCurrentText('both')
+        form.addRow('Peak sign', self.sign_combo)
+        self.snr_spin = QtWidgets.QDoubleSpinBox()
+        self.snr_spin.setRange(0.1, 10000)
+        self.snr_spin.setValue(5)
+        form.addRow('Noise threshold (σ)', self.snr_spin)
+        self.threshold_check = QtWidgets.QCheckBox('Use absolute threshold')
+        form.addRow(self.threshold_check)
+        self.threshold_spin = QtWidgets.QDoubleSpinBox()
+        self.threshold_spin.setRange(0, 1e15)
+        self.threshold_spin.setDecimals(6)
+        self.threshold_spin.setValue(1)
+        form.addRow('Absolute threshold', self.threshold_spin)
+        layout.addLayout(form)
+        self.peaks_button = QtWidgets.QPushButton('Pick peaks')
+        self.peaks_button.clicked.connect(lambda: self._analysis_job('peaks'))
+        layout.addWidget(self.peaks_button)
+        tip = QtWidgets.QLabel('Integration bounds include both endpoints (unlike crop). Enter one region below; no concentration inference or deconvolution.')
+        tip.setWordWrap(True)
+        layout.addWidget(tip)
+        self.region_unit = QtWidgets.QComboBox()
+        self.region_unit.addItems(['points', 'Hz', 'ppm'])
+        self.region_unit.currentIndexChanged.connect(self._refresh_analysis_bounds)
+        layout.addWidget(self.region_unit)
+        self.region_form = QtWidgets.QFormLayout()
+        self.region_bounds = {}
+        layout.addLayout(self.region_form)
+        self.baseline_combo = QtWidgets.QComboBox()
+        self.baseline_combo.addItems(['none', 'constant', 'edge_linear'])
+        self.baseline_combo.setToolTip('Baseline policy; inspect the report for method and flags. Edge-linear is limited to supported profiles.')
+        layout.addWidget(self.baseline_combo)
+        layout.addWidget(QtWidgets.QLabel('Constant baseline intensity (only for constant)'))
+        self.baseline_value_spin = QtWidgets.QDoubleSpinBox()
+        self.baseline_value_spin.setRange(-1e15, 1e15)
+        self.baseline_value_spin.setDecimals(6)
+        layout.addWidget(self.baseline_value_spin)
+        self.integrate_button = QtWidgets.QPushButton('Integrate entered region')
+        self.integrate_button.clicked.connect(lambda: self._analysis_job('integrate'))
+        layout.addWidget(self.integrate_button)
+        self.analysis_summary = QtWidgets.QLabel('No analysis yet.')
+        self.analysis_summary.setWordWrap(True)
+        layout.addWidget(self.analysis_summary)
+        self.analysis_table = QtWidgets.QTableWidget(0, 6)
+        self.analysis_table.setHorizontalHeaderLabels(['Kind', 'ID', 'Coordinates / bounds', 'Value', 'Units', 'Flags'])
+        self.analysis_table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.analysis_table.setMinimumHeight(150)
+        layout.addWidget(self.analysis_table, 1)
+        self.analysis_export_button = QtWidgets.QPushButton('Save analysis JSON…')
+        self.analysis_export_button.clicked.connect(self._save_analysis_dialog)
+        layout.addWidget(self.analysis_export_button)
+        self.figure_button = QtWidgets.QPushButton('Save scientific figure…')
+        self.figure_button.clicked.connect(self._save_figure_dialog)
+        self.figure_button.setToolTip('Optional plot extra. SVG/PDF vector curves and signed contours, or 300 dpi PNG. Source and analysis digest links retained.')
+        layout.addWidget(self.figure_button)
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setWidget(panel)
+        self.analysis_panel = panel
+        return scroll
+
+    def _refresh_analysis_bounds(self):
+        while self.region_form.rowCount():
+            self.region_form.removeRow(0)
+        self.region_bounds = {}
+        if self.current is None:
+            return
+        for axis in self.current.axes[:2]:
+            row = QtWidgets.QWidget()
+            box = QtWidgets.QHBoxLayout(row)
+            box.setContentsMargins(0, 0, 0, 0)
+            fields = [QtWidgets.QDoubleSpinBox(), QtWidgets.QDoubleSpinBox()]
+            try:
+                values = (np.arange(axis.size) if self.region_unit.currentText() == 'points'
+                          else self.current.coordinates(axis.id, self.region_unit.currentText()))
+                limits = (float(min(values)), float(max(values)))
+            except NMRNextError:
+                limits = (0, 0)
+            for field, value in zip(fields, limits):
+                field.setRange(-1e12, 1e12)
+                field.setDecimals(6)
+                field.setMinimumWidth(60)
+                field.setSizePolicy(QtWidgets.QSizePolicy.Policy.Ignored, QtWidgets.QSizePolicy.Policy.Fixed)
+                field.setValue(value)
+                box.addWidget(field)
+            self.region_bounds[axis.id] = fields
+            self.region_form.addRow(axis.nucleus or axis.id, row)
+
+    def _clear_analysis(self):
+        self.analysis_reports = {}
+        self._display_analysis()
+        self._refresh_analysis_bounds()
+
+    def _display_analysis(self):
+        self.analysis_table.setRowCount(0)
+        summaries = []
+        if 'autophase' in self.analysis_reports:
+            summaries.append('Automatic phase is applied to the current result. Next Process rebuilds the manual recipe and discards this automatic correction.')
+        for kind, report in self.analysis_reports.items():
+            summaries.append(f"{kind}: " + ', '.join(report.get('flags', [])))
+            if kind == 'peaks':
+                summaries.append(f"Noise σ={report.get('noise', {}).get('sigma')}; threshold={report.get('threshold')}")
+            records = report.get('peaks', []) or report.get('regions', [])
+            for item in records:
+                values = [kind, item['id'], json.dumps(item.get('coordinates', item.get('bounds', {}))),
+                          str(item.get('intensity', item.get('integral', ''))),
+                          item.get('integral_unit', 'intensity'), ', '.join(item.get('flags', []))]
+                row = self.analysis_table.rowCount()
+                self.analysis_table.insertRow(row)
+                for col, value in enumerate(values):
+                    cell = QtWidgets.QTableWidgetItem(value)
+                    cell.setToolTip(value)
+                    self.analysis_table.setItem(row, col, cell)
+        self.analysis_table.resizeColumnsToContents()
+        self.analysis_summary.setText('\n'.join(summaries) or 'No analysis yet.')
+
+    def _analysis_request(self, kind):
+        from .analysis import autophase, integrate_regions, pick_peaks
+        if self.current is None or self.preview is not None:
+            raise NMRNextError('ANALYSIS_STATE', 'Process the current result before analysis; previews are excluded')
+        dataset = self.current
+        if kind == 'autophase':
+            options = {'backend': self.last_backend or self.backend_combo.currentData(),
+                       'first_order': self.first_order_check.isChecked()}
+            return lambda: autophase(dataset, **options)
+        if kind == 'peaks':
+            options = {'channel': 0, 'sign': self.sign_combo.currentText(), 'snr': self.snr_spin.value(),
+                       'threshold': self.threshold_spin.value() if self.threshold_check.isChecked() else None}
+            return lambda: pick_peaks(dataset, **options)
+        region = {'id': 'region-1', 'unit': self.region_unit.currentText(),
+                  'bounds': {axis: [field.value() for field in fields] for axis, fields in self.region_bounds.items()}}
+        baseline = self.baseline_combo.currentText()
+        value = self.baseline_value_spin.value() if baseline == 'constant' else None
+        return lambda: integrate_regions(dataset, [region], channel=0, baseline=baseline, baseline_value=value)
+
+    def _accept_analysis(self, kind, result):
+        if kind == 'autophase':
+            dataset, report = result
+            operations = self.last_operations + [report['operation']]
+            backend = self.last_backend or self.backend_combo.currentData()
+            plan = plan_operations(self.source, operations, backend=backend)
+            self.current = dataset
+            self.last_operations, self.last_plan, self.last_backend = operations, plan, backend
+            self._clear_analysis()
+            self.analysis_reports['autophase'] = report
+            self._render()
+            self._update_recipe()
+        else:
+            self.analysis_reports[kind] = result
+        self._display_analysis()
+        self._refresh_buttons()
+        self._set_status('Analysis completed on the applied current result. Inspect methods and flags before use.')
+
+    def analyze_now(self, kind):
+        result = self._analysis_request(kind)()
+        self._accept_analysis(kind, result)
+        return result
+
+    def _analysis_job(self, kind):
+        try:
+            work = self._analysis_request(kind)
+        except Exception as exc:
+            self._show_error(exc)
+            return
+        self._start_job(work, lambda result: self._accept_analysis(kind, result), 'Analyzing applied spectrum…')
+
+    def _current_analysis(self):
+        from .analysis import dataset_digest
+        digest = dataset_digest(self.current)
+        reports = self.analysis_reports.copy()
+        if any(r.get('result_dataset_digest' if k == 'autophase' else 'dataset_digest') != digest for k, r in reports.items()):
+            raise NMRNextError('STALE_ANALYSIS', 'Analysis belongs to a different current dataset')
+        return reports
+
+    def _save_analysis_dialog(self):
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save applied analysis tables', 'spinflow-analysis.json', 'JSON (*.json)')
+        if not path:
+            return
+        try:
+            reports = self._current_analysis()
+            warning = _save_json_report(path, reports)
+            self._set_status(f'Saved analysis tables to {path}. {warning}')
+        except Exception as exc:
+            self._show_error(exc)
+
+    def _save_figure_dialog(self):
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save scientific figure', 'spinflow-spectrum.svg', 'Figures (*.svg *.pdf *.png)')
+        if not path:
+            return
+        try:
+            from .figures import export_figure
+            dataset, reports = self.current, self._current_analysis()
+        except Exception as exc:
+            self._show_error(exc)
+            return
+        self._start_job(lambda: export_figure(dataset, path, analysis=reports, title=self.source_name),
+                        lambda report: self._set_status(f"Saved {report['format']} figure to {report['path']}. Save analysis JSON for methods and flags."),
+                        'Rendering scientific figure…')
 
     @staticmethod
     def _heading(text):
@@ -527,11 +801,13 @@ class Workbench(QtWidgets.QMainWindow):
         from .model import Dataset
         if not isinstance(dataset, Dataset):
             raise NMRNextError("INVALID_DATASET", "Open requires a validated Dataset")
+        previous_bounds = {axis: [field.value() for field in fields] for axis, fields in self.region_bounds.items()}
         previous = (self.source, self.current, self.preview, self.source_name,
                     self.last_operations, self.last_plan, self.last_backend,
                     self.dataset_title.text(), self.view_combo.currentIndex(),
                     self.axis_combo.currentIndex(), self.component_combo.currentIndex(),
-                    self.status.text(), self.status.styleSheet(), self._axis_settings)
+                    self.status.text(), self.status.styleSheet(), self._axis_settings,
+                    self.analysis_reports, self.filter_check.isChecked())
         self._suspend_preview_invalidation = True
         try:
             self.source = dataset
@@ -542,6 +818,7 @@ class Workbench(QtWidgets.QMainWindow):
             self.last_plan = None
             self.last_backend = None
             self._reset_axis_settings()
+            self._clear_analysis()
             self.dataset_title.setText(name)
             self.view_combo.blockSignals(True)
             self.view_combo.setCurrentIndex(0)
@@ -552,7 +829,16 @@ class Workbench(QtWidgets.QMainWindow):
             (self.source, self.current, self.preview, self.source_name,
              self.last_operations, self.last_plan, self.last_backend,
              title, view_index, axis_index, component_index,
-             status, status_style, self._axis_settings) = previous
+             status, status_style, self._axis_settings,
+             self.analysis_reports, filter_checked) = previous
+            self.filter_check.blockSignals(True)
+            self.filter_check.setChecked(filter_checked)
+            self.filter_check.blockSignals(False)
+            self._display_analysis()
+            self._refresh_analysis_bounds()
+            for axis, fields in self.region_bounds.items():
+                for field, value in zip(fields, previous_bounds.get(axis, [])):
+                    field.setValue(value)
             self.dataset_title.setText(title)
             self.view_combo.blockSignals(True)
             self.view_combo.setCurrentIndex(view_index)
@@ -575,6 +861,7 @@ class Workbench(QtWidgets.QMainWindow):
         self.last_plan = None
         self.last_backend = None
         self._reset_axis_settings()
+        self._clear_analysis()
         self._refresh()
         self._set_status("Reset to original data. The source has not changed.")
 
@@ -590,6 +877,8 @@ class Workbench(QtWidgets.QMainWindow):
         if self.source is None:
             return []
         ops = []
+        if self.filter_check.isChecked():
+            ops.append({'op': 'digital_filter', 'axis': self.source.axes[-1].id})
         for axis in self.source.axes:
             if axis.role != 'spectral':
                 continue
@@ -603,6 +892,9 @@ class Workbench(QtWidgets.QMainWindow):
                     ops.append({"op": "zero_fill", "axis": axis.id, "size": axis.size * factor})
                 if settings['fft']:
                     ops.append({"op": "fft", "axis": axis.id})
+            if settings['reference']:
+                ops.append({'op': 'reference', 'axis': axis.id, 'reference_ppm': settings['reference_ppm'],
+                            'reference_hz': settings['reference_hz'], 'observation_mhz': settings['reference_mhz']})
             if (settings['p0'] or settings['p1']) and axis.id in self.source.complex_axes:
                 ops.append({"op": "phase", "axis": axis.id, "p0": settings['p0'],
                             "p1": settings['p1'], "pivot": settings['pivot']})
@@ -611,18 +903,27 @@ class Workbench(QtWidgets.QMainWindow):
         return ops
 
     def _reset_axis_settings(self):
+        self.filter_check.blockSignals(True)
+        self.filter_check.setChecked(False)
+        self.filter_check.blockSignals(False)
         self._axis_settings = {
             a.id: dict(lb=3.0, zf=1, fft=True, p0=0.0, p1=0.0, pivot=0.0,
-                       crop=False, start=0, stop=a.size)
+                       crop=False, start=0, stop=a.size, reference=False,
+                       reference_ppm=a.reference_ppm or 0.0, reference_hz=a.reference_hz,
+                       reference_mhz=a.observation_mhz or 0.0)
             for a in self.source.axes if a.role == 'spectral'
         }
 
     def _setting_controls(self):
         return {'lb': self.lb_spin, 'zf': self.zf_combo, 'fft': self.fft_check,
                 'p0': self.p0_spin, 'p1': self.p1_spin, 'pivot': self.pivot_spin,
-                'crop': self.crop_check, 'start': self.crop_start_spin, 'stop': self.crop_stop_spin}
+                'crop': self.crop_check, 'start': self.crop_start_spin, 'stop': self.crop_stop_spin,
+                'reference': self.reference_check, 'reference_ppm': self.reference_ppm_spin,
+                'reference_hz': self.reference_hz_spin, 'reference_mhz': self.reference_mhz_spin}
 
     def _eligible_setting_axes(self, key, axes):
+        if key.startswith('reference'):
+            return axes
         if key in ('lb', 'zf', 'fft'):
             return [a for a in axes if a.domain == 'time']
         if key in ('crop', 'start', 'stop'):
@@ -630,11 +931,20 @@ class Workbench(QtWidgets.QMainWindow):
         return [a for a in axes if a.id in self.source.complex_axes]
 
     def _setting_changed(self, key):
+        self._discard_extra_operations()
         widget = self._setting_controls()[key]
         value = (widget.currentIndex() if key == 'zf' else widget.isChecked()
-                 if key in ('fft', 'crop') else widget.value())
+                 if key in ('fft', 'crop', 'reference') else widget.value())
         for axis in self._eligible_setting_axes(key, self._selected_axes()):
             self._axis_settings[axis.id][key] = value
+        self._update_recipe()
+
+    def _discard_extra_operations(self):
+        if 'autophase' in self.analysis_reports:
+            self._set_status('Processing edits discard automatic phase from the next recipe. The applied current result remains unchanged until Process.')
+
+    def _processing_changed(self):
+        self._discard_extra_operations()
         self._update_recipe()
 
     def _axis_changed(self):
@@ -647,7 +957,7 @@ class Workbench(QtWidgets.QMainWindow):
                 widget.blockSignals(True)
                 if key == 'zf':
                     widget.setCurrentIndex(settings[key])
-                elif key in ('fft', 'crop'):
+                elif key in ('fft', 'crop', 'reference'):
                     widget.setChecked(settings[key])
                 else:
                     widget.setValue(settings[key])
@@ -679,7 +989,7 @@ class Workbench(QtWidgets.QMainWindow):
         else:
             names = []
             for op in ops:
-                name = {"window": "Window", "zero_fill": "Zero fill", "fft": "Fourier transform", "phase": "Phase", "crop": "Crop"}[op["op"]]
+                name = {"window": "Window", "zero_fill": "Zero fill", "fft": "Fourier transform", "phase": "Phase", "crop": "Crop", 'digital_filter': 'Digital-filter correction', 'reference': 'Reference'}[op["op"]]
                 names.append(f"{name} ({op['axis']})")
             self.recipe_label.setText(" → ".join(names))
         if any(a.domain == "time" and a.id not in self.source.complex_axes for a in self._selected_axes()) and self.fft_check.isChecked():
@@ -687,7 +997,7 @@ class Workbench(QtWidgets.QMainWindow):
         elif any(a.domain == "frequency" and a.id not in self.source.complex_axes for a in self._selected_axes()):
             self.plan_label.setText("Processed real data has no imaginary channel. Phase is unavailable; crop, view and export remain available.")
         elif _digital_filter_info(self.source.metadata)[0] == "uncorrected_or_unknown":
-            self.plan_label.setText("Digital-filter correction is unresolved. Fourier transform will be refused until a validated correction workflow is available.")
+            self.plan_label.setText("Digital-filter correction is unresolved. Select explicit validated correction; unsupported acquisition profiles will be refused.")
         elif _digital_filter_info(self.source.metadata)[1]:
             self.plan_label.setText("Import details are opaque. Check acquisition metadata before transforming; unsupported filter records may be refused.")
         else:
@@ -711,6 +1021,7 @@ class Workbench(QtWidgets.QMainWindow):
             self.last_operations = ops
             self.last_plan = plan
             self.last_backend = backend
+            self._clear_analysis()
             self._set_status(f"Processed {len(ops)} operation{'s' if len(ops) != 1 else ''} with {backend}." if ops
                              else "No processing operations selected; current data is unchanged.")
         self.view_combo.setCurrentIndex(0)
@@ -738,6 +1049,7 @@ class Workbench(QtWidgets.QMainWindow):
                 self.last_operations = ops
                 self.last_plan = plan
                 self.last_backend = backend
+                self._clear_analysis()
                 self._set_status(f"Processed {len(ops)} operation{'s' if len(ops) != 1 else ''} with {backend}." if ops
                                  else "No processing operations selected; current data is unchanged.")
             self.view_combo.setCurrentIndex(0)
@@ -751,6 +1063,10 @@ class Workbench(QtWidgets.QMainWindow):
         if self.view_combo.currentIndex() == 1:
             return self.source
         return self.preview or self.current
+
+    def _component_changed(self):
+        # Display selection does not change the digest-bound applied result.
+        self._render()
 
     def _refresh(self):
         self.axis_combo.blockSignals(True)
@@ -785,11 +1101,23 @@ class Workbench(QtWidgets.QMainWindow):
         has_frequency = any(a.domain == 'frequency' for a in selected)
         for control in (self.crop_check, self.crop_start_spin, self.crop_stop_spin):
             control.setEnabled(has_frequency and not self._busy)
+        for control in (self.reference_check, self.reference_ppm_spin, self.reference_hz_spin, self.reference_mhz_spin):
+            control.setEnabled(bool(selected) and not self._busy)
         self.process_button.setEnabled(has and bool(self.build_recipe()) and not self._busy)
         self.preview_button.setEnabled(has and bool(self.build_recipe()) and not self._busy)
         self.export_button.setEnabled(has and self.preview is None and not self._busy)
         self.recipe_button.setEnabled(has and self.preview is None and not self._busy)
         self.workflow_button.setEnabled(has and self.preview is None and not self._busy)
+        imported = self.source.metadata.get('import') if has else None
+        self.filter_check.setEnabled(not self._busy and isinstance(imported, dict)
+                                     and imported.get('format') == 'bruker-raw-1d')
+        can_analyze = (has and self.preview is None and not self._busy
+                       and len(self.current.axes) in (1, 2)
+                       and all(a.domain == 'frequency' for a in self.current.axes))
+        self.analysis_panel.setEnabled(can_analyze)
+        self.autophase_button.setEnabled(can_analyze and len(self.current.axes) == 1
+                                         and bool(self.current.complex_axes))
+        self.analysis_export_button.setEnabled(can_analyze and bool(self.analysis_reports))
 
     def _update_details(self):
         if self.source is None:
@@ -944,10 +1272,8 @@ class Workbench(QtWidgets.QMainWindow):
         if not path:
             return
         try:
-            with open(path, "x", encoding="utf-8") as file:
-                json.dump(self.recipe_record(), file, indent=2, allow_nan=False)
-                file.write("\n")
-            self._set_status(f"Saved audit report to {path}. Use Save runnable workflow for CLI replay.")
+            warning = _save_json_report(path, self.recipe_record())
+            self._set_status(f"Saved audit report to {path}. Use Save runnable workflow for CLI replay. {warning}")
         except Exception as exc:
             self._show_error(exc)
 

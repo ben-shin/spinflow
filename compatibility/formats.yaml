@@ -45,13 +45,15 @@ profiles:
     object: "raw complex 1D FID"
     dimensions: [1]
     components: "real and imaginary"
-    read: implemented_synthetic_fixture_only
+    read: implemented_bounded_1d
     write: not_implemented
     preserved: [acquired_points, raw_acqus_text, digital_filter_parameters, source_checksums]
     known_losses: [padding_outside_TD]
     text_validation: "validated parameter names and continuations plus finite-read/repeated-EOF stream around pinned parser; caught parser warnings fail; binary read never reparses acqus"
     readback: "nmrglue 0.12 Bruker reader (shared codec family)"
-    actual_instrument_fixture: missing
+    actual_instrument_fixture: "hash-pinned public bmse000001/1H; eight archived TopSpin peak positions only"
+    correction_scope: "explicit positive recorded GRPDLY on original complex 1D grid; no DSP lookup or raw 2D"
+    independent_reference: "archived TopSpin peak positions only; no amplitude, phase or integral equivalence"
     external_consumer: unverified
   - id: nmrpipe-complex-or-stream
     dialect: "no declared profile"

@@ -28,8 +28,8 @@ jobs:
       - name: Build in-place extension for source-path tests
         run: .venv/bin/python tools/build_native.py
       - name: Test headless source checkout
-        # Three real-Qt CLI lifecycle tests run in the complete Qt job.
-        run: .venv/bin/python -m pytest -q --ignore=tests/gui -k 'not test_gui_'
+        # Real Qt and optional Matplotlib tests run in the complete GUI/plot job.
+        run: .venv/bin/python -m pytest -q --ignore=tests/gui --ignore=tests/plot --ignore=tests/cli/test_plot_cli.py -k 'not test_gui_'
       - name: Build wheel and source distribution
         run: |
           .venv/bin/python -m pip install 'build==1.4.0'
@@ -49,6 +49,23 @@ jobs:
           cd "$RUNNER_TEMP"
           "$RUNNER_TEMP/spinflow-sdist/bin/python" -I "$GITHUB_WORKSPACE/tools/ci_smoke.py"
 
+  plot-headless:
+    name: Ubuntu 24.04 / Python 3.13 / plot without Qt
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install plot and test extras in a fresh Qt-free environment
+        run: bash tools/bootstrap.sh --plot --test
+      - name: Confirm Qt is absent
+        run: .venv/bin/python -c "import importlib.util; assert importlib.util.find_spec('PySide6') is None"
+      - name: Test actual CLI figure export and report validation
+        run: .venv/bin/python -m pytest -q tests/cli/test_plot_cli.py
+
   gui:
     name: Ubuntu 24.04 / Python 3.13 / Qt offscreen
     runs-on: ubuntu-24.04
@@ -63,9 +80,30 @@ jobs:
           python-version: "3.13"
       - name: Install Qt runtime libraries
         run: sudo apt-get update && sudo apt-get install -y libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0
-      - name: Install project and GUI test dependencies
-        run: bash tools/bootstrap.sh --gui --test
+      - name: Install project and GUI/plot test dependencies
+        run: bash tools/bootstrap.sh --gui --plot --test
       - name: Build in-place extension for source-path tests
         run: .venv/bin/python tools/build_native.py
       - name: Test complete source suite with Qt
         run: .venv/bin/python -m pytest -q
+
+  public-bruker:
+    name: Ubuntu 24.04 / public Bruker 1D
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install native processor and test dependencies
+        run: bash tools/bootstrap.sh --test
+      - name: Build in-place extension for source-path tests
+        run: .venv/bin/python tools/build_native.py
+      - name: Fetch and verify the nine public BMRB files
+        run: .venv/bin/python tests/fixtures/fetch_bruker_public.py
+      - name: Validate the declared Bruker correction and archived peak positions
+        run: |
+          .venv/bin/python -m pytest -q tests/io/test_bruker_public.py
+          .venv/bin/python tools/validate_public_bruker.py

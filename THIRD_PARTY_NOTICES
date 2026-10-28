@@ -10,3 +10,21 @@ Python runtime, development, and optional GUI dependencies are not vendored
 in this repository. Their version constraints are in pyproject.toml; Windows
 development wheel hashes are retained in the requirements lock files.
 Those packages carry their own licenses and notices in their distributions.
+
+The optional figure extra installs Matplotlib 3.11.2; it is not vendored.
+Matplotlib's project license is at
+https://matplotlib.org/stable/project/license.html . Its license agreement
+identifies the Matplotlib Development Team and retains contributor notices.
+
+The Bruker digital-filter operation is original SpinFlow code implementing a
+declared fractional group-delay policy also documented by nmrglue's
+rm_dig_filter operation. nmrglue 0.12 is an installed, non-vendored runtime
+dependency under the upstream BSD-3-Clause license:
+https://github.com/jjhelmus/nmrglue/blob/master/LICENSE.txt .
+No nmrglue source is copied into this repository for that operation.
+
+The public BMRB acquisition used by optional integration validation is fetched
+at runtime to an ignored local directory and is not redistributed here. Its
+source URLs, byte counts, hashes, original authors and independent TopSpin
+reference scope are recorded in tests/fixtures/bruker_public_manifest.json.
+BMRB's public-access policy is at https://bmrb.io/metabolomics/data_policy.shtml .
