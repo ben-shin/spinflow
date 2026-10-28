@@ -1,0 +1,11 @@
+{
+  "schema_version": "1",
+  "input": "demo-1d-raw.h5",
+  "output": "demo-1d-processed.h5",
+  "backend": "native",
+  "operations": [
+    {"op": "window", "axis": "t2", "kind": "exponential", "lb_hz": 1.0},
+    {"op": "zero_fill", "axis": "t2", "size": 512},
+    {"op": "fft", "axis": "t2"}
+  ]
+}

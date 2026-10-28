@@ -1,0 +1,12 @@
+PocketFFT (vendored source)
+===========================
+Source: https://github.com/mreineck/pocketfft
+Pinned commit: 4d865cba24359b05b37da4e75aee24498c3b78e7
+Files: cpp/vendor/pocketfft/pocketfft_hdronly.h and LICENSE.md
+License: BSD-3-Clause
+Copyright notices and the complete license text are retained in both files.
+
+Python runtime, development, and optional GUI dependencies are not vendored
+in this repository. Their version constraints are in pyproject.toml; Windows
+development wheel hashes are retained in the requirements lock files.
+Those packages carry their own licenses and notices in their distributions.

@@ -1,0 +1,43 @@
+schema_version: "1"
+baseline_version: null
+workflows:
+  - id: synthetic-1d-processing
+    status: experimental
+    input_profile: mathematical-complex-fully-sampled
+    output_profile: nmrnext-hdf5
+    entry_points: [cli, python-api, optional-qt]
+    recipe: examples/process-1d.json
+    evidence: [tests/unit/test_operations.py, tests/reference/test_production_reference.py, tests/cli/test_cli.py]
+    real_acquisition_validation: unavailable
+  - id: synthetic-2d-hypercomplex-processing
+    status: experimental
+    input_profile: mathematical-states-fully-sampled
+    preserved: [all-four-quadrature-channels, axis-metadata, provenance]
+    recipe: examples/process-2d.json
+    evidence: [tests/reference/test_production_reference.py, tests/gui/test_workbench.py, tests/cli/test_cli.py]
+    legacy_numerical_equivalence: unverified
+  - id: processed-spectrum-conversion
+    status: experimental
+    formats: [nmrnext-hdf5, nmrpipe-real, ucsf-real]
+    evidence: tests/io/test_codecs.py
+    loss_policy: explicit-per-code-acknowledgment
+    independent_check: test-only-header-and-payload-decoder
+    established_external_consumer: unverified
+  - id: bruker-raw-1d-inspection
+    status: experimental
+    profile: controlled-acqus-fid
+    evidence: tests/io/test_codecs.py
+    real_vendor_fixture: unavailable
+    processing: blocked-if-digital-filter-unknown-or-uncorrected
+  - id: researcher-workbench
+    status: experimental
+    evidence: tests/gui/test_workbench.py
+    user_observation_sessions: not-yet-run
+  - id: first-real-laboratory-raw-to-export
+    status: unsupported
+    blockers: [permitted-real-fixture, validated-vendor-encoding-and-filter, pinned-reference, independent-consumer]
+  - id: legacy-script-migration
+    status: unsupported
+  - id: complete-native-nmrpipe-suite
+    status: unsupported
+    inventory: "Seed preserved in functions.yaml; exact installation inventory not frozen"

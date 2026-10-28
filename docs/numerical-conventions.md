@@ -1,0 +1,9 @@
+# Numerical contract 1
+
+The modern transform is `X[k] = sum_j x[j] exp(-2*pi*i*j*k/N)`, forward unscaled, inverse scaled by 1/N. Frequency output is FFT-shifted, bins `(-floor(N/2)+k)/(N*dwell)`. No automatic conjugation, reversal, fitting, normalization or acquisition-origin phase correction occurs. The stored samples include any time-origin phase. This follows the explicitly documented [SciPy DFT convention](https://docs.scipy.org/doc/scipy/reference/generated/scipy.fft.fft.html), with centering added explicitly; it is not a claim of NMRPipe option equivalence.
+
+Each complex axis transforms paired real channels selected by its bit. Other quadrature degrees survive, including mixed time/frequency intermediates. An inverse requires a full canonical frequency grid; cropped/reversed grids are rejected rather than guessed. Synthetic time starts zero, half and one dwell must be tested independently.
+
+Exponential window is `exp(-pi*lb_hz*j*dwell)` with lb_hz >= 0; sine window is `sin(pi*j/(N-1))**power`, N > 1, power > 0. Optional `first_point_scale` defaults to 1 and is explicit. Windows apply per axis to all components. Zero fill extends a time axis with zeros, preserving acquired size. Phase rotates every component pair by `exp(i*pi/180*(p0+p1*(j-pivot)/N))`; pivot is a zero-based point, p1 degrees per N points. Crop is half-open point indices, preserving physical coordinates; reverse negates coordinate step and updates start; transpose permutes named physical axes.
+
+Float32/64 storage is preserved. Bootstrap NumPy FFT can use wider intermediates and casts back explicitly; this is labelled experimental. Native PocketFFT must preserve precision and execute without NMRPipe. Independent direct DFT and analytic literals are oracles; production helpers may not generate expected results. Tolerances depend on dtype and fixture, not output alignment.

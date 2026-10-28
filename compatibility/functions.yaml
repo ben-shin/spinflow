@@ -1,0 +1,191 @@
+schema_version: "1"
+baseline_version: null
+baseline_status: "blocked: no reference installation"
+scope: "Full supplied seed inventory; not an exhaustive frozen legacy installation"
+functions:
+  - id: FT
+    status: unsupported
+    evidence: []
+  - id: RFT
+    status: unsupported
+    evidence: []
+  - id: HT
+    status: unsupported
+    evidence: []
+  - id: HA
+    status: unsupported
+    evidence: []
+  - id: LP
+    status: unsupported
+    evidence: []
+  - id: MEM
+    status: unsupported
+    evidence: []
+  - id: ML
+    status: unsupported
+    evidence: []
+  - id: APOD
+    status: unsupported
+    evidence: []
+  - id: SP
+    status: unsupported
+    evidence: []
+  - id: EM
+    status: unsupported
+    evidence: []
+  - id: GM
+    status: unsupported
+    evidence: []
+  - id: GMB
+    status: unsupported
+    evidence: []
+  - id: TM
+    status: unsupported
+    evidence: []
+  - id: TRI
+    status: unsupported
+    evidence: []
+  - id: JMOD
+    status: unsupported
+    evidence: []
+  - id: PS
+    status: unsupported
+    evidence: []
+  - id: SOL
+    status: unsupported
+    evidence: []
+  - id: POLY
+    status: unsupported
+    evidence: []
+  - id: BASE
+    status: unsupported
+    evidence: []
+  - id: CBF
+    status: unsupported
+    evidence: []
+  - id: MED
+    status: unsupported
+    evidence: []
+  - id: QART
+    status: unsupported
+    evidence: []
+  - id: ZD
+    status: unsupported
+    evidence: []
+  - id: TP
+    status: unsupported
+    evidence: []
+  - id: YTP
+    status: unsupported
+    evidence: []
+  - id: ZTP
+    status: unsupported
+    evidence: []
+  - id: SHUF
+    status: unsupported
+    evidence: []
+  - id: EXT
+    status: unsupported
+    evidence: []
+  - id: ZF
+    status: unsupported
+    evidence: []
+  - id: MIR
+    status: unsupported
+    evidence: []
+  - id: REV
+    status: unsupported
+    evidence: []
+  - id: CS
+    status: unsupported
+    evidence: []
+  - id: FSH
+    status: unsupported
+    evidence: []
+  - id: LS
+    status: unsupported
+    evidence: []
+  - id: RS
+    status: unsupported
+    evidence: []
+  - id: ADD
+    status: unsupported
+    evidence: []
+  - id: MULT
+    status: unsupported
+    evidence: []
+  - id: SET
+    status: unsupported
+    evidence: []
+  - id: SIGN
+    status: unsupported
+    evidence: []
+  - id: COADD
+    status: unsupported
+    evidence: []
+  - id: QMIX
+    status: unsupported
+    evidence: []
+  - id: MC
+    status: unsupported
+    evidence: []
+  - id: DX
+    status: unsupported
+    evidence: []
+  - id: INTEG
+    status: unsupported
+    evidence: []
+  - id: SMO
+    status: unsupported
+    evidence: []
+  - id: IMG
+    status: unsupported
+    evidence: []
+  - id: MAC
+    status: unsupported
+    evidence: []
+  - id: SAVE
+    status: unsupported
+    evidence: []
+  - id: NULL
+    status: unsupported
+    evidence: []
+modern_operations:
+  - id: window
+    status: experimental
+    contract: docs/numerical-conventions.md
+    tests: tests/unit/test_operations.py
+    legacy_option_equivalence: unverified
+  - id: zero_fill
+    status: experimental
+    contract: docs/numerical-conventions.md
+    tests: tests/unit/test_operations.py
+    legacy_option_equivalence: unverified
+  - id: fft
+    status: experimental
+    contract: docs/numerical-conventions.md
+    tests: tests/unit/test_operations.py
+    legacy_option_equivalence: unverified
+  - id: phase
+    status: experimental
+    contract: docs/numerical-conventions.md
+    tests: tests/unit/test_operations.py
+    legacy_option_equivalence: unverified
+  - id: crop
+    status: experimental
+    contract: docs/numerical-conventions.md
+    tests: tests/unit/test_operations.py
+    legacy_option_equivalence: unverified
+  - id: reverse
+    status: experimental
+    contract: docs/numerical-conventions.md
+    tests: tests/unit/test_operations.py
+    legacy_option_equivalence: unverified
+  - id: transpose
+    status: experimental
+    contract: docs/numerical-conventions.md
+    tests: tests/unit/test_operations.py
+    legacy_option_equivalence: unverified
+notes:
+  - "Modern operations have restricted explicit contracts; names do not establish legacy option compatibility."
+  - "TP/YTP are aliases in the seed; full installed utility, macro, plugin and workflow inventories remain to be frozen."

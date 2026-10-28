@@ -1,0 +1,40 @@
+[build-system]
+requires = ["scikit-build-core==1.1.1", "pybind11==3.1.0", "cmake==4.4.4", "ninja==1.13.2"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "spinflow"
+version = "0.1.0"
+description = "Experimental, explicit NMR spectrum processing"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+license-files = ["LICENSE", "cpp/vendor/pocketfft/LICENSE.md"]
+dependencies = ["numpy==2.5.4", "scipy==1.18.1", "h5py==3.16.0", "nmrglue==0.12"]
+
+[project.optional-dependencies]
+test = ["pytest==9.2.0", "pybind11==3.1.0", "cmake==4.4.4", "ninja==1.13.2"]
+gui = ["PySide6==6.12.0", "pyqtgraph==0.14.0"]
+
+[project.scripts]
+spinflow = "nmrnext.cli:main"
+nmrnext = "nmrnext.cli:main"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+wheel.packages = []
+sdist.inclusion-mode = "explicit"
+sdist.include = [
+  "/CMakeLists.txt",
+  "/LICENSE",
+  "/README.md",
+  "/pyproject.toml",
+  "/cpp/native.cpp",
+  "/cpp/vendor/pocketfft/pocketfft_hdronly.h",
+  "/cpp/vendor/pocketfft/LICENSE.md",
+  "/src/nmrnext/**/*.py",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

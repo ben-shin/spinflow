@@ -1,0 +1,11 @@
+{
+  "provenance": "synthetic analytical signals; no instrument, sample, or vendor provenance",
+  "convention": "forward DFT, negative exponent, unscaled, unshifted bins",
+  "cases": [
+    {"id": "constant_odd", "length": 5, "kind": "constant", "value": [0.5, -0.25], "peak_bin": 0, "peak_value": [2.5, -1.25]},
+    {"id": "positive_even", "length": 8, "kind": "tone", "cycles_per_dwell": 0.25, "value": [1.0, 2.0], "peak_bin": 2, "peak_value": [8.0, 16.0]},
+    {"id": "negative_odd", "length": 7, "kind": "tone", "cycles_per_dwell": -0.2857142857142857, "value": [0.5, -0.5], "peak_bin": 5, "peak_value": [3.5, -3.5]},
+    {"id": "non_power_two", "length": 6, "kind": "tone", "cycles_per_dwell": 0.16666666666666666, "value": [0.25, 0.0], "peak_bin": 1, "peak_value": [1.5, 0.0]},
+    {"id": "single_sample", "length": 1, "kind": "constant", "value": [3.0, -2.0], "peak_bin": 0, "peak_value": [3.0, -2.0]}
+  ]
+}

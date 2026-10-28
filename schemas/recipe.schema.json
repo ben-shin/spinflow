@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NMRNext processing recipe schema 1",
+  "description": "Structural schema. Runtime also checks axis/domain/encoding/shape, window parameter combinations, allocation estimates and file profiles.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "input",
+    "output",
+    "operations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1"
+    },
+    "input": {
+      "type": "string",
+      "minLength": 1
+    },
+    "output": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "op",
+              "axis"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "window"
+              },
+              "version": {
+                "const": "1"
+              },
+              "axis": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "exponential",
+                  "sine"
+                ]
+              },
+              "lb_hz": {
+                "type": "number",
+                "minimum": 0
+              },
+              "power": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "first_point_scale": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "op",
+              "axis",
+              "size"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "zero_fill"
+              },
+              "version": {
+                "const": "1"
+              },
+              "axis": {
+                "type": "string",
+                "minLength": 1
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "op",
+              "axis"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "fft"
+              },
+              "version": {
+                "const": "1"
+              },
+              "axis": {
+                "type": "string",
+                "minLength": 1
+              },
+              "inverse": {
+                "type": "boolean"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "op",
+              "axis"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "phase"
+              },
+              "version": {
+                "const": "1"
+              },
+              "axis": {
+                "type": "string",
+                "minLength": 1
+              },
+              "p0": {
+                "type": "number"
+              },
+              "p1": {
+                "type": "number"
+              },
+              "pivot": {
+                "type": "number"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "op",
+              "axis",
+              "start",
+              "stop"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "crop"
+              },
+              "version": {
+                "const": "1"
+              },
+              "axis": {
+                "type": "string",
+                "minLength": 1
+              },
+              "start": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "stop": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "op",
+              "axis"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "reverse"
+              },
+              "version": {
+                "const": "1"
+              },
+              "axis": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "op",
+              "order"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "version": {
+                "const": "1"
+              },
+              "op": {
+                "const": "transpose"
+              },
+              "order": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            }
+          }
+        ]
+      }
+    },
+    "backend": {
+      "enum": [
+        "native",
+        "numpy"
+      ],
+      "default": "native"
+    },
+    "threads": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1
+    },
+    "memory_bytes": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9]+(B|KiB|MiB|GiB)?$"
+        }
+      ]
+    },
+    "allow_losses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "input_format": {
+      "type": "string"
+    },
+    "output_format": {
+      "type": "string"
+    }
+  }
+}

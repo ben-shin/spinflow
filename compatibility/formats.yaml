@@ -1,0 +1,59 @@
+schema_version: "1"
+scope: "Implemented first-slice profiles; not broad format compatibility"
+profiles:
+  - id: nmrnext-hdf5
+    dialect: "native schema 1"
+    object: "numeric Dataset"
+    dimensions: "1+ physical axes"
+    components: "all explicit quadrature bits"
+    read: implemented
+    write: implemented
+    preserved: [intensities, dtype, physical_axes, quadrature_mapping, metadata, provenance]
+    known_losses: []
+    readback: "h5py 3.16.0 with explicit schema checks"
+    external_consumer: unverified
+  - id: nmrpipe-real
+    dialect: "nmrglue 0.12 writer/header dialect"
+    object: "processed real spectrum"
+    dimensions: [1, 2]
+    components: "fixed component 0 (all-real channel)"
+    read: implemented
+    write: implemented
+    preserved: [float32_intensities, ppm_coordinates, axis_labels]
+    known_losses: [quadrature_projection, float32_quantization, metadata, provenance, reference_fields, axis_annotations]
+    fatal_preflight_errors: [float32_overflow, target_header_unrepresentable]
+    coordinate_conversion: "odd N carrier +half bin; ascending axes reversed"
+    readback: "nmrglue 0.12 pipe.read (shared codec family)"
+    independent_binary_check: "test-only header/payload decoder"
+    external_consumer: unverified
+    legacy_nmrpipe_reopen: unverified
+  - id: ucsf-real
+    dialect: "UCSF NMR version 2 via nmrglue 0.12"
+    object: "processed real spectrum"
+    dimensions: [2]
+    components: "fixed component 0 (all-real channel)"
+    read: implemented
+    write: implemented
+    preserved: [float32_intensities, ppm_coordinates, axis_labels]
+    known_losses: [quadrature_projection, float32_quantization, metadata, provenance, reference_fields, axis_annotations]
+    fatal_preflight_errors: [float32_overflow, target_header_unrepresentable]
+    readback: "nmrglue 0.12 sparky.read (shared codec family)"
+    independent_binary_check: "test-only header/payload decoder"
+    external_consumer: unverified
+  - id: bruker-raw-1d
+    dialect: "controlled acqus/fid, AQ_mod 1/3, BYTORDA 0/1, DTYPA 0/2"
+    object: "raw complex 1D FID"
+    dimensions: [1]
+    components: "real and imaginary"
+    read: implemented_synthetic_fixture_only
+    write: not_implemented
+    preserved: [acquired_points, raw_acqus_text, digital_filter_parameters, source_checksums]
+    known_losses: [padding_outside_TD]
+    text_validation: "validated parameter names and continuations plus finite-read/repeated-EOF stream around pinned parser; caught parser warnings fail; binary read never reparses acqus"
+    readback: "nmrglue 0.12 Bruker reader (shared codec family)"
+    actual_instrument_fixture: missing
+    external_consumer: unverified
+  - id: nmrpipe-complex-or-stream
+    dialect: "no declared profile"
+    read: not_implemented
+    write: not_implemented

@@ -1,0 +1,19 @@
+# Pinned packages for the original Windows CPython 3.13 development environment.
+# All direct and transitive packages installed as wheels from official PyPI.
+cmake==4.4.4
+colorama==0.4.6
+h5py==3.16.0
+iniconfig==2.3.1
+ninja==1.13.2
+nmrglue==0.12
+numpy==2.5.4
+packaging==26.3
+pathspec==1.1.1
+pluggy==1.7.0
+pybind11==3.1.0
+Pygments==2.21.0
+pytest==9.2.0
+scipy==1.18.1
+scikit-build-core==1.1.1
+setuptools==84.2.1
+wheel==0.48.0

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "purpose": "Small synthetic analytical fixtures for independent numerical validation",
+  "files": [
+    {
+      "path": "synthetic/one_dimensional.json",
+      "sha256": "5dece51efc9e39a3c7974eaa3dc6801fe7c66ea18318e26b6c52a49950799009",
+      "origin": "written in this repository from mathematical formulas",
+      "redistribution": "project-authored synthetic data",
+      "instrument_or_sample": null
+    },
+    {
+      "path": "synthetic/four_channel_2d.json",
+      "sha256": "fbe69f2b9ed9cb76314120cfb568d29dee485923780eb63f0dfbaf01d362ff06",
+      "origin": "written in this repository from four-channel algebra",
+      "redistribution": "project-authored synthetic data",
+      "instrument_or_sample": null
+    }
+  ]
+}

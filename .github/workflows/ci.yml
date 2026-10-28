@@ -1,0 +1,71 @@
+name: Linux build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  headless:
+    name: Ubuntu 24.04 / Python ${{ matrix.python-version }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install project and test dependencies
+        run: bash tools/bootstrap.sh --test
+      - name: Build in-place extension for source-path tests
+        run: .venv/bin/python tools/build_native.py
+      - name: Test headless source checkout
+        # Three real-Qt CLI lifecycle tests run in the complete Qt job.
+        run: .venv/bin/python -m pytest -q --ignore=tests/gui -k 'not test_gui_'
+      - name: Build wheel and source distribution
+        run: |
+          .venv/bin/python -m pip install 'build==1.4.0'
+          .venv/bin/python -m build
+      - name: Exercise installed wheel outside checkout
+        run: |
+          python -m venv "$RUNNER_TEMP/spinflow-wheel"
+          "$RUNNER_TEMP/spinflow-wheel/bin/python" -m pip install dist/*.whl
+          "$RUNNER_TEMP/spinflow-wheel/bin/python" -m pip check
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/spinflow-wheel/bin/python" -I "$GITHUB_WORKSPACE/tools/ci_smoke.py"
+      - name: Exercise source distribution outside checkout
+        run: |
+          python -m venv "$RUNNER_TEMP/spinflow-sdist"
+          "$RUNNER_TEMP/spinflow-sdist/bin/python" -m pip install dist/*.tar.gz
+          "$RUNNER_TEMP/spinflow-sdist/bin/python" -m pip check
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/spinflow-sdist/bin/python" -I "$GITHUB_WORKSPACE/tools/ci_smoke.py"
+
+  gui:
+    name: Ubuntu 24.04 / Python 3.13 / Qt offscreen
+    runs-on: ubuntu-24.04
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install Qt runtime libraries
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0
+      - name: Install project and GUI test dependencies
+        run: bash tools/bootstrap.sh --gui --test
+      - name: Build in-place extension for source-path tests
+        run: .venv/bin/python tools/build_native.py
+      - name: Test complete source suite with Qt
+        run: .venv/bin/python -m pytest -q

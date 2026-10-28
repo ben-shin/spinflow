@@ -1,0 +1,55 @@
+# Implemented file profiles
+
+The profile name is part of the contract. `nmrpipe-real` and `ucsf-real` are processed **real** spectrum profiles, not general support for either format. Input is signature-probed; an unknown signature raises `AMBIGUOUS_FORMAT`. Output inference uses `.nmrh5`/`.h5`, `.ft1`/`.ft2`, and `.ucsf`, or the caller supplies an explicit format. The aliases `native`, `hdf5`, `nmrpipe`, and `ucsf` are accepted.
+
+| Profile | Read | Write | Dimensions | Numeric layout | Read-back |
+| --- | --- | --- | --- | --- | --- |
+| `nmrnext-hdf5` schema 1 | yes | yes | one or more physical axes | float32/64 `(2**q, *physical_shape)` | h5py plus schema validation |
+| `nmrpipe-real` (nmrglue 0.12 header dialect) | yes | yes | 1D/2D | one real float32 array | nmrglue 0.12 `pipe.read` (shared codec family) |
+| `ucsf-real` (UCSF NMR version 2) | yes | yes | 2D | one real float32 tiled array | nmrglue 0.12 `sparky.read` (shared codec family) |
+| `bruker-raw-1d` (controlled `acqus`/`fid`) | yes | no | 1D | complex time-domain points | nmrglue 0.12 Bruker reader (synthetic fixture only) |
+
+NMRPipe raw, complex, hypercomplex, 3D/4D streams or series, and unknown header dialects are not declared. UCSF 1D, time domain, and complex files are not declared. Bruker 2D/3D/4D, processed data, and writes are not declared. External NMRPipe and Sparky/Poky reopening has not been checked. The installed NMRPipe executable has not been used as a reference, so no legacy parity claim follows from these adapters.
+
+## Native HDF5 schema 1
+
+The root attribute `schema_version` is the UTF-8 string `"1"`. The root attribute `metadata_json` contains one UTF-8 JSON object returned by `Dataset.to_metadata()`, with exactly `schema_version`, `axes`, `complex_axes`, `metadata`, and `provenance`. The root dataset `/data` is an internal hard-linked HDF5 dataset of float32 or float64, C-order logical shape `(2**q, *physical_shape)`. Component bit `k` belongs to `complex_axes[k]`; the first dimension is not a physical axis. No compression is applied. HDF5 chunks are enabled for partial access. Unknown schema versions, duplicate JSON keys, nonfinite JSON constants, malformed axis fields, and missing or extra numeric fields fail header inspection. Virtual datasets and external storage are rejected before numeric reads. Import checks dtype, shape, component count, each axis size, finite numeric values, and the declared memory budget before copying the array into a read-only `Dataset`.
+
+This is a native project container, not a universal NMR exchange standard. Metadata and provenance are JSON values and are stored without interpreting opaque vendor parameters. The importer rejects external links for `/data`; no embedded script is executed.
+
+## Processed spectrum calibration
+
+The canonical `Axis` holds Hz point coordinates `start + i*step` and a separate ppm reference: `ppm = reference_ppm + (Hz - reference_hz) / observation_mhz`. The NMRPipe and UCSF target conventions use descending spectral coordinates with target width `SW = N*abs(step)` and observation frequency `OBS = observation_mhz`. The target carrier is chosen so the target index-zero coordinate equals the original endpoint at the high-ppm side. When a canonical axis has positive step, export reverses the samples on that physical axis; the conversion report lists each reversal. For either sign, the target point coordinates are computed from the original formula, without best-fit alignment. Import keeps the target's descending point order and populates `reference_ppm=0`, `reference_hz=0`, so ppm positions remain equivalent. Original reference decomposition cannot be reconstructed from these formats.
+
+For odd NMRPipe axis sizes, pinned nmrglue 0.12 rounds `CENTER` to `floor(N/2)+1`. Its generated `ORIG` would place the first point half a bin below the declared coordinate. The NMRPipe adapter adds `abs(step)/2` Hz to the exported carrier for odd sizes; even sizes and UCSF use no such adjustment. The report names this `odd_point_nmrpipe_carrier_half_bin_adjustment` and gives its Hz amount. The independent byte-level regression checks `ORIG + SW - SW/N` against the intended first point for N=1, 3, 5, and 6, both axis directions, with a nonzero `reference_hz`; a mixed 3×6 dataset checks both 2D axes.
+
+Only frequency-domain spectral axes with known `observation_mhz` and `reference_ppm` can be exported. The target axis field uses `nucleus` when available, otherwise `label`; it must fit the profile's ASCII field (8 bytes NMRPipe, 6 bytes UCSF). A distinct display label is an acknowledged `axis_annotations` loss. The importer preserves a JSON copy of the original parsed header and the source SHA-256 in `Dataset.metadata.import`; it does not assign scientific meaning to unparsed header fields.
+
+## Controlled Bruker raw 1D import
+
+`bruker-raw-1d` accepts an acquisition directory containing regular `acqus` and `fid` files, with no `ser` or higher-dimensional `acquNs` file. The declared profile requires direct complex `AQ_mod` 1 or 3, `BYTORDA` 0 or 1, `DTYPA` 0 (int32) or 2 (float64), even positive `TD`, finite positive `SW_h` and `SFO1`, and a nonempty ASCII `NUC1`. It verifies the `fid` file length against `TD` and 1024-byte block padding before reading. The acquired `TD/2` complex points become two float64 components. Padding outside `TD` is excluded and counted in metadata. The original `acqus` text and SHA-256 for both inputs are retained in native metadata; no acquisition file is edited. The 1 MiB `acqus` is decoded one-to-one with Latin-1. The adapter validates parameter names and continuation structure, then supplies the pinned parser a stream with a finite read budget that raises on repeated EOF. It checks the stream's failure flag even if the dependency catches an exception and returns partial metadata. Parser warnings are converted to structured `INVALID_HEADER` errors. The subsequent import uses nmrglue's binary reader with explicit validated parameters, so it does not parse the text again. Unknown parameters remain in the retained original text.
+
+The axis dwell is `1/SW_h` seconds. `reference_ppm` remains unknown because acquisition-only parameters do not establish corrected chemical-shift referencing. `GRPDLY`, `DECIM`, and `DSPFVS` are preserved under `metadata.import.digital_filter` with `state="uncorrected_or_unknown"`. The FFT path must refuse this state until an explicit, validated correction is available; the importer never applies digital-filter removal silently. This profile has only a synthetic file-layout test at present. Actual instrument data and an external independent reader are still required to establish laboratory reliability.
+
+## Preflight and losses
+
+`export_preflight(dataset, format, allow_losses=())` returns `format`, `ok`, `errors`, `losses`, `unacknowledged`, `conversions`, and `preserved`. `write_dataset` refuses if `errors` or `unacknowledged` is nonempty. A finite float64 intensity outside the finite float32 range produces fatal `float32_overflow` in `errors`; `write_dataset` raises `FLOAT32_OVERFLOW` before destination publication, even when `float32_quantization` is acknowledged. The adapter also builds each target's actual header dictionary during preflight and checks the pinned float32 or binary serialization of its numeric fields. Nonfinite, overflowed, or zeroed required spectral width and observation frequency fields produce `target_header_unrepresentable`, with field names in `target_header_fields`; writes raise `TARGET_HEADER_UNREPRESENTABLE` before creating a temporary file. This includes derived carrier and origin fields. No clipping or rescaling occurs. The caller must name each permitted nonfatal loss through `allow_losses`. These are the accepted loss codes:
+
+| Code | Meaning |
+| --- | --- |
+| `quadrature_projection` | Keep fixed component index 0 (all-real channel), dropping every other independent quadrature channel. The source `Dataset` remains unchanged; GUI display selection does not change this export rule. |
+| `float32_quantization` | Source intensities change when converted to float32. |
+| `metadata` | Arbitrary native metadata has no matching target fields. |
+| `provenance` | Native processing provenance has no matching target fields. |
+| `reference_fields` | A nonzero `reference_hz` is folded into the target carrier; the original decomposition is lost. |
+| `axis_annotations` | Acquisition size, dwell, time origin, transform time origin, or distinct nucleus annotation has no matching target field. |
+
+The write report records the target path, source/target shape and dtype, conversions, losses, and output SHA-256. Processed-format preflight and write reports include `projection.component_index=0`, `projection.meaning="all-real quadrature channel"`, and the `complex_axes` bit order. There is no sidecar masquerading as lossless interchange. A native HDF5 export preserves all fields without loss codes. Bruker raw is read-only; export preflight reports `read_only_profile`.
+
+Writes use a temporary file in the destination directory and atomic completion. Existing outputs are refused unless `overwrite=True`; an exception removes the temporary file. Reads validate declared shape and file length before the format reader allocates. `max_bytes` defaults to 1 GiB and bounds the numeric payload allocation, including UCSF padded tiles rather than only logical points. Output directories are never created implicitly. Native HDF5 inspection does not load nmrglue or SciPy; those codecs are imported when a processed or vendor profile is used.
+
+## Implementation source
+
+The processed readers/writers use pinned nmrglue 0.12 source (`nmrglue.fileio.pipe`, `nmrglue.fileio.sparky`). That package declares a New BSD License. The adapter validates a narrower profile than nmrglue's general reader/writer API, including real components, dimension count, header calibration, and file length. Tests read target files back with nmrglue and check array order and endpoint ppm positions; this is shared-dependency read-back evidence, not an independent consumer. A separate test-only binary decoder checks declared header offsets and target payload bytes. External application reopening remains unverified.
+
+Regression evidence: [odd/even NMRPipe calibration and header bytes](../tests/io/test_codecs.py), [finite float32 intensity and header preflight with no staged file](../tests/io/test_codecs.py), and [bounded Bruker continuations, malformed key, swallowed parser exception, and warning behavior through API and CLI child processes](../tests/io/test_codecs.py). The fixture in each case is constructed locally by the test; it is not represented as instrument data.

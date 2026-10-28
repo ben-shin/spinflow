@@ -1,0 +1,66 @@
+# Local Python environments and caches
+.venv/
+.tools/
+.tmp/
+.artifacts/
+.build/
+.pytest_cache/
+.pytest_*/
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+*.whl
+*.tar.gz
+
+# Compiled native binaries and build products
+*.so
+*.dylib
+*.dll
+*.pyd
+*.lib
+*.a
+*.o
+*.obj
+*.pdb
+*.ilk
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+
+# Generated examples and benchmark data
+examples/*.h5
+examples/*.nmrh5
+examples/*.ucsf
+examples/*.ft1
+examples/*.ft2
+benchmarks/results/
+
+# Local work records and supplied project brief. Keep locally, outside Git.
+docs/WORK_LOG.md
+docs/BRIEF_INTAKE.md
+docs/PROJECT_BRIEF.md
+docs/RESEARCH.md
+docs/RELEASE_REVIEW.md
+docs/CHECKLIST_TRACE.md
+docs/validation.md
+docs/performance.md
+docs/build-environment.md
+docs/reference-corpus.md
+docs/briefs/
+docs/superpowers/
+
+# Local editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+.env
+.env.*
+!.env.example

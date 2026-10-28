@@ -1,0 +1,7 @@
+# Current implementation scope
+
+This increment targets a user-testable headless synthetic 1D/2D processing workflow: generation, inspection, planning, window, zero fill, FFT, phase, crop, reverse, transpose, native storage and declared interchange profiles. The [roadmap](../ROADMAP.md) and [compatibility inventories](../compatibility/functions.yaml) retain broader future scope.
+
+The validated numerical encoding is an explicitly synthetic complex/States mathematical model with fully sampled axes. A controlled experimental Bruker 1D reader preserves raw fields, but real vendor data and correction semantics remain unvalidated; unresolved filtering blocks FFT. Digital filter correction, NUS reconstruction, automatic phase/baseline, LP, fitting, NEF and script translation remain visible future work. An optional Qt workbench uses the same engine. Unsupported requests fail. A synthetic demonstration does not meet the real laboratory workflow exit of Milestone 1.
+
+Native means no NMRPipe subprocess. `numpy` is an explicitly labelled experimental bootstrap backend; C++20/PocketFFT is the intended native backend. Legacy numerical parity, NMRPipe benchmarks, real user-failure regression, all-format fidelity and platform installation claims remain blocked until evidence exists. The first available independent file reader provides profile-specific evidence, not universal consumer compatibility.

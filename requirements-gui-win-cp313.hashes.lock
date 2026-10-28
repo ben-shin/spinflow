@@ -1,0 +1,9 @@
+# Windows x86-64 CPython 3.13 wheel hashes, captured 2026-10-28.
+# Use with pip --require-hashes --only-binary=:all:.
+PySide6==6.12.0 --hash=sha256:31a8d2893f2f28ab483b1534dde0438f27af6e234593de30425cb4729052d8f8
+PySide6_Addons==6.12.0 --hash=sha256:98d8d62010da6605344cee83e5c96fb846170a1f2d924523f10f5d92078b02b0
+PySide6_Essentials==6.12.0 --hash=sha256:c9a95102aa23c1f86516a30d5a9be37552d324eee7e567eb7508973f1218cb42
+PySide6_Pdf==6.12.0.140 --hash=sha256:4971ba1a0ca15e7c29cfd808e9600aeb46b2305dad01456eb09fa3197166268e
+PySide6_WebEngine==6.12.0.140 --hash=sha256:f9b61b1d457a591ee590a6b80515f25a3e61e2576a2a0a70566380f9d9de4ab0
+shiboken6==6.12.0 --hash=sha256:a1906cb8116869178c64b6bab52623bbc8b4ceed7b30bfc3c9aa0f6e67f6438e
+pyqtgraph==0.14.0 --hash=sha256:7abb7c3e17362add64f8711b474dffac5e7b0e9245abdf992e9a44119b7aa4f5
