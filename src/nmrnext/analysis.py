@@ -523,7 +523,7 @@ def integrate_regions(dataset, regions, *, channel=0, baseline="none", baseline_
 
 @_guard
 def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
-              max_peaks=8, min_snr=15., backend="numpy", threads=1, inclusion_mask=None):
+              max_peaks=8, min_snr=15., backend="numpy", threads=1, inclusion_mask=None, memory_bytes=None):
     """Estimate a phase ramp from isolated positive Lorentzian-like resonances.
 
     Fits up to eight well-resolved lines with complex affine local backgrounds.
@@ -541,11 +541,18 @@ def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
     must be included. Correction applies to all data, but excluded regions are
     not phase-certified. Every accepted 1D line must satisfy relative RMS <=.05.
     """
+    if (memory_bytes is not None and isinstance(dataset, Dataset) and len(dataset.axes) in (1, 2)
+            and set(dataset.complex_axes) == {a.id for a in dataset.axes}
+            and math.prod(a.size for a in dataset.axes) <= MAX_POINTS
+            and all(a.size >= 2 and a.role == "spectral" and a.domain == "frequency" for a in dataset.axes)):
+        from .planning import plan_operations
+        phase_steps = [{"op": "phase", "axis": a.id, "p0": 0., "p1": 0., "pivot": 0.} for a in dataset.axes]
+        plan_operations(dataset, phase_steps, backend=backend, threads=threads, memory_bytes=memory_bytes)
     _validate(dataset)
     if len(dataset.axes) == 2:
         return _autophase_2d(dataset, axis=axis, pivot=pivot, first_order=first_order,
                              max_p1=max_p1, max_peaks=max_peaks, min_snr=min_snr,
-                             backend=backend, threads=threads, inclusion_mask=inclusion_mask)
+                             backend=backend, threads=threads, inclusion_mask=inclusion_mask, memory_bytes=memory_bytes)
     if len(dataset.axes) != 1 or dataset.complex_axes != (dataset.axes[0].id,):
         raise NMRNextError("UNSUPPORTED_AUTOPHASE", "Automatic phase requires complex frequency data")
     a = dataset.axes[0]
@@ -664,7 +671,7 @@ def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
         raise NMRNextError("AUTOPHASE_MODEL_MISMATCH", "Accepted lines do not share a consistent positive phase model",
                            details={"per_line_relative_rms": per_line_rms, "acceptance_limit": .05})
     operation = {"op": "phase", "axis": a.id, "p0": float((-p0+180)%360-180), "p1": -p1, "pivot": pivot}
-    result = run_operations(dataset, [operation], backend=backend, threads=threads)
+    result = run_operations(dataset, [operation], backend=backend, threads=threads, memory_bytes=memory_bytes)
     report = _report(dataset, "autophase", {"axis": a.id, "pivot": pivot, "pivot_unit": "points",
                     "first_order": first_order, "max_p1": max_p1, "max_peaks": max_peaks, "min_snr": min_snr,
                     "min_snr_semantics": "phase candidate variation multiplier, not amplitude SNR",
@@ -713,7 +720,7 @@ def _hypercomplex_design(line):
 
 
 def _autophase_2d(dataset, *, axis, pivot, first_order, max_p1, max_peaks,
-                  min_snr, backend, threads, inclusion_mask=None):
+                  min_snr, backend, threads, inclusion_mask=None, memory_bytes=None):
     """Bounded full-quadrature fit of isolated, positive, separable 2D lines.
 
     This is an original extension of the isolated-line estimator, not an
@@ -905,7 +912,7 @@ def _autophase_2d(dataset, *, axis, pivot, first_order, max_p1, max_peaks,
     p0s = [canonical0, (p0s[1]+180)%360-180]
     operations = [{"op": "phase", "axis": a.id, "p0": p0, "p1": p1, "pivot": p}
                   for a, p0, p1, p in zip(axes, p0s, p1s, pivots)]
-    result = run_operations(dataset, operations, backend=backend, threads=threads)
+    result = run_operations(dataset, operations, backend=backend, threads=threads, memory_bytes=memory_bytes)
     report = _report(dataset, "autophase", {"axes": ids, "pivot": dict(zip(ids, pivots)),
                      "pivot_unit": "points", "first_order": first_order, "max_p1": max_p1,
                      "max_peaks": max_peaks, "min_snr": min_snr,

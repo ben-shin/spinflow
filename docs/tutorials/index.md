@@ -4,7 +4,7 @@ SpinFlow is experimental. Start with the offline synthetic example, then try the
 
 ## 1. Your first spectrum, offline
 
-On Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and `python3-venv`, install the release using the commands below after v0.2.0 is published. Installation needs network access for the wheel and dependencies. The core installation needs neither Qt nor Matplotlib. For a desktop and figures, rerun the installer with `--gui --plot`; existing extras are retained. A different Python version or SpinFlow version requires a different `--prefix`. See the [installation instructions](../../README.md) for details.
+On Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and `python3-venv`, install the published v0.2.0 prerelease using the commands below. Installation needs network access for the wheel and dependencies. The core installation needs neither Qt nor Matplotlib. For a desktop and figures, rerun the installer with `--gui --plot`; existing extras are retained. A different Python version or SpinFlow version requires a different `--prefix`. See the [installation instructions](../../README.md) for details.
 
 ```sh
 curl -fLO https://github.com/ben-shin/spinflow/releases/download/v0.2.0/install-spinflow.py

@@ -202,6 +202,7 @@ class Workbench(QtWidgets.QMainWindow):
         self.last_operations = []
         self.last_plan = None
         self.last_backend = None
+        self.last_memory_bytes = None
         self._thread = None
         self._worker = None
         self._on_success = None
@@ -443,6 +444,13 @@ class Workbench(QtWidgets.QMainWindow):
         self.backend_combo.addItem("NumPy (experimental)", "numpy")
         self.backend_combo.currentIndexChanged.connect(self._update_recipe)
         layout.addWidget(self.backend_combo)
+        layout.addWidget(QtWidgets.QLabel("Processing working-array budget (MiB)"))
+        self.memory_spin = QtWidgets.QSpinBox()
+        self.memory_spin.setRange(1, 1048576)
+        self.memory_spin.setValue(256)
+        self.memory_spin.setToolTip("Budget for estimated working arrays, not a hard process-memory limit. Preview computes the complete recipe. Opening has a separate 1 GiB payload cap.")
+        self.memory_spin.valueChanged.connect(self._update_recipe)
+        layout.addWidget(self.memory_spin)
         self.recipe_label = QtWidgets.QLabel("No recipe")
         self.recipe_label.setObjectName("recipe")
         self.recipe_label.setWordWrap(True)
@@ -667,10 +675,14 @@ class Workbench(QtWidgets.QMainWindow):
         dataset = self.current
         if kind == 'autophase':
             mask, selection = _point_mask_selection(dataset, self.phase_mask_path.text().strip() or None)
+            memory = self.last_memory_bytes if self.last_memory_bytes is not None else self.memory_spin.value() * 1024**2
             options = {'backend': self.last_backend or self.backend_combo.currentData(),
                        'first_order': self.first_order_check.isChecked(),
-                       'inclusion_mask': mask}
-            return lambda: _attach_mask_selection(autophase(dataset, **options), 'phase', selection)
+                       'inclusion_mask': mask, 'memory_bytes': memory}
+            def work():
+                return _attach_mask_selection(autophase(dataset, **options), 'phase', selection)
+            work.phase_memory_bytes = memory
+            return work
         if kind == 'peaks':
             mask, selection = _point_mask_selection(dataset, self.noise_mask_path.text().strip() or None)
             options = {'channel': 0, 'sign': self.sign_combo.currentText(), 'snr': self.snr_spin.value(),
@@ -684,15 +696,16 @@ class Workbench(QtWidgets.QMainWindow):
         mask, selection = _point_mask_selection(dataset, self.baseline_mask_path.text().strip() or None)
         return lambda: _attach_mask_selection(integrate_regions(dataset, [region], channel=0, baseline=baseline, baseline_value=value, baseline_mask=mask), 'baseline', selection)
 
-    def _accept_analysis(self, kind, result):
+    def _accept_analysis(self, kind, result, *, phase_memory_bytes=None):
         if kind == 'autophase':
             dataset, report = result
             corrections = report.get('operations') or [report['operation']]
             operations = self.last_operations + corrections
             backend = self.last_backend or self.backend_combo.currentData()
-            plan = plan_operations(self.source, operations, backend=backend)
+            plan = plan_operations(self.source, operations, backend=backend, memory_bytes=phase_memory_bytes)
             self.current = dataset
             self.last_operations, self.last_plan, self.last_backend = operations, plan, backend
+            self.last_memory_bytes = phase_memory_bytes
             self._clear_analysis()
             self.analysis_reports['autophase'] = report
             self._render()
@@ -704,8 +717,9 @@ class Workbench(QtWidgets.QMainWindow):
         self._set_status('Analysis completed on the applied current result. Inspect methods and flags before use.')
 
     def analyze_now(self, kind):
-        result = self._analysis_request(kind)()
-        self._accept_analysis(kind, result)
+        work = self._analysis_request(kind)
+        result = work()
+        self._accept_analysis(kind, result, phase_memory_bytes=getattr(work, 'phase_memory_bytes', None))
         return result
 
     def _analysis_job(self, kind):
@@ -714,7 +728,8 @@ class Workbench(QtWidgets.QMainWindow):
         except Exception as exc:
             self._show_error(exc)
             return
-        self._start_job(work, lambda result: self._accept_analysis(kind, result), 'Analyzing applied spectrum…')
+        phase_memory = getattr(work, 'phase_memory_bytes', None)
+        self._start_job(work, lambda result: self._accept_analysis(kind, result, phase_memory_bytes=phase_memory), 'Analyzing applied spectrum…')
 
     def _current_analysis(self):
         from .analysis import dataset_digest
@@ -831,17 +846,27 @@ class Workbench(QtWidgets.QMainWindow):
             return
         super().closeEvent(event)
 
+    def _read_with_budget(self, path, memory_bytes):
+        from .io import describe_dataset
+        header = describe_dataset(path)
+        limit = min(memory_bytes, 1024**3)
+        if header.nbytes > limit:
+            raise NMRNextError('MEMORY_BUDGET', f'Input requires {header.nbytes} bytes; selected read limit is {limit} bytes. Increase the processing budget or use a smaller input (opening is capped at 1 GiB).', details={'required_bytes': header.nbytes, 'max_bytes': limit})
+        return read_dataset(path, max_bytes=limit, expected_header=header)
+
     def _open_file(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self, "Open NMR spectrum", "", "NMR spectra (*.nmrh5 *.h5 *.ft1 *.ft2 *.ucsf);;All files (*)")
         if path:
-            self._start_job(lambda: read_dataset(path),
+            memory = self.memory_spin.value() * 1024**2
+            self._start_job(lambda: self._read_with_budget(path, memory),
                             lambda ds: self.load_dataset_now(ds, Path(path).name), "Opening spectrum…")
 
     def _open_bruker(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose acquisition folder")
         if path:
-            self._start_job(lambda: read_dataset(path),
+            memory = self.memory_spin.value() * 1024**2
+            self._start_job(lambda: self._read_with_budget(path, memory),
                             lambda ds: self.load_dataset_now(ds, Path(path).name), "Opening acquisition…")
 
     def load_dataset_now(self, dataset, name="Dataset"):
@@ -851,7 +876,7 @@ class Workbench(QtWidgets.QMainWindow):
             raise NMRNextError("INVALID_DATASET", "Open requires a validated Dataset")
         previous_bounds = {axis: [field.value() for field in fields] for axis, fields in self.region_bounds.items()}
         previous = (self.source, self.current, self.preview, self.source_name,
-                    self.last_operations, self.last_plan, self.last_backend,
+                    self.last_operations, self.last_plan, self.last_backend, self.last_memory_bytes,
                     self.dataset_title.text(), self.view_combo.currentIndex(),
                     self.axis_combo.currentIndex(), self.component_combo.currentIndex(),
                     self.status.text(), self.status.styleSheet(), self._axis_settings,
@@ -865,6 +890,7 @@ class Workbench(QtWidgets.QMainWindow):
             self.last_operations = []
             self.last_plan = None
             self.last_backend = None
+            self.last_memory_bytes = None
             self._reset_axis_settings()
             self._clear_analysis()
             self.dataset_title.setText(name)
@@ -875,7 +901,7 @@ class Workbench(QtWidgets.QMainWindow):
             self._set_status(f"Loaded {name}. Original data is preserved.")
         except Exception:
             (self.source, self.current, self.preview, self.source_name,
-             self.last_operations, self.last_plan, self.last_backend,
+             self.last_operations, self.last_plan, self.last_backend, self.last_memory_bytes,
              title, view_index, axis_index, component_index,
              status, status_style, self._axis_settings,
              self.analysis_reports, filter_checked) = previous
@@ -908,6 +934,7 @@ class Workbench(QtWidgets.QMainWindow):
         self.last_operations = []
         self.last_plan = None
         self.last_backend = None
+        self.last_memory_bytes = None
         self._reset_axis_settings()
         self._clear_analysis()
         self._refresh()
@@ -1063,8 +1090,9 @@ class Workbench(QtWidgets.QMainWindow):
             raise NMRNextError("NO_DATASET", "Open a dataset first")
         ops = self.build_recipe()
         backend = self.backend_combo.currentData()
-        plan = plan_operations(self.source, ops, backend=backend)
-        result = run_operations(self.source, ops, backend=backend)
+        memory = self.memory_spin.value() * 1024**2
+        plan = plan_operations(self.source, ops, backend=backend, memory_bytes=memory)
+        result = run_operations(self.source, ops, backend=backend, memory_bytes=memory)
         if preview:
             self.preview = result
             self._set_status("Complete recipe preview. Process to make it the current result.")
@@ -1074,6 +1102,7 @@ class Workbench(QtWidgets.QMainWindow):
             self.last_operations = ops
             self.last_plan = plan
             self.last_backend = backend
+            self.last_memory_bytes = memory
             self._clear_analysis()
             self._set_status(f"Processed {len(ops)} operation{'s' if len(ops) != 1 else ''} with {backend}." if ops
                              else "No processing operations selected; current data is unchanged.")
@@ -1088,9 +1117,10 @@ class Workbench(QtWidgets.QMainWindow):
         ops = self.build_recipe()
         backend = self.backend_combo.currentData()
         source = self.source
+        memory = self.memory_spin.value() * 1024**2
         def work():
-            plan = plan_operations(source, ops, backend=backend)
-            return run_operations(source, ops, backend=backend), plan
+            plan = plan_operations(source, ops, backend=backend, memory_bytes=memory)
+            return run_operations(source, ops, backend=backend, memory_bytes=memory), plan
         def done(value):
             result, plan = value
             if preview:
@@ -1102,6 +1132,7 @@ class Workbench(QtWidgets.QMainWindow):
                 self.last_operations = ops
                 self.last_plan = plan
                 self.last_backend = backend
+                self.last_memory_bytes = memory
                 self._clear_analysis()
                 self._set_status(f"Processed {len(ops)} operation{'s' if len(ops) != 1 else ''} with {backend}." if ops
                                  else "No processing operations selected; current data is unchanged.")
@@ -1316,7 +1347,7 @@ class Workbench(QtWidgets.QMainWindow):
             raise NMRNextError("NO_DATASET", "Open a dataset first")
         ops = self.last_operations if self.current is not self.source else []
         return {"schema_version": "1", "report_type": "spinflow-applied-workflow-audit", "source_name": self.source_name,
-                "operations": ops, "backend": self.last_backend,
+                "operations": ops, "backend": self.last_backend, "memory_bytes": self.last_memory_bytes,
                 "plan": self.last_plan, "result_provenance": self.current.provenance,
                 "source_axes": [a.to_dict() for a in self.source.axes],
                 "result_axes": [a.to_dict() for a in self.current.axes]}
@@ -1339,7 +1370,8 @@ class Workbench(QtWidgets.QMainWindow):
         if self.source is None:
             raise NMRNextError('NO_DATASET', 'Open a dataset first')
         return export_workflow_bundle(self.source, self.last_operations, directory,
-                                      backend=self.last_backend or 'native')
+                                      backend=self.last_backend or 'native',
+                                      memory_bytes=self.last_memory_bytes or self.memory_spin.value() * 1024**2)
 
     def _save_workflow_dialog(self):
         if self.source is None:

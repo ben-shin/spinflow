@@ -1,0 +1,232 @@
+{
+  "scope": "Actual NMRDraw and Sparky screenshots for one prior-exposed public case; images are unmodified; generic /home/validator guest paths may be visible",
+  "source_consumer_record_sha256": "b4c6b54ec45352974852e1db4dcdd1f4e1ae9540e019d909d4848ed5bae31cf7",
+  "source_consumer_index_sha256": "04103e3046710025a70fabd7be85988c9744a6cb6c44b2ea87330c29327293fd",
+  "source_reference_consumer_record_sha256": "905caf6308882264324f8b775a4995416d2d9d160f659ea82b5f32ae3f8ed6a2",
+  "images": [
+    {
+      "file": "candidate-01-nmrdraw-first.png",
+      "sha256": "463a46627b2173a2b74df3eec582b34344c6547510861fe6475c84ce38127bf1",
+      "bytes": 31996,
+      "source_group": "consumers-v4",
+      "source_file": "01-nmrdraw-first.png"
+    },
+    {
+      "file": "candidate-10-T49.png",
+      "sha256": "76d8ea7df16d14910843e0ff0d1793f60b6484fb6429b1f0d4097715446a1ff9",
+      "bytes": 51708,
+      "source_group": "consumers-v4",
+      "source_file": "10-T49.png"
+    },
+    {
+      "file": "candidate-11-T11.png",
+      "sha256": "a5190956cd2bdeccd616cc3ad410784a40480038b0bddc34bb81edfc116e4ec4",
+      "bytes": 49441,
+      "source_group": "consumers-v4",
+      "source_file": "11-T11.png"
+    },
+    {
+      "file": "candidate-12-G14.png",
+      "sha256": "df9cc1ad7809b0defec03b6968c7dbf5085f9df05003bb4eb4f24ba330298dd8",
+      "bytes": 49701,
+      "source_group": "consumers-v4",
+      "source_file": "12-G14.png"
+    },
+    {
+      "file": "candidate-13-E15.png",
+      "sha256": "d778cb31a9d8f05ba8f942ed0844a6d0aaac8b86d26aa1a4a6488903bca27e15",
+      "bytes": 51750,
+      "source_group": "consumers-v4",
+      "source_file": "13-E15.png"
+    },
+    {
+      "file": "candidate-14-W43.png",
+      "sha256": "ad95c512b02ad7f6daf935afff2a53fe9bf0fd8ee0301811114c612e251d7a5d",
+      "bytes": 52268,
+      "source_group": "consumers-v4",
+      "source_file": "14-W43.png"
+    },
+    {
+      "file": "candidate-16-nmr-reopened.png",
+      "sha256": "463a46627b2173a2b74df3eec582b34344c6547510861fe6475c84ce38127bf1",
+      "bytes": 31996,
+      "source_group": "consumers-v4",
+      "source_file": "16-nmr-reopened.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-full.png",
+      "sha256": "7766d27b16c4335fd4eaee1cbc96eb4c08fc5c3c71ff0c76adae5baf203de7b5",
+      "bytes": 13458,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-full.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-T49.png",
+      "sha256": "ff11c843c9a1b5f71f960a0c7155e4ac24c3b5e1fd96103c7618639ae0906e36",
+      "bytes": 29439,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-T49.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-T11.png",
+      "sha256": "c3cad1b62db9806e121ce4983e1f9ddf8ab984da310e0ba61f04dc72e25dcfb8",
+      "bytes": 27944,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-T11.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-G14.png",
+      "sha256": "0fc74f66b0ab5889b85d36a6c77d4705754b3819ad0912b4f281060468794e9c",
+      "bytes": 27080,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-G14.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-E15.png",
+      "sha256": "30b88f002fefeb92a9bb6c5c984593e50b91a2ac25ef88d3c12d6134c49a268d",
+      "bytes": 29543,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-E15.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-W43.png",
+      "sha256": "1cee783e34a7bf8705b229dd3e4786ad269d18bc207980b0baf0c77af07dd3b4",
+      "bytes": 29777,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-W43.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-reopen-full.png",
+      "sha256": "7f3a4ff35f59e3a07d51cd43dd220bb9cdb8f2a33dca75b41619d9a61301b94a",
+      "bytes": 13448,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-reopen-full.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-reopen-T49.png",
+      "sha256": "62c513c3ff935c7e479cfc157c33eac905457aa3849f5c06b15349ffc1105993",
+      "bytes": 29438,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-reopen-T49.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-reopen-T11.png",
+      "sha256": "90bd64348b3a26631d40d71849f3e32121b14279a256c4568d44953d3f30595f",
+      "bytes": 27928,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-reopen-T11.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-reopen-G14.png",
+      "sha256": "11b70b5f1f98b75e5db7599295d08be207975ff4b8060032b865c0c8ceef8f4d",
+      "bytes": 27029,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-reopen-G14.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-reopen-E15.png",
+      "sha256": "1fe71fd063567905a571a1f0218b876a8d451a58d3840adff7764bc11365a356",
+      "bytes": 29548,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-reopen-E15.png"
+    },
+    {
+      "file": "candidate-60-sparky-candidate-reopen-W43.png",
+      "sha256": "b612b13ffe87f3cda3b5169e758ae74ee3c33031837eb852f7199768160bb7e2",
+      "bytes": 29769,
+      "source_group": "consumers-v4",
+      "source_file": "60-sparky-candidate-reopen-W43.png"
+    },
+    {
+      "file": "reference-28-reference-full.png",
+      "sha256": "c40255d15b3ddf3e188910da0ea6690194ad2e65bfa14ecac63817e5717a5117",
+      "bytes": 31890,
+      "source_group": "consumers-protocol",
+      "source_file": "28-reference-full.png"
+    },
+    {
+      "file": "reference-31-reference-T49.png",
+      "sha256": "53fe1cef63cf9542fc1ffc092b2bf8af83c4db3367e5e5b54fefdab974b068db",
+      "bytes": 51112,
+      "source_group": "consumers-protocol",
+      "source_file": "31-reference-T49.png"
+    },
+    {
+      "file": "reference-32-reference-T11.png",
+      "sha256": "eb627b5721722288b59b9d755f4d82276cd548a6e61c8a48e39f2b9418c7b398",
+      "bytes": 49098,
+      "source_group": "consumers-protocol",
+      "source_file": "32-reference-T11.png"
+    },
+    {
+      "file": "reference-33-reference-G14.png",
+      "sha256": "09ec6ba3065f4c318c5730b96eed2fa69ddcd08601897f63fc4b7feb6ad9a50e",
+      "bytes": 49121,
+      "source_group": "consumers-protocol",
+      "source_file": "33-reference-G14.png"
+    },
+    {
+      "file": "reference-34-reference-E15.png",
+      "sha256": "46df94495e0d7e72605ddf98898bd29855fd533fca6b5692aca106a55b725a9a",
+      "bytes": 51279,
+      "source_group": "consumers-protocol",
+      "source_file": "34-reference-E15.png"
+    },
+    {
+      "file": "reference-35-reference-W43.png",
+      "sha256": "d8313bc6da030573f4dedd3734edeb19c1d1797c30f5cff02616595e824b5409",
+      "bytes": 52039,
+      "source_group": "consumers-protocol",
+      "source_file": "35-reference-W43.png"
+    },
+    {
+      "file": "reference-65-nmrdraw-reference-reopened.png",
+      "sha256": "c40255d15b3ddf3e188910da0ea6690194ad2e65bfa14ecac63817e5717a5117",
+      "bytes": 31890,
+      "source_group": "consumers-protocol",
+      "source_file": "65-nmrdraw-reference-reopened.png"
+    },
+    {
+      "file": "reference-60-sparky-reference-full.png",
+      "sha256": "f556ee24ec2b446c0e9e1bf8b63de7865c2a6f9ea90b3d5911823a492ebc0d1c",
+      "bytes": 12249,
+      "source_group": "consumers-protocol",
+      "source_file": "60-sparky-reference-full.png"
+    },
+    {
+      "file": "reference-60-sparky-reference-T49.png",
+      "sha256": "ad62d150697b19d2b2534ae9cf743f187736334e239b3c51d7a09811e89963bc",
+      "bytes": 29409,
+      "source_group": "consumers-protocol",
+      "source_file": "60-sparky-reference-T49.png"
+    },
+    {
+      "file": "reference-60-sparky-reference-T11.png",
+      "sha256": "ffbbf6063c775acf4561743458ff60c283bd818d839d96026329d5633f321972",
+      "bytes": 27907,
+      "source_group": "consumers-protocol",
+      "source_file": "60-sparky-reference-T11.png"
+    },
+    {
+      "file": "reference-60-sparky-reference-G14.png",
+      "sha256": "78d0fad5dd1713f869b5bc447997b17108eea5dab843a1c03c1124c01dffbb5d",
+      "bytes": 27080,
+      "source_group": "consumers-protocol",
+      "source_file": "60-sparky-reference-G14.png"
+    },
+    {
+      "file": "reference-60-sparky-reference-E15.png",
+      "sha256": "3c56a19780773f1ef233bbed87e8cd29425f099d1124b61b72357301ffb63550",
+      "bytes": 29530,
+      "source_group": "consumers-protocol",
+      "source_file": "60-sparky-reference-E15.png"
+    },
+    {
+      "file": "reference-60-sparky-reference-W43.png",
+      "sha256": "22f8bb4d1bdf07e473c81550f55889c42cb8b106230ac7e60d9f97b4e066f43d",
+      "bytes": 29765,
+      "source_group": "consumers-protocol",
+      "source_file": "60-sparky-reference-W43.png"
+    }
+  ]
+}

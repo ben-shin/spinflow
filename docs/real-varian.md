@@ -1,7 +1,7 @@
 # Controlled Varian / Agilent acquisition profiles
 
 SpinFlow reads a bounded float32 `procpar`/`fid` profile. Raw vendor writing is
-not implemented. This is not general VNMR/VnmrJ compatibility.
+not implemented. This is not general VNMR/VnmrJ compatibility. The selected larger comparison is specified in the [laboratory-workflow protocol](laboratory-workflow-protocol.md), with its [results and pending gates](laboratory-workflow-results.md).
 
 - `varian-raw-1d` (`varian1d`, `agilent1d`): one unarrayed complex FID.
 - `varian-raw-2d` (`varian2d`, `agilent2d`): the acquired `cpjdcptan2d`

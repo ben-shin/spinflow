@@ -21,7 +21,7 @@ import h5py
 import numpy as np
 
 from nmrnext.errors import NMRNextError
-from nmrnext.model import Axis, Dataset
+from nmrnext.model import Axis, Dataset, DatasetHeader
 
 
 MAX_BYTES = 1 << 30
@@ -96,7 +96,7 @@ def capabilities():
     ]
 
 
-def _format(name, path, *, reading=False):
+def _format(name, path, *, reading=False, header_only=False):
     if name is not None:
         result = _ALIASES.get(str(name).lower())
         if result is None:
@@ -120,14 +120,22 @@ def _format(name, path, *, reading=False):
                 return "bruker-raw-1d"
             raise NMRNextError("AMBIGUOUS_FORMAT", "Directory does not contain a declared acquisition profile")
         with open(path, "rb") as handle:
-            head = handle.read(2048)
+            head = handle.read(12)
+            # Only a text candidate needs a longer text signature. Binary
+            # UCSF headers can be shorter than 2048 bytes; do not probe samples.
+            if head.lstrip().startswith(b"##TITLE="):
+                if header_only:
+                    # Refuse text-spectrum planning before any possible table
+                    # bytes are probed; explicit numeric conversion stays separate.
+                    return "jcamp-real-1d"
+                head += handle.read(2036)
         if head.startswith(b"\x89HDF\r\n\x1a\n"):
             return "nmrnext-hdf5"
         if head.startswith(b"UCSF NMR"):
             return "ucsf-real"
         if head.lstrip().startswith(b"##TITLE=") and b"##JCAMP-DX=" in head:
             return "jcamp-real-1d"
-        if len(head) >= 2048:
+        if len(head) >= 12:
             marker = np.frombuffer(head[8:12], dtype="<f4")[0]
             swapped = np.frombuffer(head[8:12], dtype=">f4")[0]
             if min(abs(float(marker)-2.345), abs(float(swapped)-2.345)) < 1e-5:
@@ -477,7 +485,31 @@ def _axis_from_uc(index, size, uc, label, *, obs, sw, car):
                 reference_hz=0.0, label=str(label), nucleus=str(label), encoding="real")
 
 
-def read_dataset(path, *, format=None, max_bytes=MAX_BYTES):
+def describe_dataset(path, *, format=None):
+    """Return a planning-only DatasetHeader without loading sample payloads."""
+    from .headers import describe_dataset as describe
+    return describe(path, format=format)
+
+
+def read_dataset(path, *, format=None, max_bytes=MAX_BYTES, expected_header=None):
+    """Read numeric data, optionally guarding a preceding header-only plan."""
+    if expected_header is not None:
+        if not isinstance(expected_header, DatasetHeader):
+            raise NMRNextError("INVALID_HEADER_IDENTITY", "expected_header must be a file-derived DatasetHeader")
+        from .headers import check_source_stat
+        check_source_stat(expected_header)
+        current=describe_dataset(path,format=format)
+        if (current.source_identity != expected_header.source_identity or current.axes != expected_header.axes
+                or current.complex_axes != expected_header.complex_axes or current.dtype != expected_header.dtype
+                or current.metadata != expected_header.metadata or current.provenance != expected_header.provenance):
+            raise NMRNextError("INPUT_CHANGED", "Input headers changed since the plan; inspect and plan again")
+    dataset=_read_dataset(path,format=format,max_bytes=max_bytes)
+    if expected_header is not None:
+        check_source_stat(expected_header)
+    return dataset
+
+
+def _read_dataset(path, *, format=None, max_bytes=MAX_BYTES):
     """Read one supported exact profile into the canonical component layout."""
     path = Path(path)
     head = inspect_dataset(path, format=format, max_bytes=max_bytes)
@@ -508,41 +540,22 @@ def read_dataset(path, *, format=None, max_bytes=MAX_BYTES):
                 raise NMRNextError("INVALID_SHAPE", "Bruker reader disagrees with declared 1D complex shape")
             if _hash_file(path/"acqus") != header["acqus_sha256"]:
                 raise NMRNextError("INPUT_CHANGED", "acqus changed between inspection and import")
-            n = head["shape"][1]
-            axis = Axis(id="a0", size=n, domain="time", unit="s", start=0., step=1/header["SW_h"],
-                        observation_mhz=header["SFO1"], reference_ppm=None,
-                        label=header["NUC1"], nucleus=header["NUC1"], encoding="complex",
-                        dwell_seconds=1/header["SW_h"], acquired_size=n)
-            data = np.stack((raw[:n].real.astype("float64"), raw[:n].imag.astype("float64")))
-            return Dataset(data, (axis,), ("a0",), metadata={"import": {
-                "format": fmt, "source_sha256": {"fid": _hash_file(path/"fid"),
-                                                  "acqus": header["acqus_sha256"]},
-                "raw_acqus_text": header["raw_acqus_text"],
-                "acquisition_parameters": header["acquisition_parameters"],
-                "padding_complex_points": raw.size-n,
-                "digital_filter": header["digital_filter"]}})
+            from .headers import normalized_description
+            axes,bits,metadata,provenance=normalized_description(head, {'fid':_hash_file(path/'fid'), 'acqus':header['acqus_sha256']})
+            n=head['shape'][1]
+            data=np.stack((raw[:n].real.astype('float64'),raw[:n].imag.astype('float64')))
+            return Dataset(data,axes,bits,metadata,provenance)
         if fmt == "nmrpipe-real":
             dic, data = ng.pipe.read(str(path))
             if tuple(data.shape) != tuple(head["shape"][1:]) or np.iscomplexobj(data):
                 raise NMRNextError("INVALID_SHAPE", "NMRPipe reader disagrees with inspected real shape")
-            axes = []
-            for i, n in enumerate(data.shape):
-                dim = "FDF2" if data.ndim == 1 else ("FDF1" if i == 0 else "FDF2")
-                uc = ng.pipe.make_uc(dic, data, dim=i)
-                axes.append(_axis_from_uc(i, n, uc, dic[dim+"LABEL"],
-                                          obs=dic[dim+"OBS"], sw=dic[dim+"SW"], car=0))
         else:
             dic, data = ng.sparky.read(str(path))
             if tuple(data.shape) != tuple(head["shape"][1:]):
                 raise NMRNextError("INVALID_SHAPE", "UCSF reader disagrees with inspected real shape")
-            axes = []
-            for i, n in enumerate(data.shape):
-                ax = dic[f"w{i+1}"]
-                uc = ng.sparky.make_uc(dic, data, dim=i)
-                axes.append(_axis_from_uc(i, n, uc, ax["nucleus"],
-                                          obs=ax["spectrometer_freq"], sw=ax["spectral_width"], car=0))
-        return Dataset(data[None], tuple(axes), metadata={"import": {"format": fmt,
-                   "source_sha256": _hash_file(path), "source_header": _jsonable_header(head["header"])}})
+        from .headers import normalized_description
+        axes,bits,metadata,provenance=normalized_description(head,_hash_file(path))
+        return Dataset(data[None],axes,bits,metadata,provenance)
     except (OSError, EOFError, IndexError, TypeError, AttributeError, struct.error, ValueError) as exc:
         if isinstance(exc, NMRNextError):
             raise
@@ -577,7 +590,7 @@ def _target_label(axis):
 
 def export_preflight(dataset, format, *, allow_losses=()):
     if not isinstance(dataset, Dataset):
-        raise NMRNextError("INVALID_DATASET", "Export requires a Dataset")
+        raise NMRNextError("INVALID_DATASET", "Export requires numeric sample data; a DatasetHeader is planning-only")
     fmt = _format(format, "")
     accepted = set(allow_losses)
     known = {"quadrature_projection", "float32_quantization", "metadata", "provenance",

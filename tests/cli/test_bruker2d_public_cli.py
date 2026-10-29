@@ -37,7 +37,7 @@ def test_public_recipe_cli_auto_phase_and_native_replay(tmp_path, experiment):
     output, report_path = tmp_path/'phased.nmrh5', tmp_path/'phase.json'
     with contextlib.redirect_stdout(io.StringIO()):
         assert cli.main(['run', str(workflow)]) == 0
-        args = ['autophase', recipe['output'], str(output), '--report', str(report_path)]
+        args = ['autophase', recipe['output'], str(output), '--report', str(report_path), '--memory', '512MiB']
         if case['autophase_first_order']:
             args += ['--first-order']
         assert cli.main(args) == 0

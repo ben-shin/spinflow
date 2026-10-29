@@ -1,0 +1,27 @@
+{
+  "status": "PASS_WITH_AUTHORIZED_APPEND_ONLY_LIVE_LOG_EXCEPTION",
+  "guest_shutdown_utc": "2026-10-29T19:24:54Z",
+  "graceful_shutdown": true,
+  "owned_guest_process_exited": true,
+  "localhost_forwarded_port_closed": true,
+  "force_kill_used": false,
+  "host_settings_changed": false,
+  "closure_manifest_sha256": "a17336effe95f9fde1aba883da5a8929edbeaad0eecd7512ddfc93bd29636849",
+  "pre_shutdown_science_seal_manifest_sha256": "40cd24fe3768f73c3baf42ed31a45d7ee505c6821f20ffb56254a237141639c8",
+  "final_validation_seal_manifest_sha256": "e62d1f6ccbacfa0a5e263596f23f50c6327b6635661eda662c2e77fd7f467bb5",
+  "sealed_serial_prefix": {
+    "bytes": 60650,
+    "sha256": "b83ca195c0ad2dec989d38ea8643e6fba74f21f20758941fd9c18b4b6592a2ad"
+  },
+  "authorized_shutdown_append": {
+    "bytes": 8456,
+    "sha256": "625c0ada43a460b57b01c50da0aa93ede11f5881520a7b0b622d79c19311ca01"
+  },
+  "current_serial": {
+    "bytes": 69106,
+    "sha256": "92b99a73ef6e9a515a4b21b3fa7b58dd16d5dc60ae87ef5f519db535806966ed"
+  },
+  "other_sealed_files_unchanged": 1550,
+  "prior_manifest_bytes_unchanged": 10,
+  "qualification": "The earlier science seal describes the pre-shutdown serial prefix, not the current full serial log. The original log was not truncated, restored, or rewritten. All other sealed scientific, code, runtime, test, and benchmark files remain unchanged."
+}

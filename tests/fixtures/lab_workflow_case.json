@@ -1,0 +1,744 @@
+{
+  "schema_version": 1,
+  "case_id": "public-agilent-cpjdcptan2d",
+  "selection_authority": "User explicitly selected cached public protein case; no private laboratory acquisition supplied",
+  "identity_limit": "Protein NCa label in public plot; NCO comment in limits.in; protein identity unknown; samplename empty",
+  "raw_shape_channels_y_x": [
+    4,
+    166,
+    1500
+  ],
+  "final_real_shape_y_x": [
+    2048,
+    4096
+  ],
+  "dtype": "float32",
+  "nuclei_y_x": [
+    "15N",
+    "13C"
+  ],
+  "files": [
+    {
+      "bytes": 3689027,
+      "sha256": "f2b617fec93da7ff5c92344c98127a1ec8fef9398daebe92b1fea1e6a33847aa",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_agilent2pipe_2d.zip",
+      "source_member": null,
+      "cache_relative_path": "agilent_2d.zip"
+    },
+    {
+      "bytes": 947,
+      "sha256": "292a82d433c254b156d293926906d2a7b7657fe17a18930290c811b6fef0f01e",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_agilent2pipe_2d.zip",
+      "source_member": "agilent2pipe_2d/agilent2pipe_2d.py",
+      "cache_relative_path": "2d/agilent2pipe_2d/agilent2pipe_2d.py"
+    },
+    {
+      "bytes": 493,
+      "sha256": "71622387d57b4d80e677e2facddeb1e92273429424a40641ae889fc7789eeb6b",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_agilent2pipe_2d.zip",
+      "source_member": "agilent2pipe_2d/agilent2pipe_2d.com",
+      "cache_relative_path": "2d/agilent2pipe_2d/agilent2pipe_2d.com"
+    },
+    {
+      "bytes": 547,
+      "sha256": "aa551136235f761f6093bb47a5eac566bc1bd2253f17775bad89c1802c256064",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_agilent2pipe_2d.zip",
+      "source_member": "agilent2pipe_2d/compare.py",
+      "cache_relative_path": "2d/agilent2pipe_2d/compare.py"
+    },
+    {
+      "bytes": 1337,
+      "sha256": "7025d4b5f083fcba911c4597aab434c0eb0aca631c286ffd3535e029b093dce1",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_agilent2pipe_2d.zip",
+      "source_member": "agilent2pipe_2d/README",
+      "cache_relative_path": "2d/agilent2pipe_2d/README"
+    },
+    {
+      "bytes": 3993328,
+      "sha256": "4a35f4b98f9116ba67760d1c0c83cc48a17b4e53897b5dbe1e25f85f28b1eac8",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_agilent2pipe_2d.zip",
+      "source_member": "agilent2pipe_2d/agilent_2d/fid",
+      "cache_relative_path": "2d/agilent2pipe_2d/agilent_2d/fid"
+    },
+    {
+      "bytes": 22523,
+      "sha256": "54cf12841987ec3a05f5ca76f2b09dff09b7648d84b2936627f2c9757472c817",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_agilent2pipe_2d.zip",
+      "source_member": "agilent2pipe_2d/agilent_2d/procpar",
+      "cache_relative_path": "2d/agilent2pipe_2d/agilent_2d/procpar"
+    },
+    {
+      "bytes": 3679921,
+      "sha256": "859eafae26e0ffb1f6c197ebe204165b1f6e1eb24df7a0461644f253878f9be7",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_process_pipe_2d.zip",
+      "source_member": null,
+      "cache_relative_path": "process_2d.zip"
+    },
+    {
+      "bytes": 1012,
+      "sha256": "5eda37f56687f78631ed22e80da5df553f3e421ee4122db66bdf7e5cbb365a4b",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_process_pipe_2d.zip",
+      "source_member": "processing/README",
+      "cache_relative_path": "reference_2d/processing/README"
+    },
+    {
+      "bytes": 876,
+      "sha256": "43fc82a3fecd5eaef39d6f4e1e20898360ad7000858a953e2d10570203d82678",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_process_pipe_2d.zip",
+      "source_member": "processing/process_pipe_2d.py",
+      "cache_relative_path": "reference_2d/processing/process_pipe_2d.py"
+    },
+    {
+      "bytes": 511,
+      "sha256": "c0961bfe8673b71a6d008e2333534bda41e563c8856d3f4f9ce915133dcfb124",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_process_pipe_2d.zip",
+      "source_member": "processing/compare_2d.py",
+      "cache_relative_path": "reference_2d/processing/compare_2d.py"
+    },
+    {
+      "bytes": 656,
+      "sha256": "62279f8e94d8122c89128759cc7eb633541217573b1c73a834642c3825503282",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_process_pipe_2d.zip",
+      "source_member": "processing/pipe2pipe_2d.com",
+      "cache_relative_path": "reference_2d/processing/pipe2pipe_2d.com"
+    },
+    {
+      "bytes": 3986048,
+      "sha256": "da31afa472b8aed429b43297b094d61824979eb0984919df70bf85322d6b2739",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_process_pipe_2d.zip",
+      "source_member": "processing/nmrpipe_2d/test.fid",
+      "cache_relative_path": "reference_2d/processing/nmrpipe_2d/test.fid"
+    },
+    {
+      "bytes": 31081854,
+      "sha256": "ce2ca56535b931fafc004067a4cef05b9d3bb45a836d2ae8cdb6a0b8ffd22f29",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_plot_2d.zip",
+      "source_member": null,
+      "cache_relative_path": "processed_2d.zip"
+    },
+    {
+      "bytes": 1599,
+      "sha256": "0f84c03834f9c76348d244f70c7e2f3dc4afba5d7895a2760191468e0fb82d66",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_plot_2d.zip",
+      "source_member": "plot_2d/plot_spectrum.py",
+      "cache_relative_path": "processed_2d/plot_2d/plot_spectrum.py"
+    },
+    {
+      "bytes": 1348,
+      "sha256": "74c08a9c8d13e4e1f7b129255deae8275e63551585f524156362570bf49011c0",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_plot_2d.zip",
+      "source_member": "plot_2d/plot_spectrum_pts.py",
+      "cache_relative_path": "processed_2d/plot_2d/plot_spectrum_pts.py"
+    },
+    {
+      "bytes": 1387,
+      "sha256": "df1cd73fb5d66bc9f506c4121156e19e92c2eef431b427b4b643348cded67b55",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_plot_2d.zip",
+      "source_member": "plot_2d/plot_assignments.py",
+      "cache_relative_path": "processed_2d/plot_2d/plot_assignments.py"
+    },
+    {
+      "bytes": 1856,
+      "sha256": "927947f74544703d387ded527759465ee8a38553c002ea019d6dfda937266b95",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_plot_2d.zip",
+      "source_member": "plot_2d/plot_boxes.py",
+      "cache_relative_path": "processed_2d/plot_2d/plot_boxes.py"
+    },
+    {
+      "bytes": 513,
+      "sha256": "6005999fa04472d700562189219eabf6da26f7542bd7d7363b50619225cdf4b4",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_plot_2d.zip",
+      "source_member": "plot_2d/limits.in",
+      "cache_relative_path": "processed_2d/plot_2d/limits.in"
+    },
+    {
+      "bytes": 998,
+      "sha256": "f78466d046cb6125b98f5316c2446638e903f8c3effc66ac760f1eff12ccb27b",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_plot_2d.zip",
+      "source_member": "plot_2d/README",
+      "cache_relative_path": "processed_2d/plot_2d/README"
+    },
+    {
+      "bytes": 33556480,
+      "sha256": "7baaaf03137561a39a362ee35dfff0c5a7e480c3c2e0e9fdfe9befc7f6c503b8",
+      "source_archive_url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_plot_2d.zip",
+      "source_member": "plot_2d/nmrpipe_2d/test.ft2",
+      "cache_relative_path": "processed_2d/plot_2d/nmrpipe_2d/test.ft2"
+    }
+  ],
+  "roi_selection_rule_sha256": "6d59888e89cd523b415d27239efefa4fb69b75094f08f22b6aad775a44e64e6b",
+  "rois": [
+    {
+      "label": "T49",
+      "inclusive_yx": [
+        [
+          1316,
+          1334
+        ],
+        [
+          1992,
+          2003
+        ]
+      ],
+      "ppm_yx_at_bounds": [
+        [
+          104.3606674080326,
+          103.39659910538236
+        ],
+        [
+          60.43867533788892,
+          59.370362238871046
+        ]
+      ],
+      "expected_sign": "positive",
+      "reference_max": 107964.03125,
+      "reference_min": -6404.9384765625,
+      "reference_sum_float64": 10194683.16015625,
+      "reference_peak_yx": [
+        1325,
+        1998
+      ],
+      "strength_class": "strong"
+    },
+    {
+      "label": "T11",
+      "inclusive_yx": [
+        [
+          1284,
+          1302
+        ],
+        [
+          1996,
+          2008
+        ]
+      ],
+      "ppm_yx_at_bounds": [
+        [
+          106.07456661274412,
+          105.11049831009389
+        ],
+        [
+          60.05019784733697,
+          58.884765375681106
+        ]
+      ],
+      "expected_sign": "positive",
+      "reference_max": 79494.0234375,
+      "reference_min": 1616.22314453125,
+      "reference_sum_float64": 8478200.80883789,
+      "reference_peak_yx": [
+        1292,
+        2001
+      ],
+      "strength_class": "weak"
+    },
+    {
+      "label": "G14",
+      "inclusive_yx": [
+        [
+          1293,
+          1314
+        ],
+        [
+          2032,
+          2044
+        ]
+      ],
+      "ppm_yx_at_bounds": [
+        [
+          105.59253246141901,
+          104.46778610832708
+        ],
+        [
+          56.553900432369375,
+          55.38846796071351
+        ]
+      ],
+      "expected_sign": "positive",
+      "reference_max": 94269.3125,
+      "reference_min": -5604.1220703125,
+      "reference_sum_float64": 9677603.89831543,
+      "reference_peak_yx": [
+        1303,
+        2038
+      ],
+      "strength_class": "intermediate"
+    },
+    {
+      "label": "E15",
+      "inclusive_yx": [
+        [
+          1004,
+          1025
+        ],
+        [
+          2077,
+          2087
+        ]
+      ],
+      "ppm_yx_at_bounds": [
+        [
+          121.07118465396994,
+          119.946438300878
+        ],
+        [
+          52.18352866365989,
+          51.212334937280005
+        ]
+      ],
+      "expected_sign": "positive",
+      "reference_max": 96404.8203125,
+      "reference_min": -2061.185546875,
+      "reference_sum_float64": 9187132.058532715,
+      "reference_peak_yx": [
+        1014,
+        2083
+      ],
+      "strength_class": "strong"
+    },
+    {
+      "label": "W43",
+      "inclusive_yx": [
+        [
+          933,
+          952
+        ],
+        [
+          2008,
+          2019
+        ]
+      ],
+      "ppm_yx_at_bounds": [
+        [
+          124.87389851442363,
+          123.85627086162616
+        ],
+        [
+          58.884765375681106,
+          57.81645227666323
+        ]
+      ],
+      "expected_sign": "positive",
+      "reference_max": 83863.703125,
+      "reference_min": -3437.8310546875,
+      "reference_sum_float64": 8778142.428100586,
+      "reference_peak_yx": [
+        941,
+        2013
+      ],
+      "strength_class": "weak"
+    }
+  ],
+  "noise_half_open_yx": [
+    [
+      [
+        512,
+        768
+      ],
+      [
+        2800,
+        3072
+      ]
+    ],
+    [
+      [
+        1280,
+        1536
+      ],
+      [
+        2800,
+        3072
+      ]
+    ]
+  ],
+  "original_script_external_commands": [
+    "/bin/csh",
+    "var2pipe",
+    "nmrPipe"
+  ],
+  "original_script_sourced_files": [],
+  "protocol_gates": {
+    "declared_before_candidate_comparison": true,
+    "raw_tolerance": {
+      "rtol": 0,
+      "atol": 0
+    },
+    "native_fft_relative_max_tolerance": 2e-06,
+    "canonical_convention": "Negative DFT: 1D original [R,I], 2D original [even.R,odd.R,even.I,odd.I]. Archived NMRPipe components convert with fixed signs [1,-1] or [1,-1,-1,1], independently derived before candidate validation.",
+    "no_fitting": "No fitted phases, alignment, sign selection, scaling or tolerance relaxation",
+    "processed_reference_scope": "Entire real arrays from independent stored archives with fixed source sine/zero-fill/phase recipe. Native phase angles are negative archived NMRPipe angles because independent-axis conjugation changes exp(+i phase) to exp(-i phase).",
+    "processed_relative_max_tolerance": 2e-05,
+    "processed_window_sum_relative_tolerance": 2e-05,
+    "processed_peak_bin_tolerance": 0,
+    "physical_coordinate_tolerance_ppm": 2e-05,
+    "physical_frequency_direction": {
+      "a0": -1,
+      "a1": -1
+    },
+    "coordinate_scope": "Every physical axis uses explicit reference.frequency_scale=-1 in the frozen example recipe. FFT mathematical grid unchanged. Compare calibrated physical ppm against independently decoded archived header; no candidate-based convention choice."
+  },
+  "reference_only": true,
+  "candidate_outputs_read": false,
+  "status": "PREDECLARED_PENDING_EXECUTION_LOCK",
+  "prior_exposure": "This selected public case was used in earlier SpinFlow archived-reference validation; it is not a new independent holdout or blinded dataset. New rules and deterministic strength classes were fixed before new NMRPipe13/DI candidate comparisons.",
+  "baseline_sha256": {
+    "scientific_protocol_2": "aaacaac19be3ab7a5b906b3d4fb3498e3c397cd226b49bd281122bc62508b455",
+    "private_case_inputs": "153c3d0e2bcbbdc39bf757794be9594491e86384db734202a47a87fa0f59edbf",
+    "di_contract": "02fa4b59bae33bbaea576601545301323b454284709e749802fc1071dc4572a1"
+  },
+  "native_axis_ids": [
+    "a0",
+    "a1"
+  ],
+  "canonical_channel_labels": [
+    "RR",
+    "IR",
+    "RI",
+    "II"
+  ],
+  "nmrpipe_to_native_signs": [
+    1,
+    -1,
+    -1,
+    1
+  ],
+  "calibration": {
+    "a0": {
+      "nucleus": "15N",
+      "sw_hz": 5555.556,
+      "observation_mhz": 50.648,
+      "reference_ppm": 120.0,
+      "reference_hz": 0,
+      "frequency_scale": -1
+    },
+    "a1": {
+      "nucleus": "13C",
+      "sw_hz": 50000.0,
+      "observation_mhz": 125.691,
+      "reference_ppm": 55.0,
+      "reference_hz": 0,
+      "frequency_scale": -1
+    }
+  },
+  "original_recipe": {
+    "direct": {
+      "window": {
+        "off": 0.35,
+        "end": 0.98,
+        "power": 1,
+        "first_point_scale": 1
+      },
+      "zero_fill": "auto",
+      "expected_zero_fill_size": 4096,
+      "fft": "auto",
+      "phase_p0": -29.0,
+      "phase_p1": 0.0,
+      "discard_imaginary": true
+    },
+    "indirect": {
+      "window": {
+        "off": 0.35,
+        "end": 0.9,
+        "power": 1,
+        "first_point_scale": 0.5
+      },
+      "zero_fill": 2048,
+      "fft": "auto",
+      "phase_p0": 0.0,
+      "phase_p1": 0.0,
+      "discard_imaginary": true
+    },
+    "transpose_after_direct": true,
+    "transpose_after_indirect": true
+  },
+  "native_phase": {
+    "a1": {
+      "p0": 29.0,
+      "p1": 0.0,
+      "pivot": 0.0,
+      "denominator": "N"
+    },
+    "a0": {
+      "p0": 0.0,
+      "p1": 0.0,
+      "pivot": 0.0,
+      "denominator": "N"
+    }
+  },
+  "fft_convention": {
+    "native_exponent": -1,
+    "reference_exponent": 1,
+    "forward_scale": 1,
+    "centered": true,
+    "auto_resolution": "PENDING actual NMRPipe13 help/header and analytic impulse/complex-tone lock before case outputs"
+  },
+  "stages": [
+    {
+      "id": "S00",
+      "boundary": "conversion",
+      "shape_yx": [
+        166,
+        1500
+      ],
+      "complex_axes": [
+        "a0",
+        "a1"
+      ],
+      "reference_transposed": false,
+      "frequency_axes": [],
+      "relative_max_gate": 0.0
+    },
+    {
+      "id": "S01",
+      "boundary": "direct_window",
+      "shape_yx": [
+        166,
+        1500
+      ],
+      "complex_axes": [
+        "a0",
+        "a1"
+      ],
+      "reference_transposed": false,
+      "frequency_axes": [],
+      "relative_max_gate": 2e-05
+    },
+    {
+      "id": "S02",
+      "boundary": "direct_zero_fill",
+      "shape_yx": [
+        166,
+        4096
+      ],
+      "complex_axes": [
+        "a0",
+        "a1"
+      ],
+      "reference_transposed": false,
+      "frequency_axes": [],
+      "relative_max_gate": 2e-05
+    },
+    {
+      "id": "S03",
+      "boundary": "direct_fft",
+      "shape_yx": [
+        166,
+        4096
+      ],
+      "complex_axes": [
+        "a0",
+        "a1"
+      ],
+      "reference_transposed": false,
+      "frequency_axes": [
+        "a1"
+      ],
+      "relative_max_gate": 2e-05
+    },
+    {
+      "id": "S04",
+      "boundary": "direct_phase_discard",
+      "shape_yx": [
+        166,
+        4096
+      ],
+      "complex_axes": [
+        "a0"
+      ],
+      "reference_transposed": false,
+      "frequency_axes": [
+        "a1"
+      ],
+      "relative_max_gate": 2e-05
+    },
+    {
+      "id": "S05",
+      "boundary": "first_transpose",
+      "shape_yx": [
+        166,
+        4096
+      ],
+      "complex_axes": [
+        "a0"
+      ],
+      "reference_transposed": true,
+      "frequency_axes": [
+        "a1"
+      ],
+      "relative_max_gate": 2e-05
+    },
+    {
+      "id": "S06",
+      "boundary": "indirect_window",
+      "shape_yx": [
+        166,
+        4096
+      ],
+      "complex_axes": [
+        "a0"
+      ],
+      "reference_transposed": true,
+      "frequency_axes": [
+        "a1"
+      ],
+      "relative_max_gate": 2e-05
+    },
+    {
+      "id": "S07",
+      "boundary": "indirect_zero_fill",
+      "shape_yx": [
+        2048,
+        4096
+      ],
+      "complex_axes": [
+        "a0"
+      ],
+      "reference_transposed": true,
+      "frequency_axes": [
+        "a1"
+      ],
+      "relative_max_gate": 2e-05
+    },
+    {
+      "id": "S08",
+      "boundary": "indirect_fft",
+      "shape_yx": [
+        2048,
+        4096
+      ],
+      "complex_axes": [
+        "a0"
+      ],
+      "reference_transposed": true,
+      "frequency_axes": [
+        "a0",
+        "a1"
+      ],
+      "relative_max_gate": 2e-05
+    },
+    {
+      "id": "S09",
+      "boundary": "indirect_phase_discard",
+      "shape_yx": [
+        2048,
+        4096
+      ],
+      "complex_axes": [],
+      "reference_transposed": true,
+      "frequency_axes": [
+        "a0",
+        "a1"
+      ],
+      "relative_max_gate": 2e-05
+    },
+    {
+      "id": "S10",
+      "boundary": "final_transpose",
+      "shape_yx": [
+        2048,
+        4096
+      ],
+      "complex_axes": [],
+      "reference_transposed": false,
+      "frequency_axes": [
+        "a0",
+        "a1"
+      ],
+      "relative_max_gate": 2e-05
+    }
+  ],
+  "diagnostic_side_branch": {
+    "id": "S03P",
+    "source": "S03",
+    "operation": "original direct PS without -di",
+    "projection_must_equal": "S04",
+    "feed_to_main_pipeline": false
+  },
+  "roi_selection_rule": "All five original boxes; rank ascending reference-only maximum positive intensity with lexical label tie-break; lowest two weak, highest two strong, middle intermediate. No candidate data read for selection.",
+  "contours": {
+    "magnitude_start": 30000,
+    "factor": 1.2,
+    "count": 20,
+    "signs": [
+      -1,
+      1
+    ]
+  },
+  "auxiliary_peak_picking": {
+    "snr_mad": 6,
+    "min_separation_points": 4,
+    "signal_sign": "positive"
+  },
+  "reference_distribution": {
+    "nmrpipe": {
+      "url": "https://www.ibbr.umd.edu/nmrpipe/install",
+      "advertised_version": "13.0",
+      "advertised_revision": "2026.072.12.03",
+      "advertised_script_update": "2026-05-20",
+      "required_files": [
+        "NMRPipeX.tZ",
+        "s.tZ",
+        "install.com",
+        "binval.com"
+      ],
+      "redistribution": "Not permitted without author permission",
+      "inspected_text_files": [
+        {
+          "name": "install.com",
+          "bytes": 55234,
+          "sha256": "a8d22b110d0a4cd202dbd94759215ba6053a1e106d67ca728bf9acbc83531bbc",
+          "script_version": "2026.113.16.30"
+        },
+        {
+          "name": "binval.com",
+          "bytes": 7406,
+          "sha256": "12b306c4a031e44ab51049d2983a7656a764a108707964223eb909001e163c52"
+        }
+      ]
+    },
+    "sparky": {
+      "archive_url": "https://www.cgl.ucsf.edu/home/sparky/distrib-3.115/sparky-linux2.6-64bit.tar.gz",
+      "license_url": "https://www.cgl.ucsf.edu/home/sparky/sparky-license.html",
+      "status": "old unmaintained distribution; runtime not yet verified",
+      "required_programs": [
+        "bin/sparky",
+        "bin/pipe2ucsf",
+        "bin/ucsfdata"
+      ]
+    }
+  },
+  "benchmark": {
+    "endpoints": [
+      "raw_to_nmrpipe_real",
+      "raw_to_ucsf_real"
+    ],
+    "precision": "float32",
+    "total_cpu_physical_cores": 1,
+    "threads_per_pool": 1,
+    "warmups_per_lane": 1,
+    "minimum_measured_pairs": 7,
+    "pair_order": "AB,BA,AB,BA,AB,BA,AB",
+    "lane_A": "NMRPipe13",
+    "lane_B": "SpinFlow native",
+    "cache_default": "warm/cache-uncontrolled",
+    "intermediate_instrumentation_included": false,
+    "metric_definitions_document": "docs/laboratory-workflow-protocol.md"
+  },
+  "execution_lock_required": [
+    "protocol_sha256",
+    "case_fixture_sha256",
+    "harness_sha256",
+    "candidate_driver_sha256",
+    "candidate_recipe_sha256",
+    "candidate_source_and_binary_hashes",
+    "actual_reference_version_and_binary_hashes",
+    "actual_consumer_binary_hashes",
+    "dependency_runtime_versions",
+    "original_script_hashes",
+    "captured_actual_help_hashes",
+    "analytic_ft_auto_semantics_record",
+    "header_gui_prerequisite_evidence",
+    "hardware_and_resource_controls",
+    "benchmark_trial_schedule"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "scope": "Installed final candidate validation and carry-forward; measurements remain attributed to v4, not final package",
+  "measured_v4_source_archive_sha256": "c93565a83abc7bfcc2a9fddcfca5a759d84352c270d3febc8aa9cf17f16bcade",
+  "measured_v4_wheel_sha256": "705f7283cb297d7f2eac180910027f263a39996ed7737d58a60f0390b69a1bca",
+  "tested_final_source_archive_sha256": "d561c427d7d8ef0059f3cc0452920403890a618511392d13e54480a615a868fb",
+  "final_wheel_sha256": "38cd61b3abe3f147813fb52ff07f6db87d5da92488c99d40dcba7df4e4da51e9",
+  "final_sdist_sha256": "26647370d2d77b4ad742abdf363e68807a480566a60ad00c59054e656289514c",
+  "final_full_suite": {
+    "passed": 814,
+    "subtests": 101,
+    "skipped": 0,
+    "seconds": 30.77,
+    "log_sha256": "b2a29e8617c5494dccb1ff970173aa606b7878409321e09f6ebc219c2869e050"
+  },
+  "final_posix_targeted": {
+    "passed": 49,
+    "subtests": 14,
+    "log_sha256": "9acbbb71ca90579aa5bf44ab1d1e4db18029fda252e27439ea82bfc282237719"
+  },
+  "unchanged_executed_source_sha256": {
+    "src/nmrnext/cli.py": "67bfb2627ce9abee2cc100dffbbf70b03d293e552f7d467a751098699c3d5317",
+    "src/nmrnext/analysis.py": "236e14cfadac8047d63e1a6e39be57f6b6293ca3e2a570ea4bdc656dc77657b1",
+    "src/nmrnext/operations.py": "1c1a7c7b6dbc4cca5d94e6b83cdd75bd9c6af2177e34788c0e9005f1811e00be",
+    "src/nmrnext/planning.py": "989375d3b2a7eda95fcc1149ec72b47ab762b93f0407676cd60130bda0e09f09",
+    "src/nmrnext/io/__init__.py": "aa9a1a1c328b9c3d25145393a935c2f14e0419121948f9fbcd9638fd9f09775b",
+    "src/nmrnext/io/headers.py": "398dd65f2c7591d6eb452d55835147706bc99097a0870ed664c6aa173e7944b8",
+    "src/nmrnext/io/varian.py": "92745a6a5f481601dc2b550eedbf1f8c3d97e1c07dd6428f318f5312bcec7165",
+    "cpp/native.cpp": "0bfadca736413e008fafbac495eaea934a10631c0607ff34d7927d60abb61ae0",
+    "examples/laboratory-workflow.json": "69e6c1e26c80c1fdc3ac0401c2477355a2d55dc05b97471b68dacdeea9787cb5",
+    "schemas/recipe.schema.json": "31ea1fb3eb9e31f84d701cc539a84f73e3cbb8ec05ed1984d502e90b263546f9",
+    "docs/laboratory-workflow-protocol.md": "a34b4eda477ab474d8aa57ec3b0ad6794b922b5db47a2e64b3d5024cd5e3a9cf",
+    "tests/fixtures/lab_workflow_case.json": "2ac9a5ee03bbcc251f2de7e76cc688969c4a9b8ca055d4f823e2b355e313750c",
+    "tools/lab_candidate.py": "47deeb3fc1b66e3af0c17962d1b5e618f4e16091a352715449f372e8920ef823",
+    "tools/lab_compare.py": "ac265af0a9325ebb49f44683bd73def07a72a7599bd68c4ba1928d7f635894d5",
+    "tools/lab_diagnostics.py": "a78b2f5c879f775357d64071a0218a966cb59f1219e9ae0994e1333af803b20d"
+  },
+  "installed_package_only_difference": "workflow_bundle.py",
+  "native_extension_sha256": "854608737e5cfef2aef67fe9d10e39e8f13d8d6178609adcaffbe11a779c0a80",
+  "same_named_loaded_libraries_identical": 52,
+  "cli_import_probe": "workflow_bundle absent from CLI import and source references",
+  "prior_bound_files_unchanged": 202,
+  "measured_outputs_unchanged": 32,
+  "source_delta_report_sha256": "378a7b46ee0e2a661028230715d1c4ea16d44f378579938052ff497e1820a8a2",
+  "runtime_pin_report_sha256": "a871ddcf28fa442183abc47566ea06a6bae9b2e76b504a9367abba451b80dd0d",
+  "final_integrity_report_sha256": "7649068617a420530ab95a382d10c6b1c591a768cb4dd58ce6a777d2be061f0b",
+  "scientific_rerun_or_benchmark_on_final_package": false,
+  "limits": "Final source validation predates this documentary evidence addition; no source code change follows the final tested archive."
+}

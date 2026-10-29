@@ -2,9 +2,9 @@
 
 SpinFlow is an experimental, open source NMR processing workbench. It provides a headless command line and an optional Qt spectrum viewer for synthetic 1D/2D workflows and bounded public Bruker and Varian/Agilent raw acquisition paths. The Python import package and command `nmrnext` retain their existing names; `spinflow` is also a command entry point. The original project code is [MIT licensed](LICENSE), with separate [third-party notices](THIRD_PARTY_NOTICES).
 
-**Scientific status:** this is an early processing slice, not a validated replacement for NMRPipe or a laboratory processing system. One public Bruker 1D acquisition has an archived peak-position check; two public 2D acquisitions add bounded both-axis automatic phase and fixed peak/relative-volume checks. Broader real workflows, NMRPipe parity, concentration accuracy and independent export reopening remain unverified. See [scope](docs/scope.md), [validation](docs/public-validation.md), and the [roadmap](ROADMAP.md).
+**Scientific status:** this is an early processing slice, not a validated replacement for NMRPipe or a laboratory processing system. One public Bruker 1D acquisition has an archived peak-position check; two public 2D acquisitions add bounded both-axis automatic phase and fixed peak/relative-volume checks. One previously studied public Varian protein case has a bounded comparison with NMRPipe 13 and actual NMRDraw/Sparky reopening; broader real workflows, general parity, concentration accuracy and other independent reopening remain unverified. See [scope](docs/scope.md), [validation](docs/public-validation.md), and the [roadmap](ROADMAP.md).
 
-Linux checks under software emulation passed the installed-package suite, public-data and automated virtual-desktop workflows, and a CPython 3.12 release-installer preflight. The [validation record](docs/public-validation.md) gives the exact tested candidates and limitations; final hosted release assets are a separate gate.
+Linux checks under software emulation passed the installed-package suite, public-data and automated virtual-desktop workflows, and a CPython 3.12 release-installer preflight. The [validation record](docs/public-validation.md) gives the exact tested candidates and limitations. Version 0.2.0 is a published experimental prerelease; the later laboratory candidate described below is not included in that release.
 
 ## Install the experimental release on Linux
 
@@ -27,6 +27,8 @@ After installation, this command works offline and creates a new folder containi
 The folder must not already exist. If a run fails after creating it, choose a new folder name before retrying. The synthetic example illustrates the workflow and is not evidence of experimental accuracy.
 
 ## Install from source on Linux
+
+The header-only planning, GUI budget control, `discard_imaginary`, and explicit spectral-width calibration described below are **unreleased source changes** and are not in the immutable v0.2.0 installer or tagged archive. Use the checkout containing these changes; after they are merged to public `main`, a fresh checkout can be obtained with `git clone https://github.com/ben-shin/spinflow.git` and `cd spinflow`. Do not use the v0.2.0 release installer for these candidate features.
 
 Ubuntu 24.04 and Python 3.12 or 3.13 are the initial Linux build targets. From a checkout:
 
@@ -52,7 +54,7 @@ The included recipe uses paths relative to `examples/` and refuses to overwrite 
 
 The self-comparison checks a storage and CLI round trip; it does not establish scientific accuracy. `examples/process-1d.json` provides a 1D path after generating `examples/demo-1d-raw.h5 --dimensions 1 --points 256`.
 
-Operations currently include explicit Bruker digital-filter correction and frequency referencing, window, zero fill, FFT, phase, crop, reverse, and transpose. Planning validates an entire JSON recipe before numerical execution. The optional `numpy` backend is an explicitly selected experimental bootstrap; an unavailable requested native backend fails rather than silently falling back. The memory option estimates working arrays and is not a process RSS limit or out-of-core execution.
+Operations currently include explicit Bruker digital-filter correction and frequency referencing, window, zero fill, FFT, phase, explicit `discard_imaginary` on a frequency axis, crop, reverse, and transpose. The discard removes the selected imaginary quadratures with recorded loss; it is not magnitude conversion. An optional `reference.spectral_width_hz` explicitly calibrates the current grid width while retaining samples and acquisition dwell. For supported binary profiles, `plan` validates the recipe using bounded header metadata before numeric payload reads; `run` repeats that preflight before loading and validating samples. Header planning does not validate sample content. JCAMP-DX cannot be planned from a header alone; convert it to native format first. The GUI and CLI default to a 256 MiB processing working-array budget, which can be explicitly raised. This estimate is not a process RSS limit or out-of-core execution. The optional `numpy` backend is an explicitly selected experimental bootstrap; an unavailable requested native backend fails rather than silently falling back. See the [first laboratory-workflow protocol](docs/laboratory-workflow-protocol.md) and its [pending results](docs/laboratory-workflow-results.md) for the selected comparison and its gates.
 
 ## Public Bruker 1D/2D and analysis
 

@@ -40,3 +40,13 @@ The `0.2.0` candidate prepares a binary-first Ubuntu 24.04 x86-64 installation f
 This is an experimental prerelease candidate, not version 1 or a general Linux binary. The scientific and interoperability limitations recorded in the [validation record](public-validation.md) remain. Release assets, exact-commit hosted checks and publication are pending at this checkpoint.
 
 The repaired candidate `b3c6452c7f0add2111dfa5634086dde75bceec07` passed a local Ubuntu 24.04 CPython 3.12 preflight under QEMU TCG: **666 tests and 101 subtests, no skips or failures**, plus actual interrupted-installer recovery, compiler-free installation, offline first spectrum, additive optional dependencies and five virtual-X11 groups. The [validation record](public-validation.md) identifies the earlier identical package/build inputs, harness retries, startup-only timeout allowance and evidence limits. The final release wheels must be rebuilt from the exact approved commit; hosted CPython 3.12/3.13 assets, checks and publication remain pending.
+
+## Stage 15 — bounded laboratory workflow comparison (2026-10-29)
+
+The unreleased source candidate was compared with the original scripts and NMRPipe 13 on one previously studied public Varian protein case. The original UCSF output missed the fixed coordinate limit; after an explicit correction to the predeclared sweep width, the unchanged signed arrays and repaired coordinates passed the fixed numerical checks. NMRDraw and Sparky reopened the selected outputs. The [results](laboratory-workflow-results.md) preserve the original failure and limits.
+
+A single-case virtualized end-to-end benchmark found the candidate slower: median paired wall ratios versus NMRPipe were 5.463 for NMRPipe output and 3.905 for UCSF output. The [benchmark record](laboratory-workflow-results.md#end-to-end-benchmark-on-this-case) gives all observations and environment limits. These candidate features and measurements are not part of the published v0.2.0 prerelease; independent final review and publication of this source update are pending at this checkpoint.
+
+After measurement, a separately built candidate with workflow-bundle cleanup changes passed **814 installed Linux tests and 101 subtests**; its numerical execution path is unchanged, but it is not the binary used for the benchmark. The [results record](laboratory-workflow-results.md#installed-regression) identifies both source archives and wheels. Final independent review remains pending.
+
+The validation guest was shut down gracefully. Its earlier science seal predates an authorized shutdown-only append to the live serial log; the sealed prefix is preserved and the [closure record](evidence/laboratory-operational-closure.json) gives the qualification and hashes.

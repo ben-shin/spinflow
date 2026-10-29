@@ -40,15 +40,76 @@ class WorkbenchTests(unittest.TestCase):
         self.window = None
         gc.collect()
 
+    def test_processing_budget_refuses_then_exports_applied_limit(self):
+        w = self.window
+        w.load_dataset_now(generate_demo(dimensions=1, points=[64]))
+        w.memory_spin.setValue(1)
+        with self.assertRaises(NMRNextError) as caught:
+            w.process_now()
+        self.assertEqual(caught.exception.code, 'MEMORY_BUDGET_EXCEEDED')
+        self.assertIsNone(w.last_memory_bytes)
+        w.memory_spin.setValue(16)
+        w.process_now()
+        self.assertEqual(w.last_memory_bytes, 16 * 1024**2)
+        w.memory_spin.setValue(1)
+        with tempfile.TemporaryDirectory(dir=Path.cwd() / '.tmp') as directory:
+            recipe = w.export_workflow_now(Path(directory) / 'bundle')
+            self.assertEqual(json.loads(recipe.read_text())['memory_bytes'], 16 * 1024**2)
+        self.assertEqual(w.last_memory_bytes, 16 * 1024**2)
+
+    def test_autophase_direct_open_captures_selected_budget_for_worker_and_export(self):
+        w = self.window
+        source = generate_demo(dimensions=1, points=[64])
+        spectrum = run_operations(source, [{'op': 'fft', 'axis': 't2'}], backend='numpy')
+        w.load_dataset_now(spectrum)
+        w.memory_spin.setValue(16)
+        operation = {'op': 'phase', 'axis': 't2', 'p0': 0., 'p1': 0., 'pivot': 0.}
+        result = run_operations(spectrum, [operation], backend='numpy')
+        with patch('nmrnext.analysis.autophase', return_value=(result, {'operation': operation, 'objective': {'normalized_rms': 0.}})) as phase, \
+             patch.object(w, '_start_job') as start:
+            w._analysis_job('autophase')
+            work, done, _ = start.call_args.args
+            w.memory_spin.setValue(32)
+            value = work()
+            done(value)
+        self.assertEqual(phase.call_args.kwargs['memory_bytes'], 16 * 1024**2)
+        self.assertEqual(w.last_memory_bytes, 16 * 1024**2)
+        with tempfile.TemporaryDirectory(dir=Path.cwd() / '.tmp') as directory:
+            recipe = w.export_workflow_now(Path(directory) / 'bundle')
+            self.assertEqual(json.loads(recipe.read_text())['memory_bytes'], 16 * 1024**2)
+
+    def test_autophase_uses_applied_not_pending_budget(self):
+        w = self.window
+        w.load_dataset_now(generate_demo(dimensions=1, points=[64]))
+        w.memory_spin.setValue(16)
+        w.process_now()
+        w.memory_spin.setValue(32)
+        with patch('nmrnext.analysis.autophase', return_value=(w.current, {})) as phase:
+            w._analysis_request('autophase')()
+        self.assertEqual(phase.call_args.kwargs['memory_bytes'], 16 * 1024**2)
+
+    def test_async_process_captures_budget_before_worker(self):
+        w = self.window
+        w.load_dataset_now(generate_demo(dimensions=1, points=[64]))
+        w.memory_spin.setValue(16)
+        with patch.object(w, '_start_job') as start:
+            w._process_async(preview=False)
+            work, done, _ = start.call_args.args
+            w.memory_spin.setValue(32)
+            value = work()
+            done(value)
+        self.assertEqual(w.last_memory_bytes, 16 * 1024**2)
+        self.assertEqual(w.last_plan['memory_bytes'], 16 * 1024**2)
+
     def test_acquisition_folder_uses_shared_reader(self):
         self.assertIn("acquisition folder", self.window.bruker_button.text().lower())
         with patch("nmrnext.gui.QtWidgets.QFileDialog.getExistingDirectory", return_value="sample.fid") as choose, \
-             patch("nmrnext.gui.read_dataset") as reader, \
+             patch.object(self.window, "_read_with_budget") as reader, \
              patch.object(self.window, "_start_job") as start:
             self.window._open_bruker()
             self.assertEqual(choose.call_args.args[1], "Choose acquisition folder")
             start.call_args.args[0]()
-            reader.assert_called_once_with("sample.fid")
+            reader.assert_called_once_with("sample.fid", 256 * 1024**2)
 
     def test_analysis_region_files_pass_masks_to_shared_engine(self):
         w = self.window

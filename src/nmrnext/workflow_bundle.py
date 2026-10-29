@@ -1,6 +1,7 @@
 """Export portable, strict CLI recipes with a lossless original source snapshot."""
 import json
 import os
+import stat
 from pathlib import Path
 import tempfile
 
@@ -20,6 +21,21 @@ def _publish_new(staged, target):
         raise NMRNextError('OUTPUT_EXISTS', f'Workflow output already exists: {target}') from exc
 
 
+def _file_identity(path):
+    """Use file identity, not a filename or its contents, for best-effort cleanup."""
+    info = path.stat(follow_symlinks=False)
+    if not stat.S_ISREG(info.st_mode) or not info.st_ino:
+        return None
+    return (info.st_dev, info.st_ino)
+
+
+def _cleanup_published(path, identity):
+    # A replacement between this check and unlink remains a filesystem race;
+    # uncertain identity is preserved, never guessed from matching bytes.
+    if identity is not None and _file_identity(path) == identity:
+        path.unlink()
+
+
 def _cleanup_staging(staging):
     if staging is None:
         return
@@ -36,22 +52,22 @@ def _cleanup_staging(staging):
         pass
 
 
-def export_workflow_bundle(source, operations, directory, *, backend='native'):
+def export_workflow_bundle(source, operations, directory, *, backend='native', memory_bytes=256 * 1024**2):
     """Create a new directory; return its runnable ``workflow.json`` path.
 
     Files are completed in private staging before publication, recipe last.
-    Failed exports remove only files created by this
-    call, never recursively delete a directory, and never claim completion.
+    Failed exports attempt to remove only files whose identity still matches
+    the staged file; a concurrent replacement between check and unlink is a
+    filesystem race. Never recursively delete a directory or claim completion.
     The original source (including provenance) travels with the recipe.
     """
     destination = Path(directory)
-    plan = plan_operations(source, operations, backend=backend)
+    plan = plan_operations(source, operations, backend=backend, memory_bytes=memory_bytes)
     record = {
         'schema_version': '1', 'input': 'source.nmrh5', 'output': 'result.nmrh5',
         'input_format': 'native', 'output_format': 'native',
         'operations': operations, 'backend': backend,
-        # Match the applied GUI recipe even if it exceeds the CLI default budget.
-        'memory_bytes': max(256 * 1024**2, plan['estimated_working_bytes']),
+        'memory_bytes': memory_bytes,
     }
     payload = json.dumps(record, indent=2, allow_nan=False) + '\n'
     try:
@@ -71,14 +87,16 @@ def export_workflow_bundle(source, operations, directory, *, backend='native'):
         with staged_recipe.open('x', encoding='utf-8') as stream:
             stream.write(payload)
         snapshot = destination / 'source.nmrh5'
+        snapshot_identity = _file_identity(staged_snapshot)
         _publish_new(staged_snapshot, snapshot)
-        owned.append(snapshot)
+        owned.append((snapshot, snapshot_identity))
+        recipe_identity = _file_identity(staged_recipe)
         _publish_new(staged_recipe, recipe)
-        owned.append(recipe)
+        owned.append((recipe, recipe_identity))
     except BaseException:
-        for path in reversed(owned):
+        for path, identity in reversed(owned):
             try:
-                path.unlink()
+                _cleanup_published(path, identity)
             except OSError:
                 pass  # Preserve the original error, including a failed cleanup.
         _cleanup_staging(staging)

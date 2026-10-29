@@ -1,0 +1,41 @@
+{
+  "status": "PASS",
+  "coordinate_gate_ppm": 2e-05,
+  "endpoint_errors_axis0_axis1": [
+    [
+      1.52587890625e-05,
+      1.52587890625e-05
+    ],
+    [
+      1.52587890625e-05,
+      1.52587890625e-05
+    ]
+  ],
+  "candidate_first_reopen_metadata_exact": true,
+  "data_size": [
+    2048,
+    4096
+  ],
+  "axis_order": [
+    1,
+    0
+  ],
+  "candidate_nuclei": [
+    "N15",
+    "C13"
+  ],
+  "reference_nuclei": [
+    "15N",
+    "13C"
+  ],
+  "scale_offset": [
+    0.0,
+    0.0
+  ],
+  "sources": {
+    "candidate/sparky-candidate-api.txt": "930735fbda08929dedaebedc1231931864d8eca377f6f2c9d7a2bca8809d3b7c",
+    "candidate/sparky-candidate-reopen-api.txt": "930735fbda08929dedaebedc1231931864d8eca377f6f2c9d7a2bca8809d3b7c",
+    "reference/sparky-reference-api.txt": "cad1696c75aa3d39d90d95407f83cfd8509fcc14f2e7e309e9951cf38e72bda8"
+  },
+  "scope": "Actual Sparky API endpoints; not pixel labels or a replacement for independent complete-grid validation."
+}

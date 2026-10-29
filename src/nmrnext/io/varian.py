@@ -127,6 +127,8 @@ def inspect_varian(path, max_bytes, *, dimensions):
         size = 32+h['nblocks']*h['bbytes']
         if fid.stat().st_size != size:
             _fail('Varian fid length differs from declared blocks', 'INVALID_SHAPE')
+        if 32+28*h['nblocks']+text_size > 8*1024*1024:
+            _fail('Varian structured headers exceed the 8 MiB inspection limit', 'HEADER_BUDGET_EXCEEDED')
         required = h['nblocks']*h['np']*4*4+text_size+28*h['nblocks']
         _check_budget(required, max_bytes)
         blocks = []
@@ -209,21 +211,6 @@ def read_varian(path, head):
     else:
         data = np.stack((rows[0::2,0::2], rows[1::2,0::2], rows[0::2,1::2], rows[1::2,1::2]))
         mapping = 'RR=even.real; IR=odd.real; RI=even.imag; II=odd.imag'
-    axes = tuple(Axis(id=f'a{i}', size=a['size'], start=a['origin'], step=1/a['width'],
-                      dwell_seconds=1/a['width'], observation_mhz=a['obs'], reference_ppm=None,
-                      nucleus=a['nucleus'], label=a['nucleus'],
-                      encoding='states' if len(h['axes']) == 2 and i == 0 else 'complex')
-                 for i,a in enumerate(h['axes']))
-    metadata = {'sampling':'fully_sampled', 'import':{
-        'format':head['format'], 'profile_version':'1', 'byte_order':'big',
-        'source_sha256':{'fid':hashlib.sha256(payload).hexdigest(), 'procpar':h['procpar_sha256']},
-        'source_bytes':h['source_bytes'], 'file_header':h['file_header'],
-        'block_headers':h['block_headers'], 'raw_procpar_text':h['raw_procpar_text'], 'procpar':h['procpar'],
-        'quadrature':{'mapping':mapping, 'complex_bit_axes':[a.id for a in axes],
-                      'component_order':['R','I'] if len(axes) == 1 else ['RR','IR','RI','II'],
-                      'source_convention':'nmrglue 0.12 converter.from_varian followed by independent-axis conjugation for negative DFT',
-                      'archived_nmrpipe_to_native_component_signs':[1,-1] if len(axes) == 1 else [1,-1,-1,1]},
-        'reference_policy':'No ppm reference inferred; apply explicit reference after FFT',
-        'frequency_direction_policy':'Bare FFT coordinates are mathematical offsets. Physical calibration requires explicit reference frequency_scale=-1 on every physical axis for this retained-pair-sign profile.',
-        'amplitude_policy':'Stored amplitudes; no scan normalization, block scaling, drift or phase correction'}}
-    return Dataset(data.astype(np.float32, copy=False), axes, tuple(a.id for a in axes), metadata)
+    from .headers import normalized_description
+    axes,bits,metadata,provenance=normalized_description(head,{'fid':hashlib.sha256(payload).hexdigest(),'procpar':h['procpar_sha256']})
+    return Dataset(data.astype(np.float32,copy=False),axes,bits,metadata,provenance)

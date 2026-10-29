@@ -13,12 +13,13 @@ from .bruker import correction_spec, corrected_metadata, correct_samples
 
 _FIELDS = {
     "digital_filter": {"axis"},
-    "reference": {"axis", "reference_ppm", "reference_hz", "observation_mhz", "frequency_scale"},
+    "reference": {"axis", "reference_ppm", "reference_hz", "observation_mhz", "frequency_scale", "spectral_width_hz"},
     "window": {"axis", "kind", "lb_hz", "power", "first_point_scale", "off", "end"},
     "zero_fill": {"axis", "size"}, "fft": {"axis", "inverse"},
     "phase": {"axis", "p0", "p1", "pivot"},
     "crop": {"axis", "start", "stop"}, "reverse": {"axis"},
     "transpose": {"order"},
+    "discard_imaginary": {"axis"},
 }
 
 
@@ -34,9 +35,12 @@ def quadrature_index_orientation(dataset):
     records, undo only coordinate reflections after the most recent FFT so that
     saved pre-field native spectra retain their original quadrature meaning.
     """
-    axes = {a.id: a for a in dataset.axes
-            if a.domain == "frequency" and a.id in dataset.complex_axes}
-    metadata = dataset.metadata
+    return _quadrature_orientation(dataset.axes, dataset.complex_axes, dataset.metadata, dataset.provenance)
+
+
+def _quadrature_orientation(axis_records, complex_axes, metadata, history):
+    axes = {a.id: a for a in axis_records
+            if a.domain == "frequency" and a.id in complex_axes}
     if _ORIENTATION_KEY in metadata:
         declared = metadata[_ORIENTATION_KEY]
         if (not isinstance(declared, dict) or set(declared) != set(axes) or
@@ -45,7 +49,6 @@ def quadrature_index_orientation(dataset):
                                "quadrature_index_orientation must map every current frequency complex axis to integer +1 or -1")
         return dict(declared)
     result = {identity: 1 if axis.step > 0 else -1 for identity, axis in axes.items()}
-    history = dataset.provenance
     for identity in axes:
         for entry in reversed(history):
             if not isinstance(entry, dict):
@@ -62,6 +65,29 @@ def quadrature_index_orientation(dataset):
                 if type(scale) is not int or scale not in (-1, 1):
                     raise NMRNextError("INVALID_QUADRATURE_ORIENTATION", "Recorded reference frequency_scale must be integer +1 or -1")
                 result[identity] *= scale
+    return result
+
+
+def _transition_metadata(axes, complex_axes, metadata, provenance, op):
+    """Pure state transition shared by header plans and numeric execution."""
+    from copy import deepcopy
+    result = deepcopy(metadata)
+    orientation = _quadrature_orientation(axes, complex_axes, metadata, provenance)
+    if op["op"] == "fft":
+        if op["inverse"]:
+            orientation.pop(op["axis"], None)
+        else:
+            orientation[op["axis"]] = 1
+    elif op["op"] == "reverse" and op["axis"] in orientation:
+        orientation[op["axis"]] *= -1
+    elif op["op"] == "discard_imaginary":
+        orientation.pop(op["axis"], None)
+    if orientation:
+        result[_ORIENTATION_KEY] = orientation
+    else:
+        result.pop(_ORIENTATION_KEY, None)
+    if op["op"] == "digital_filter":
+        result = corrected_metadata(result, correction_spec(axes, complex_axes, metadata))
     return result
 
 
@@ -87,7 +113,7 @@ def validate_backend(backend, threads):
     raise NMRNextError("UNSUPPORTED_BACKEND", f"Unknown backend {backend!r}")
 
 
-def _transition(axes, complex_axes, metadata, operation):
+def _transition_axes(axes, complex_axes, metadata, operation):
     """Validate parameters and derive metadata without allocating sample arrays."""
     if not isinstance(operation, dict) or not isinstance(operation.get("op"), str):
         raise NMRNextError("INVALID_OPERATION", "Each operation must be an object with an op identifier")
@@ -134,13 +160,32 @@ def _transition(axes, complex_axes, metadata, operation):
         op["frequency_scale"] = op.get("frequency_scale", 1)
         if type(op["frequency_scale"]) is not int or op["frequency_scale"] not in (-1, 1):
             raise NMRNextError("INVALID_PARAMETER", "Reference frequency_scale must be integer +1 or -1")
-        new = replace(a, start=a.start*op["frequency_scale"], step=a.step*op["frequency_scale"],
+        start, step = a.start, a.step
+        if "spectral_width_hz" in op:
+            op["spectral_width_hz"] = finite(op["spectral_width_hz"], "spectral_width_hz")
+            if op["spectral_width_hz"] <= 0:
+                raise NMRNextError("INVALID_PARAMETER", "Reference spectral_width_hz must be positive")
+            finite(a.size*abs(a.step), "prior_spectral_width_hz")
+            # Width means N bins of this current grid, including after a crop;
+            # it is neither endpoint span nor the original acquisition width.
+            # Preserve index positions relative to zero Hz. Acquisition dwell
+            # remains source history, so inverse FFT keeps its canonical guard.
+            step = math.copysign(op["spectral_width_hz"] / a.size, a.step)
+            if step != a.step:
+                start = (a.start / a.step) * step
+        new = replace(a, start=start*op["frequency_scale"], step=step*op["frequency_scale"],
                       reference_ppm=op["reference_ppm"], reference_hz=op["reference_hz"], observation_mhz=op["observation_mhz"])
     elif name == "digital_filter":
         spec = correction_spec(axes, complex_axes, metadata)
         if a.id != spec["axis"]:
             raise NMRNextError("INVALID_DIGITAL_FILTER_AXIS", "Digital filter correction requires the acquired direct axis")
         new = replace(a, size=spec["output_complex_points"])
+    elif name == "discard_imaginary":
+        if a.role != "spectral" or a.domain != "frequency":
+            raise NMRNextError("INVALID_DOMAIN", "Imaginary discard requires a frequency-domain spectral axis")
+        if a.id not in complex_axes:
+            raise NMRNextError("QUADRATURE_REQUIRED", "Imaginary discard requires a currently complex axis")
+        new = replace(a, encoding="real")
     elif name == "window":
         kind = op.get("kind", "exponential")
         if a.step <= 0:
@@ -212,6 +257,14 @@ def _transition(axes, complex_axes, metadata, operation):
     return tuple(updated), op
 
 
+def _transition(axes, complex_axes, metadata, provenance, operation):
+    """One pure axes, quadrature and metadata transition for plan and execution."""
+    new_axes, op = _transition_axes(axes, complex_axes, metadata, operation)
+    new_bits = tuple(a for a in complex_axes if a != op["axis"]) if op["op"] == "discard_imaginary" else complex_axes
+    new_metadata = _transition_metadata(axes, complex_axes, metadata, provenance, op)
+    return new_axes, new_bits, new_metadata, op
+
+
 def _pairs(dataset, axis_id):
     mask = 1 << dataset.complex_axes.index(axis_id)
     for real in range(dataset.data.shape[0]):
@@ -219,14 +272,17 @@ def _pairs(dataset, axis_id):
             yield real, real | mask
 
 
-def _execute(dataset, op, new_axes, backend, threads, backend_info):
+def _execute(dataset, op, new_axes, new_bits, new_metadata, backend, threads, backend_info):
     name = op["op"]
     data = dataset.data
     metadata = dataset.metadata
-    orientation = quadrature_index_orientation(dataset)
     spec = None
     if name == "reference":
         result = data
+    elif name == "discard_imaginary":
+        mask = 1 << dataset.complex_axes.index(op["axis"])
+        selected = [c for c in range(data.shape[0]) if not c & mask]
+        result = data[selected]
     elif name == "digital_filter":
         spec = correction_spec(dataset.axes, dataset.complex_axes, metadata)
         i = dataset.axis_index(spec["axis"])
@@ -298,36 +354,42 @@ def _execute(dataset, op, new_axes, backend, threads, backend_info):
                 result[real], result[imag] = transformed.real, transformed.imag
     if not np.isfinite(result).all():
         raise NMRNextError("NUMERICAL_OVERFLOW", f"Operation {name} produced nonfinite values")
-    if name == "fft":
-        if op["inverse"]:
-            orientation.pop(op["axis"], None)
-        else:
-            orientation[op["axis"]] = 1
-    elif name == "reverse" and op["axis"] in orientation:
-        orientation[op["axis"]] *= -1
-    if orientation:
-        metadata[_ORIENTATION_KEY] = orientation
-    else:
-        metadata.pop(_ORIENTATION_KEY, None)
+    metadata = new_metadata
     entry = {"operation": op, "backend": backend_info, "input_shape": list(data.shape),
              "output_shape": list(result.shape), "dtype": str(result.dtype)}
     if spec is not None:
-        metadata = corrected_metadata(metadata, spec)
         entry["digital_filter"] = spec
-    return Dataset(result, new_axes, dataset.complex_axes, metadata, dataset.provenance+[entry])
+    if name == "reference" and "spectral_width_hz" in op:
+        prior = dataset.axis(op["axis"])
+        calibrated = next(a for a in new_axes if a.id == op["axis"])
+        def grid(a):
+            return {"size":a.size, "start_hz":a.start, "step_hz":a.step,
+                    "spectral_width_hz":a.size*abs(a.step)}
+        entry["reference_calibration"] = {
+            "requested_spectral_width_hz":op["spectral_width_hz"],
+            "width_definition":"current grid size times absolute bin spacing; scale about zero Hz",
+            "prior_grid":grid(prior), "new_grid":grid(calibrated),
+            "acquisition_dwell_seconds":prior.dwell_seconds}
+    if name == "discard_imaginary":
+        entry["losses"] = ["discarded_imaginary_quadrature"]
+        entry["discard_imaginary"] = {"axis":op["axis"], "input_complex_axes":list(dataset.complex_axes),
+                                      "output_complex_axes":list(new_bits), "retained_input_components":selected,
+                                      "input_axis_encoding":dataset.axis(op["axis"]).encoding}
+    return Dataset(result, new_axes, new_bits, metadata, dataset.provenance+[entry])
 
 
 def run_operations(dataset, operations, *, backend="numpy", threads=1, memory_bytes=None):
     from .planning import plan_operations
-    if isinstance(dataset, Dataset):
-        quadrature_index_orientation(dataset)
+    if not isinstance(dataset, Dataset):
+        raise NMRNextError("INVALID_DATASET", "Execution requires numeric sample data; a DatasetHeader is planning-only")
+    quadrature_index_orientation(dataset)
     plan = plan_operations(dataset, operations, backend=backend, threads=threads, memory_bytes=memory_bytes)
     current = dataset
     for step in plan["steps"]:
-        new_axes, op = _transition(current.axes, current.complex_axes, current.metadata, step["operation"])
+        new_axes, new_bits, new_metadata, op = _transition(current.axes, current.complex_axes, current.metadata, current.provenance, step["operation"])
         try:
             with np.errstate(over="raise", invalid="raise", divide="raise"):
-                current = _execute(current, op, new_axes, backend, threads, plan["backend"])
+                current = _execute(current, op, new_axes, new_bits, new_metadata, backend, threads, plan["backend"])
         except (FloatingPointError, OverflowError) as exc:
             raise NMRNextError("NUMERICAL_OVERFLOW", f"Operation {op['op']} overflowed; use float64 or revise parameters") from exc
         except MemoryError as exc:

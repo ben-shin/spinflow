@@ -1,0 +1,27 @@
+{
+  "schema_version": "1",
+  "input": "agilent_2d",
+  "input_format": "varian-raw-2d",
+  "output": "candidate.ft2",
+  "output_format": "nmrpipe-real",
+  "backend": "native",
+  "threads": 1,
+  "memory_bytes": 1073741824,
+  "allow_losses": ["metadata", "provenance", "axis_annotations"],
+  "operations": [
+    {"op": "window", "axis": "a1", "kind": "sine", "off": 0.35, "end": 0.98, "power": 1, "first_point_scale": 1},
+    {"op": "zero_fill", "axis": "a1", "size": 4096},
+    {"op": "fft", "axis": "a1"},
+    {"op": "reference", "axis": "a1", "reference_ppm": 55, "reference_hz": 0, "observation_mhz": 125.691, "frequency_scale": -1, "spectral_width_hz": 50000},
+    {"op": "phase", "axis": "a1", "p0": 29, "p1": 0, "pivot": 0},
+    {"op": "discard_imaginary", "axis": "a1", "version": "1"},
+    {"op": "transpose", "order": ["a1", "a0"]},
+    {"op": "window", "axis": "a0", "kind": "sine", "off": 0.35, "end": 0.9, "power": 1, "first_point_scale": 0.5},
+    {"op": "zero_fill", "axis": "a0", "size": 2048},
+    {"op": "fft", "axis": "a0"},
+    {"op": "reference", "axis": "a0", "reference_ppm": 120, "reference_hz": 0, "observation_mhz": 50.648, "frequency_scale": -1, "spectral_width_hz": 5555.556},
+    {"op": "phase", "axis": "a0", "p0": 0, "p1": 0, "pivot": 0},
+    {"op": "discard_imaginary", "axis": "a0", "version": "1"},
+    {"op": "transpose", "order": ["a0", "a1"]}
+  ]
+}

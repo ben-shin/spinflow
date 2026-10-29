@@ -58,6 +58,50 @@ class CLITests(unittest.TestCase):
             self.assertEqual(json.loads(err)['error']['code'],'UNSUPPORTED_RECIPE_SCHEMA')
             self.assertFalse((Path(tmp)/'out.h5').exists())
 
+    def test_plan_and_rejected_run_never_read_samples(self):
+        from nmrnext.io import write_dataset
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp)
+            write_dataset(generate_demo(dimensions=1, points=[64]), folder/'raw.h5', format='native')
+            recipe={'schema_version':'1','input':'raw.h5','output':'result.h5','backend':'numpy',
+                    'operations':[{'op':'fft','axis':'t2'}]}
+            path=folder/'recipe.json'
+            path.write_text(json.dumps(recipe))
+            with mock.patch('nmrnext.io.read_dataset', side_effect=AssertionError('numeric read')):
+                code,out,err=self.invoke(['plan',str(path)])
+                self.assertEqual(code,0,err)
+                self.assertEqual(json.loads(out)['input_validation'],'header_only')
+                code,out,err=self.invoke(['run',str(path),'--memory','1MiB'])
+                self.assertEqual(code,2)
+                self.assertEqual(json.loads(err)['error']['code'],'MEMORY_BUDGET_EXCEEDED')
+            self.assertFalse((folder/'result.h5').exists())
+
+    def test_cli_explicit_discard_imaginary_and_schema(self):
+        import numpy as np
+        from nmrnext.io import read_dataset, write_dataset
+        from nmrnext.operations import run_operations
+        with tempfile.TemporaryDirectory() as tmp:
+            folder=Path(tmp)
+            source=generate_demo(dimensions=1, points=[64])
+            write_dataset(source, folder/'raw.h5', format='native')
+            ops=[{'op':'fft','axis':'t2'}, {'op':'discard_imaginary','axis':'t2'}]
+            recipe={'schema_version':'1','input':'raw.h5','output':'result.h5','backend':'numpy','operations':ops}
+            path=folder/'recipe.json'; path.write_text(json.dumps(recipe))
+            code,out,err=self.invoke(['plan',str(path)])
+            self.assertEqual(code,0,err)
+            self.assertEqual(json.loads(out)['output_complex_axes'],[])
+            code,out,err=self.invoke(['run',str(path)])
+            self.assertEqual(code,0,err)
+            expected=run_operations(source,ops,backend='numpy')
+            result=read_dataset(folder/'result.h5')
+            np.testing.assert_array_equal(result.data,expected.data)
+            self.assertEqual(result.complex_axes,())
+        schema=json.loads((Path(__file__).resolve().parents[2]/'schemas/recipe.schema.json').read_text())
+        variants=schema['properties']['operations']['items']['oneOf']
+        matches=[v for v in variants if v.get('properties',{}).get('op',{}).get('const')=='discard_imaginary']
+        self.assertEqual(len(matches),1)
+        self.assertIn('axis',matches[0]['required'])
+
     def test_bad_memory_value_produces_structured_error(self):
         code,out,err=self.invoke(['plan','missing.json','--memory','nan'])
         self.assertEqual(code,2)

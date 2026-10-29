@@ -374,7 +374,7 @@ def _analysis_dispatch(args):
                                    first_order=args.first_order, max_p1=args.max_p1,
                                    max_peaks=args.max_peaks, min_snr=args.min_snr,
                                    backend=args.backend, threads=args.threads,
-                                   inclusion_mask=phase_mask), "phase", phase_selection)
+                                   inclusion_mask=phase_mask, memory_bytes=_memory(args.memory) or 256 * 1024**2), "phase", phase_selection)
         cleanup_warnings = _save_new_files([(args.output, lambda path: write_dataset(result, path, format="native")),
                                             (args.report, _write_bytes(_json_bytes(report)))])
         return {"output": str(args.output), "report": str(args.report),
@@ -467,7 +467,7 @@ def _dispatch(args):
         return _analysis_dispatch(args)
     # Validate recipe schema before importing codecs or reading sample arrays.
     config=_load_recipe(args) if args.command in ("plan","run") else None
-    from .io import capabilities,export_preflight,inspect_dataset,read_dataset,write_dataset
+    from .io import capabilities,describe_dataset,export_preflight,inspect_dataset,read_dataset,write_dataset
     if args.command == "formats": return {"formats":capabilities()},0
     if args.command == "demo":
         dataset=generate_demo(dimensions=args.dimensions,points=args.points,dtype=args.dtype)
@@ -487,13 +487,15 @@ def _dispatch(args):
         recipe,source,target,memory,backend,threads=config
         if args.command == "run" and target.exists():
             raise NMRNextError("OUTPUT_EXISTS",f"Output already exists: {target}; choose a new output path")
-        dataset=read_dataset(source,format=recipe.get("input_format"),max_bytes=memory)
-        plan=plan_operations(dataset,recipe["operations"],backend=backend,threads=threads,memory_bytes=memory)
+        header=describe_dataset(source,format=recipe.get("input_format"))
+        plan=plan_operations(header,recipe["operations"],backend=backend,threads=threads,memory_bytes=memory)
         plan.update({"input":str(source),"output":str(target),"output_format":_format(target,recipe.get("output_format"))})
         if args.command == "plan": return plan,0
+        dataset=read_dataset(source,format=recipe.get("input_format"),max_bytes=memory,expected_header=header)
+        plan=plan_operations(dataset,recipe["operations"],backend=backend,threads=threads,memory_bytes=memory)
         started=time.perf_counter()
         result=run_operations(dataset,recipe["operations"],backend=backend,threads=threads,memory_bytes=memory)
-        report=write_dataset(result,target,format=plan["output_format"],allow_losses=recipe.get("allow_losses",()))
+        report=write_dataset(result,target,format=_format(target,recipe.get("output_format")),allow_losses=recipe.get("allow_losses",()))
         return {"result":report,"backend":plan["backend"],"operations":len(plan["steps"]),
                 "elapsed_processing_and_write_seconds":time.perf_counter()-started,
                 "estimated_working_bytes":plan["estimated_working_bytes"],"memory_scope":plan["memory_scope"]},0

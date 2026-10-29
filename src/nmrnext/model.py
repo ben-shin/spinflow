@@ -178,3 +178,95 @@ class Dataset:
                        record["metadata"], record["provenance"])
         except (KeyError, TypeError) as exc:
             raise NMRNextError("INVALID_METADATA", "Malformed numeric axis schema") from exc
+
+
+@dataclass(frozen=True, slots=True, init=False)
+class DatasetHeader:
+    """Validated array description, never sample data or a numeric Dataset.
+
+    Shape and byte counts are scalar arithmetic. Source identity describes the
+    inspected headers/stat state; it does not authenticate unexamined samples.
+    """
+    _axes: tuple
+    _complex_axes: tuple
+    _dtype: np.dtype
+    _metadata: dict
+    _provenance: list
+    _source_identity: dict
+
+    def __init__(self, axes, complex_axes=(), dtype="float64", metadata=None,
+                 provenance=None, source_identity=None):
+        try:
+            axes, bits = tuple(axes), tuple(complex_axes)
+        except TypeError as exc:
+            raise NMRNextError("INVALID_AXIS", "Header axes and quadrature bits must be sequences") from exc
+        if not axes or not all(isinstance(a, Axis) for a in axes):
+            raise NMRNextError("INVALID_AXIS", "Header requires validated Axis objects")
+        ids = tuple(a.id for a in axes)
+        if len(set(ids)) != len(ids):
+            raise NMRNextError("DUPLICATE_AXIS", "Logical axis IDs must be unique")
+        if (not all(isinstance(b, str) for b in bits) or len(set(bits)) != len(bits)
+                or not set(bits).issubset(ids) or any(a.id in bits and a.encoding in {"real", "none"} for a in axes)):
+            raise NMRNextError("INVALID_COMPONENTS", "Header quadrature mapping contradicts axes")
+        try:
+            dtype = np.dtype(dtype)
+        except (TypeError, ValueError) as exc:
+            raise NMRNextError("INVALID_DTYPE", "Header requires float32 or float64") from exc
+        if dtype not in (np.dtype("float32"), np.dtype("float64")):
+            raise NMRNextError("INVALID_DTYPE", "Header requires float32 or float64")
+        meta = json_copy({} if metadata is None else metadata, "metadata")
+        history = json_copy([] if provenance is None else provenance, "provenance")
+        identity = json_copy({} if source_identity is None else source_identity, "source_identity")
+        if not isinstance(meta, dict) or not isinstance(history, list) or not isinstance(identity, dict):
+            raise NMRNextError("INVALID_METADATA", "Header metadata and identity are objects; provenance is a list")
+        for name, value in (("_axes", axes), ("_complex_axes", bits), ("_dtype", dtype),
+                            ("_metadata", meta), ("_provenance", history), ("_source_identity", identity)):
+            object.__setattr__(self, name, value)
+
+    @property
+    def axes(self):
+        return self._axes
+
+    @property
+    def complex_axes(self):
+        return self._complex_axes
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @property
+    def shape(self):
+        return (2**len(self._complex_axes), *(a.size for a in self._axes))
+
+    @property
+    def nbytes(self):
+        return math.prod(self.shape)*self._dtype.itemsize
+
+    @property
+    def metadata(self):
+        return deepcopy(self._metadata)
+
+    @property
+    def provenance(self):
+        return deepcopy(self._provenance)
+
+    @property
+    def source_identity(self):
+        return deepcopy(self._source_identity)
+
+    def axis_index(self, axis_id):
+        for i, axis in enumerate(self._axes):
+            if axis.id == axis_id:
+                return i
+        raise NMRNextError("UNKNOWN_AXIS", f"Unknown axis {axis_id!r}")
+
+    def axis(self, axis_id):
+        return self._axes[self.axis_index(axis_id)]
+
+    @classmethod
+    def from_dataset(cls, dataset):
+        if not isinstance(dataset, Dataset):
+            raise NMRNextError("INVALID_DATASET", "Expected a numeric Dataset")
+        return cls(dataset.axes, dataset.complex_axes, dataset.data.dtype,
+                   dataset.metadata, dataset.provenance)

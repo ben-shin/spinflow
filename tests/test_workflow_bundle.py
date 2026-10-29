@@ -118,3 +118,43 @@ def test_concurrent_file_collision_preserves_other_actor_bytes(tmp_path, filenam
     assert (destination / filename).read_bytes() == b'created by another process'
     assert (destination / 'unrelated.txt').read_bytes() == b'also preserve'
     assert sorted(p.name for p in destination.iterdir()) == sorted([filename, 'unrelated.txt'])
+
+
+def test_bundle_budget_is_exact_and_refusal_creates_no_destination(tmp_path):
+    source = generate_demo(dimensions=1, points=[64])
+    with pytest.raises(NMRNextError) as caught:
+        export(source, [], tmp_path / 'too-small', memory_bytes=1024**2)
+    assert caught.value.code == 'MEMORY_BUDGET_EXCEEDED'
+    assert not (tmp_path / 'too-small').exists()
+    recipe = export(source, [], tmp_path / 'explicit', memory_bytes=16 * 1024**2)
+    assert json.loads(recipe.read_text())['memory_bytes'] == 16 * 1024**2
+
+
+def test_autophase_budget_preflight_before_analysis_copy():
+    from nmrnext.analysis import autophase
+    source = generate_demo(dimensions=1, points=[64])
+    spectrum = run_operations(source, [{'op': 'fft', 'axis': source.axes[0].id}], backend='numpy')
+    with patch('nmrnext.analysis._validate', side_effect=AssertionError('analysis allocation reached')):
+        with pytest.raises(NMRNextError) as caught:
+            autophase(spectrum, memory_bytes=1024**2)
+    assert caught.value.code == 'MEMORY_BUDGET_EXCEEDED'
+
+
+def test_rollback_preserves_atomically_replaced_source_and_foreign_recipe(tmp_path):
+    import os
+    from nmrnext import workflow_bundle
+    destination = tmp_path / 'bundle'
+    publish = workflow_bundle._publish_new
+    def replace_after_publication(staged, target):
+        publish(staged, target)
+        if target.name == 'source.nmrh5':
+            replacement = destination / 'foreign.tmp'
+            replacement.write_bytes(b'foreign replacement source')
+            os.replace(replacement, target)
+            (destination / 'workflow.json').write_bytes(b'foreign recipe')
+    with patch.object(workflow_bundle, '_publish_new', side_effect=replace_after_publication):
+        with pytest.raises(NMRNextError) as caught:
+            export(generate_demo(dimensions=1), [], destination)
+    assert caught.value.code == 'OUTPUT_EXISTS'
+    assert (destination / 'source.nmrh5').read_bytes() == b'foreign replacement source'
+    assert (destination / 'workflow.json').read_bytes() == b'foreign recipe'

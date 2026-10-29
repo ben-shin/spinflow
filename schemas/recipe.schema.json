@@ -262,6 +262,31 @@
                   1
                 ],
                 "default": 1
+              },
+              "spectral_width_hz": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": "Width of the current N-bin grid in Hz (N times absolute spacing), scaled about zero Hz; acquisition dwell is retained."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "op",
+              "axis"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "discard_imaginary"
+              },
+              "version": {
+                "const": "1"
+              },
+              "axis": {
+                "type": "string",
+                "minLength": 1
               }
             }
           }

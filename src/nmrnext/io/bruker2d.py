@@ -182,20 +182,6 @@ def read_bruker_2d(path, head):
     else:
         c, s = even-odd, 1j*(even+odd)
         mapping = "C=even-odd; S=i*(even+odd); scale=1 (no averaging)"
-    axes = tuple(Axis(id=f"a{i}",size=head["shape"][i+1],domain="time",unit="s",start=0.,
-        step=1/width,dwell_seconds=1/width,observation_mhz=frequency,reference_ppm=None,
-        nucleus=nucleus,label=nucleus,encoding="states" if i==0 else "complex")
-        for i,(width,frequency,nucleus) in enumerate(((h["indirect_SW_h"],h["indirect_SFO1"],h["indirect_NUC1"]),
-                                                     (h["SW_h"],h["SFO1"],h["NUC1"]))))
-    metadata = {"sampling":"fully_sampled","import":{
-        "format":"bruker-raw-2d","profile_version":"1","direct_axis":"a1","indirect_axis":"a0",
-        "source_sha256":{**h["parameter_sha256"],"ser":hashlib.sha256(payload).hexdigest()},
-        "raw_acqus_text":h["raw_acqus_text"],"raw_acqu2s_text":h["raw_acqu2s_text"],
-        "acquisition_parameters":h["acquisition_parameters"],
-        "indirect_acquisition_parameters":h["indirect_acquisition_parameters"],
-        "quadrature":{"source_FnMODE":h["FnMODE"],"row_mapping":mapping,
-                      "component_order":["RR","IR","RI","II"],
-                      "component_label_axis_order":["a0","a1"],
-                      "complex_bit_axes":["a0","a1"],"imaginary_negation":False},
-        "padding_real_points_per_trace":h["padded_real_points"]-h["TD"],"digital_filter":h["digital_filter"]}}
-    return Dataset(np.stack((c.real,s.real,c.imag,s.imag)),axes,("a0","a1"),metadata)
+    from .headers import normalized_description
+    axes,bits,metadata,provenance=normalized_description(head,{**h['parameter_sha256'],'ser':hashlib.sha256(payload).hexdigest()})
+    return Dataset(np.stack((c.real,s.real,c.imag,s.imag)),axes,bits,metadata,provenance)

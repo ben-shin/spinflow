@@ -57,7 +57,9 @@ def test_public_raw_directory_controls_canonical_preprocessing_and_both_axis_pha
         assert len([op for op in recipe if op['op'] == 'digital_filter']) == 1
         assert recipe[0] == {'op': 'digital_filter', 'axis': 'a1'}
         assert [op['first_point_scale'] for op in recipe if op['op'] == 'window'] == [.5, .5]
+        window.memory_spin.setValue(512)
         applied = window.process_now()
+        assert window.last_memory_bytes == 512 * 1024**2
         expected = run_operations(source, canonical, backend='native')
         np.testing.assert_allclose(applied.data, expected.data, rtol=1e-10, atol=1e-6)
         assert window.autophase_button.isEnabled()
@@ -73,7 +75,9 @@ def test_public_raw_directory_controls_canonical_preprocessing_and_both_axis_pha
         window.view_combo.setCurrentIndex(0)
         assert window._current_analysis()['autophase'] == report
         bundle = window.export_workflow_now(tmp_path/'workflow')
-        assert json.loads(bundle.read_text())['operations'] == recipe+report['operations']
+        saved = json.loads(bundle.read_text())
+        assert saved['operations'] == recipe+report['operations']
+        assert saved['memory_bytes'] == 512 * 1024**2
         assert read_dataset(bundle.parent/'source.nmrh5').to_metadata() == source.to_metadata()
         validator.verify_sources(root, manifest)
     finally:

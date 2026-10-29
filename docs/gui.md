@@ -1,9 +1,13 @@
 # Spectrum workbench
 
+This guide describes the unreleased source candidate; the published v0.2.0 prerelease does not include the processing budget control described below. Build the candidate checkout as explained in the [source installation instructions](../README.md#install-from-source-on-linux).
+
 On a Linux desktop, install the optional GUI and figures with `bash tools/bootstrap.sh --gui --plot`,
 then run `.venv/bin/spinflow gui` from the project folder. Follow the
 [Linux user-testing walkthrough](linux-user-testing.md) for a guided synthetic session. The workbench uses
-the same `nmrnext` processing and file APIs as the command line.
+the same `nmrnext` processing and file APIs as the command line. The selected
+[laboratory-workflow protocol](laboratory-workflow-protocol.md) and
+[results](laboratory-workflow-results.md) record the separate comparison gates.
 
 ## First run
 
@@ -11,6 +15,8 @@ the same `nmrnext` processing and file APIs as the command line.
 2. Inspect the axes and select the real or imaginary quadrature channel above the plot. Channel labels follow the dataset's actual complex-axis order. The signed intensity is shown; negative peaks remain negative.
 3. Set line broadening, zero fill and phase separately for each spectral axis; choose one backend for the complete recipe. Switching the selected axis retains its values; **All spectral axes** edits each changed setting across eligible axes and shows when current values differ. **Preview** computes the complete recipe without making it the current result. Changing a processing setting clears that preview. **Process** runs the recipe for all axes from the immutable original and makes the result current. **Reset to original** discards that result. For an already frequency-domain axis, **Crop frequency region** uses zero-based start-inclusive and stop-exclusive point indices.
 4. Choose **Save current result…** for a spectrum file, **Save runnable workflow…** for a new folder containing the original native source and a CLI `workflow.json`, or **Save audit report…** for a JSON inspection record of operations, plan, axes and resolved processing history. The workflow reproduces the last applied result, rather than a preview or pending control edits. See the [Linux walkthrough](linux-user-testing.md) for exact replay commands.
+
+Set **Processing working-array budget (MiB)** before opening or processing data; it defaults to 256 MiB. The full-recipe preview and Process use that limit, and the runnable workflow retains the limit of the applied result even if the control is later changed. Opening also has a separate 1 GiB payload ceiling. The estimate covers working arrays, not all solver, backend or process memory, and is not an RSS limit. The analysis size limit remains separate; crop large spectra before analysis. Header-only planning is unavailable for JCAMP-DX; convert it to native format with the CLI before opening it here.
 
 The plot supports wheel zoom and drag pan. Frequency axes use ppm when calibrated and follow the usual descending NMR direction; time axes use milliseconds. For large arrays the display is sampled, and the footer says so. Processing and export always use complete data.
 
