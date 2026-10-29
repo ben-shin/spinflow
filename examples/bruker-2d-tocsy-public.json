@@ -1,0 +1,60 @@
+{
+  "schema_version": "1",
+  "input": "../.artifacts/bruker2d-realdata/bmse000001/nmr/set01/HH_TOCSY",
+  "output": "../.artifacts/bruker2d-realdata/bmse000001/tocsy-transformed.nmrh5",
+  "backend": "native",
+  "threads": 1,
+  "memory_bytes": 536870912,
+  "operations": [
+    {
+      "op": "digital_filter",
+      "axis": "a1"
+    },
+    {
+      "op": "window",
+      "axis": "a0",
+      "kind": "exponential",
+      "lb_hz": 74.94990134880024,
+      "first_point_scale": 0.5
+    },
+    {
+      "op": "zero_fill",
+      "axis": "a0",
+      "size": 1024
+    },
+    {
+      "op": "fft",
+      "axis": "a0"
+    },
+    {
+      "op": "reference",
+      "axis": "a0",
+      "reference_ppm": 4.835736489885066,
+      "reference_hz": 0.0,
+      "observation_mhz": 499.839932153801
+    },
+    {
+      "op": "window",
+      "axis": "a1",
+      "kind": "exponential",
+      "lb_hz": 9.304637479268099,
+      "first_point_scale": 0.5
+    },
+    {
+      "op": "zero_fill",
+      "axis": "a1",
+      "size": 1024
+    },
+    {
+      "op": "fft",
+      "axis": "a1"
+    },
+    {
+      "op": "reference",
+      "axis": "a1",
+      "reference_ppm": 4.839969087334365,
+      "reference_hz": 0.0,
+      "observation_mhz": 499.83993003819
+    }
+  ]
+}

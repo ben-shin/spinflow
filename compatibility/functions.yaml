@@ -155,7 +155,7 @@ modern_operations:
     status: experimental
     contract: docs/numerical-conventions.md
     tests: tests/unit/test_bruker_filter.py
-    scope: "raw complex Bruker 1D with recorded positive GRPDLY only"
+    scope: "raw complex Bruker 1D or declared fully sampled 2D direct axis, positive recorded GRPDLY only"
     legacy_option_equivalence: unverified
   - id: reference
     status: experimental
@@ -201,8 +201,8 @@ modern_operations:
 modern_analysis:
   - id: autophase
     status: experimental
-    scope: "bounded complex frequency-domain 1D with identifiable positive lines"
-    evidence: [tests/test_analysis.py, tests/cli/test_analysis_cli.py]
+    scope: "bounded complex 1D or full-hypercomplex 2D frequency-domain isolated positive separable lines; both-axis operations and gauge"
+    evidence: [tests/test_analysis.py, tests/test_autophase_2d.py, tests/cli/test_analysis_cli.py, tests/io/test_bruker2d_public.py]
     legacy_option_equivalence: unverified
   - id: peak_picking
     status: experimental

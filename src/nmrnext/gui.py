@@ -265,9 +265,9 @@ class Workbench(QtWidgets.QMainWindow):
         self.open_button = QtWidgets.QPushButton("Open spectrum…")
         self.open_button.clicked.connect(self._open_file)
         layout.addWidget(self.open_button)
-        self.bruker_button = QtWidgets.QPushButton("Open Bruker FID…")
+        self.bruker_button = QtWidgets.QPushButton("Open Bruker acquisition…")
         self.bruker_button.clicked.connect(self._open_bruker)
-        self.bruker_button.setToolTip("Controlled 1D acqus/fid profile; digital-filter correction may be required.")
+        self.bruker_button.setToolTip("Controlled 1D acqus/fid or fully sampled 2D acqus/acqu2s/ser profile; recorded-delay correction is explicit.")
         layout.addWidget(self.bruker_button)
         demo_row = QtWidgets.QHBoxLayout()
         self.demo1_button = QtWidgets.QPushButton("1D demo")
@@ -358,14 +358,23 @@ class Workbench(QtWidgets.QMainWindow):
         layout.addWidget(QtWidgets.QLabel("Line broadening (Hz)"))
         self.lb_spin = QtWidgets.QDoubleSpinBox()
         self.lb_spin.setRange(0, 100000)
-        self.lb_spin.setDecimals(3)
+        self.lb_spin.setDecimals(12)
         self.lb_spin.setSingleStep(0.5)
         self.lb_spin.setValue(3.0)
         self.lb_spin.valueChanged.connect(lambda: self._setting_changed('lb'))
         layout.addWidget(self.lb_spin)
+        layout.addWidget(QtWidgets.QLabel("Window first-point scale"))
+        self.first_point_spin = QtWidgets.QDoubleSpinBox()
+        self.first_point_spin.setRange(0.0, 1.0)
+        self.first_point_spin.setDecimals(3)
+        self.first_point_spin.setSingleStep(0.5)
+        self.first_point_spin.setValue(1.0)
+        self.first_point_spin.setToolTip("Scale the first acquired point when windowing; public 2D recipes use 0.5 on both axes.")
+        self.first_point_spin.valueChanged.connect(lambda: self._setting_changed('first_point'))
+        layout.addWidget(self.first_point_spin)
         layout.addWidget(QtWidgets.QLabel("Zero fill"))
         self.zf_combo = QtWidgets.QComboBox()
-        self.zf_combo.addItems(["1× original", "2× original", "4× original"])
+        self.zf_combo.addItems(["1× original", "2× original", "4× original", "8× original"])
         self.zf_combo.setCurrentIndex(1)
         self.zf_combo.currentIndexChanged.connect(lambda: self._setting_changed('zf'))
         layout.addWidget(self.zf_combo)
@@ -419,7 +428,7 @@ class Workbench(QtWidgets.QMainWindow):
             layout.addWidget(QtWidgets.QLabel(label))
             field = QtWidgets.QDoubleSpinBox()
             field.setRange(-1e9 if key != 'reference_mhz' else 0, 1e9)
-            field.setDecimals(9)
+            field.setDecimals(12)
             field.valueChanged.connect(lambda value, k=key: self._setting_changed(k))
             setattr(self, attr, field)
             layout.addWidget(field)
@@ -490,11 +499,11 @@ class Workbench(QtWidgets.QMainWindow):
     def _analysis_panel(self):
         panel = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(panel)
-        tip = QtWidgets.QLabel('Analyze the applied current result, component 0 (all-real). Pending processing edits and previews are excluded. Inspect all automatic results.')
+        tip = QtWidgets.QLabel('Analyze the applied current result. Peaks and integrals use component 0; automatic phase fits every quadrature channel. Pending edits and previews are excluded. Inspect all automatic results.')
         tip.setWordWrap(True)
         layout.addWidget(tip)
-        self.autophase_button = QtWidgets.QPushButton('Apply automatic phase (1D)…')
-        self.autophase_button.setToolTip('Restricted positive isolated Lorentzian peaks; mixed-sign, crowded or underdetermined spectra may be refused. Adds an explicit phase operation to the applied recipe.')
+        self.autophase_button = QtWidgets.QPushButton('Apply automatic phase (1D / 2D)…')
+        self.autophase_button.setToolTip('Positive isolated Lorentzian lines; 2D requires all four quadratures and fits both axes together. Mixed-sign, crowded or underdetermined spectra may be refused. Adds explicit phase operations to the applied recipe, using centered point pivots.')
         self.autophase_button.clicked.connect(lambda: self._analysis_job('autophase'))
         layout.addWidget(self.autophase_button)
         self.first_order_check = QtWidgets.QCheckBox('Estimate first-order phase')
@@ -602,6 +611,13 @@ class Workbench(QtWidgets.QMainWindow):
             summaries.append('Automatic phase is applied to the current result. Next Process rebuilds the manual recipe and discards this automatic correction.')
         for kind, report in self.analysis_reports.items():
             summaries.append(f"{kind}: " + ', '.join(report.get('flags', [])))
+            if kind == 'autophase':
+                operations = report.get('operations') or [report['operation']]
+                summaries.extend(f"{op['axis']}: p0={op['p0']:.4g}°, p1={op['p1']:.4g}° per N points; pivot={op['pivot']:.4g} points"
+                                 for op in operations)
+                if 'phase_gauge' in report:
+                    summaries.append(report['phase_gauge']['canonical_branch'])
+                summaries.append(f"Fit normalized RMS={report['objective']['normalized_rms']:.4g}; inspect excluded candidates and flags in saved JSON.")
             if kind == 'peaks':
                 summaries.append(f"Noise σ={report.get('noise', {}).get('sigma')}; threshold={report.get('threshold')}")
             records = report.get('peaks', []) or report.get('regions', [])
@@ -640,7 +656,8 @@ class Workbench(QtWidgets.QMainWindow):
     def _accept_analysis(self, kind, result):
         if kind == 'autophase':
             dataset, report = result
-            operations = self.last_operations + [report['operation']]
+            corrections = report.get('operations') or [report['operation']]
+            operations = self.last_operations + corrections
             backend = self.last_backend or self.backend_combo.currentData()
             plan = plan_operations(self.source, operations, backend=backend)
             self.current = dataset
@@ -793,8 +810,8 @@ class Workbench(QtWidgets.QMainWindow):
     def _open_bruker(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose Bruker acquisition directory")
         if path:
-            self._start_job(lambda: read_dataset(path, format="bruker-raw-1d"),
-                            lambda ds: self.load_dataset_now(ds, Path(path).name), "Opening Bruker FID…")
+            self._start_job(lambda: read_dataset(path),
+                            lambda ds: self.load_dataset_now(ds, Path(path).name), "Opening Bruker acquisition…")
 
     def load_dataset_now(self, dataset, name="Dataset"):
         """Install a validated source. Used by dialogs, demos and offscreen tests."""
@@ -883,12 +900,14 @@ class Workbench(QtWidgets.QMainWindow):
             if axis.role != 'spectral':
                 continue
             settings = self._axis_settings[axis.id]
-            factor = (1, 2, 4)[settings['zf']]
+            factor = (1, 2, 4, 8)[settings['zf']]
             if axis.domain == "time":
-                if settings['lb'] > 0:
+                if settings['lb'] > 0 or settings['first_point'] != 1.0:
                     ops.append({"op": "window", "axis": axis.id, "kind": "exponential",
-                                "lb_hz": settings['lb'], "first_point_scale": 1.0})
-                if factor > 1:
+                                "lb_hz": settings['lb'], "first_point_scale": settings['first_point']})
+                # Correction trims direct points. "1× original" restores the
+                # original acquisition grid before FFT, rather than a shorter grid.
+                if factor > 1 or (self.filter_check.isChecked() and axis.id == self.source.axes[-1].id):
                     ops.append({"op": "zero_fill", "axis": axis.id, "size": axis.size * factor})
                 if settings['fft']:
                     ops.append({"op": "fft", "axis": axis.id})
@@ -907,7 +926,7 @@ class Workbench(QtWidgets.QMainWindow):
         self.filter_check.setChecked(False)
         self.filter_check.blockSignals(False)
         self._axis_settings = {
-            a.id: dict(lb=3.0, zf=1, fft=True, p0=0.0, p1=0.0, pivot=0.0,
+            a.id: dict(lb=3.0, first_point=1.0, zf=1, fft=True, p0=0.0, p1=0.0, pivot=0.0,
                        crop=False, start=0, stop=a.size, reference=False,
                        reference_ppm=a.reference_ppm or 0.0, reference_hz=a.reference_hz,
                        reference_mhz=a.observation_mhz or 0.0)
@@ -915,7 +934,7 @@ class Workbench(QtWidgets.QMainWindow):
         }
 
     def _setting_controls(self):
-        return {'lb': self.lb_spin, 'zf': self.zf_combo, 'fft': self.fft_check,
+        return {'lb': self.lb_spin, 'first_point': self.first_point_spin, 'zf': self.zf_combo, 'fft': self.fft_check,
                 'p0': self.p0_spin, 'p1': self.p1_spin, 'pivot': self.pivot_spin,
                 'crop': self.crop_check, 'start': self.crop_start_spin, 'stop': self.crop_stop_spin,
                 'reference': self.reference_check, 'reference_ppm': self.reference_ppm_spin,
@@ -924,7 +943,7 @@ class Workbench(QtWidgets.QMainWindow):
     def _eligible_setting_axes(self, key, axes):
         if key.startswith('reference'):
             return axes
-        if key in ('lb', 'zf', 'fft'):
+        if key in ('lb', 'first_point', 'zf', 'fft'):
             return [a for a in axes if a.domain == 'time']
         if key in ('crop', 'start', 'stop'):
             return [a for a in axes if a.domain == 'frequency']
@@ -1094,7 +1113,7 @@ class Workbench(QtWidgets.QMainWindow):
         has_complex = any(a.id in self.source.complex_axes for a in selected) if has else False
         for control in (self.axis_combo, self.backend_combo, self.export_combo):
             control.setEnabled(has and not self._busy)
-        for control in (self.lb_spin, self.zf_combo, self.fft_check):
+        for control in (self.lb_spin, self.first_point_spin, self.zf_combo, self.fft_check):
             control.setEnabled(has_time and not self._busy)
         for control in (self.p0_spin, self.p1_spin, self.pivot_spin):
             control.setEnabled(has_complex and not self._busy)
@@ -1110,18 +1129,19 @@ class Workbench(QtWidgets.QMainWindow):
         self.workflow_button.setEnabled(has and self.preview is None and not self._busy)
         imported = self.source.metadata.get('import') if has else None
         self.filter_check.setEnabled(not self._busy and isinstance(imported, dict)
-                                     and imported.get('format') == 'bruker-raw-1d')
+                                     and imported.get('format') in ('bruker-raw-1d', 'bruker-raw-2d'))
         can_analyze = (has and self.preview is None and not self._busy
                        and len(self.current.axes) in (1, 2)
                        and all(a.domain == 'frequency' for a in self.current.axes))
         self.analysis_panel.setEnabled(can_analyze)
-        self.autophase_button.setEnabled(can_analyze and len(self.current.axes) == 1
-                                         and bool(self.current.complex_axes))
+        phase_ready = (can_analyze and all(a.role == 'spectral' for a in self.current.axes)
+                       and set(self.current.complex_axes) == {a.id for a in self.current.axes})
+        self.autophase_button.setEnabled(phase_ready)
         self.analysis_export_button.setEnabled(can_analyze and bool(self.analysis_reports))
 
     def _update_details(self):
         if self.source is None:
-            self.details.setHtml("<p>Open SpinFlow native data, a supported processed spectrum, or a Bruker 1D FID.</p><p>Try a synthetic example to explore the workflow.</p>")
+            self.details.setHtml("<p>Open SpinFlow native data, a supported processed spectrum, or a declared Bruker 1D/2D acquisition.</p><p>Try a synthetic example to explore the workflow.</p>")
             return
         d = self.source
         rows = [f"<p><b>{len(d.axes)}D · {d.data.dtype.name} · {d.data.shape[0]} component(s)</b></p>"]

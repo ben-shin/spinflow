@@ -52,8 +52,23 @@ profiles:
     text_validation: "validated parameter names and continuations plus finite-read/repeated-EOF stream around pinned parser; caught parser warnings fail; binary read never reparses acqus"
     readback: "nmrglue 0.12 Bruker reader (shared codec family)"
     actual_instrument_fixture: "hash-pinned public bmse000001/1H; eight archived TopSpin peak positions only"
-    correction_scope: "explicit positive recorded GRPDLY on original complex 1D grid; no DSP lookup or raw 2D"
+    correction_scope: "explicit positive recorded GRPDLY on original complex 1D grid; no DSP lookup; 2D has a separate declared profile"
     independent_reference: "archived TopSpin peak positions only; no amplitude, phase or integral equivalence"
+    external_consumer: unverified
+  - id: bruker-raw-2d
+    dialect: "controlled fully sampled ser/acqus/acqu2s; AQ_mod 3, AQSEQ 0, PARMODE 1, FnTYPE 0, FnMODE 5/6"
+    object: "raw 2D hypercomplex acquisition"
+    digitizer_policy: "DIGMOD omitted or integer 1; explicit analog/invalid values refused"
+    optional_direct_SW: "SW * SFO1 agrees with SW_h within relative 2e-5"
+    dimensions: [2]
+    components: "RR IR RI II; indirect bit 0, direct bit 1"
+    read: implemented_bounded_2d
+    write: not_implemented
+    preserved: [acquired_quadratures, acquisition_texts, source_checksums, mode_mapping, digital_filter_parameters]
+    known_losses: [padding_outside_TD]
+    correction_scope: "direct-axis positive recorded GRPDLY on original grid, all four channels"
+    evidence: [tests/io/test_bruker_2d.py, tests/unit/test_bruker_2d_filter.py, tests/io/test_bruker2d_public.py]
+    independent_reference: "two acquired HSQC/TOCSY cases; archived TopSpin peak positions and fixed relative-volume ratios; docs/real-bruker-2d.md"
     external_consumer: unverified
   - id: nmrpipe-complex-or-stream
     dialect: "no declared profile"

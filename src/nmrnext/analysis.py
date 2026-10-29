@@ -4,7 +4,8 @@ No concentration inference or line deconvolution is performed. Integrals have
 positive coordinate measure and retain the sign of the selected component.
 Reports refer to immutable data/axis snapshots, not mutable Dataset metadata.
 
-Automatic phase estimation fits isolated positive complex Lorentzian lines.
+Automatic phase estimation fits isolated positive complex Lorentzian lines,
+or positive separable four-quadrature Lorentzian cross-peaks in 2D.
 This is an intentionally restricted model, inspired by line-symmetry methods
 (Heuer, JMR 91, 241–253, doi:10.1016/0022-2364(91)90189-Z), not ACME and not a
 general solution for edited, mixed-sign, crowded or non-Lorentzian spectra.
@@ -453,10 +454,17 @@ def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
     require visual inspection and do not imply quantitative phase certification.
     The historical min_snr parameter is a multiplier for the phase candidate
     variation heuristic, not a statistical amplitude-SNR significance level.
+    For 2D, both independent complex axes are estimated together; axis must be
+    omitted and pivot, if supplied, maps both axis IDs to points. The report
+    contains operations (plural), axis_results and an explicit 180-degree gauge.
     """
     _validate(dataset)
+    if len(dataset.axes) == 2:
+        return _autophase_2d(dataset, axis=axis, pivot=pivot, first_order=first_order,
+                             max_p1=max_p1, max_peaks=max_peaks, min_snr=min_snr,
+                             backend=backend, threads=threads)
     if len(dataset.axes) != 1 or dataset.complex_axes != (dataset.axes[0].id,):
-        raise NMRNextError("UNSUPPORTED_AUTOPHASE", "Automatic phase requires 1D complex frequency data; 2D and real-only phasing are unsupported")
+        raise NMRNextError("UNSUPPORTED_AUTOPHASE", "Automatic phase requires complex frequency data")
     a = dataset.axes[0]
     if axis is not None and axis != a.id:
         raise NMRNextError("UNKNOWN_AXIS", "Automatic phase axis must identify the 1D spectral axis")
@@ -585,6 +593,241 @@ def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
                              "amplitude": "normalized intensity", "intensity_scale": scale,
                              "reported_lines": "initial independent fits used to seed shared phase refinement"})
     report["flags"] = ["inspect_phase", "positive_lorentzian_line_assumption", "background_fitted_for_estimation_only"]
+    if not first_order:
+        report["flags"].append("first_order_not_estimated")
+    return result, report
+
+
+def _tensor_line(z0, z1):
+    """Canonical quadratures [RR, IR, RI, II], with independent imaginary units."""
+    return np.array([np.outer(z0.real, z1.real).ravel(),
+                     np.outer(z0.imag, z1.real).ravel(),
+                     np.outer(z0.real, z1.imag).ravel(),
+                     np.outer(z0.imag, z1.imag).ravel()])
+
+
+def _hypercomplex_design(line):
+    # Multiplication by 1, i0, i1, i0*i1. In particular (i0*i1)^2 = +1.
+    return np.stack([line, line[[1, 0, 3, 2]] * np.array([-1, 1, -1, 1])[:, None],
+                     line[[2, 3, 0, 1]] * np.array([-1, -1, 1, 1])[:, None],
+                     line[[3, 2, 1, 0]] * np.array([1, -1, -1, 1])[:, None]], axis=-1)
+
+
+def _autophase_2d(dataset, *, axis, pivot, first_order, max_p1, max_peaks,
+                  min_snr, backend, threads):
+    """Bounded full-quadrature fit of isolated, positive, separable 2D lines.
+
+    This is an original extension of the isolated-line estimator, not an
+    implementation of a published universal 2D autophase algorithm. See Heuer,
+    doi:10.1016/0022-2364(91)90189-Z (line symmetry), and NMRPipe TP/PS:
+    https://spin.niddk.nih.gov/bax-apps/NMRPipe/ref/nmrpipe/tp.html
+    Both independent imaginary units and their cross term enter every fit.
+    Norms locate seeds only. Affine backgrounds are eliminated by orthogonal
+    projection; they are never removed from the returned data. Mixed-sign,
+    antiphase, overlapping, non-Lorentzian or insufficiently sampled lines are
+    outside this model. Its residual gate is not a universal model classifier.
+    """
+    axes = dataset.axes
+    ids = [a.id for a in axes]
+    if set(dataset.complex_axes) != set(ids):
+        raise NMRNextError("UNSUPPORTED_AUTOPHASE", "2D automatic phase requires both independent complex axes (four quadratures)")
+    if axis is not None:
+        raise NMRNextError("INVALID_PARAMETER", "2D automatic phase estimates both axes together; omit axis")
+    if not isinstance(first_order, bool):
+        raise NMRNextError("INVALID_PARAMETER", "first_order must be boolean")
+    if isinstance(max_peaks, bool) or not isinstance(max_peaks, int) or not 1 <= max_peaks <= 8:
+        raise NMRNextError("INVALID_PARAMETER", "max_peaks must be an integer in [1,8]")
+    max_p1 = _positive(max_p1, "max_p1")
+    if max_p1 > 180:
+        raise NMRNextError("INVALID_PARAMETER", "max_p1 is limited to 180 degrees; correct large ramps explicitly")
+    min_snr = _positive(min_snr, "min_snr")
+    if any(a.size < 64 for a in axes):
+        raise NMRNextError("INSUFFICIENT_DATA", "2D automatic phase needs at least 64 points on each axis")
+    if pivot is not None and (not isinstance(pivot, dict) or set(pivot) != set(ids)):
+        raise NMRNextError("INVALID_PARAMETER", "2D pivot must map every axis ID to a zero-based point")
+    pivots = [(a.size-1)/2 if pivot is None else finite(pivot[a.id], "pivot") for a in axes]
+    if any(not 0 <= p <= a.size-1 for a, p in zip(axes, pivots)):
+        raise NMRNextError("INVALID_PARAMETER", "pivot must be an in-range zero-based point")
+    bits = [1 << dataset.complex_axes.index(a.id) for a in axes]
+    canonical_channels = [0, bits[0], bits[1], bits[0] | bits[1]]
+    scale = float(np.max(np.abs(dataset.data)))
+    if not scale:
+        raise NMRNextError("AUTOPHASE_NO_SIGNAL", "Zero spectrum cannot determine phase")
+    z = dataset.data[canonical_channels].astype(float)/scale
+    magnitude = np.sqrt(np.sum(z*z, axis=0))
+    variation = max(float(np.median(np.abs(d-np.median(d))) / (_MAD_NORMAL*math.sqrt(2)))
+                    for dim in (1, 2) for d in [np.diff(z, axis=dim)])
+    cut = max(min_snr*variation, .02*float(magnitude.max()))
+    maxima = (magnitude == ndimage.maximum_filter(magnitude, size=5)) & (magnitude > cut)
+    centers = np.argwhere(maxima)
+    ranked = sorted(centers.tolist(), key=lambda c: (-float(magnitude[tuple(c)]), c))[:32]
+    lines, rejected = [], []
+    orientations = [1 if a.step > 0 else -1 for a in axes]
+    for center in ranked:
+        widths, radii = [], []
+        for dim in range(2):
+            trace = magnitude[:, center[1]] if dim == 0 else magnitude[center[0], :]
+            peaks, _ = signal.find_peaks(trace)
+            if center[dim] not in peaks:
+                break
+            width = float(signal.peak_widths(trace, [center[dim]], rel_height=.5)[0][0]/(2*math.sqrt(3)))
+            widths.append(width)
+            radii.append(max(6, int(math.ceil(4*width))))
+        if len(widths) != 2 or any(w < .7 or r > a.size//6 or c-r < 0 or c+r >= a.size
+                                  for c, w, r, a in zip(center, widths, radii, axes)):
+            rejected.append({"points": center, "reason": "edge_or_unresolved_width"})
+            continue
+        if any(other != center and all(abs(other[d]-center[d]) < radii[d] for d in range(2))
+               for other in ranked):
+            rejected.append({"points": center, "reason": "overlapping_candidate"})
+            continue
+        # Integer subsampling avoids interpolation-induced line-shape changes.
+        points = [np.unique(np.rint(np.linspace(c-r, c+r, min(21, 2*r+1))).astype(int))
+                  for c, r in zip(center, radii)]
+        sample = z[:, points[0][:, None], points[1][None, :]].reshape(4, -1)
+        u, v = np.meshgrid((points[0]-center[0])/radii[0],
+                           (points[1]-center[1])/radii[1], indexing="ij")
+        background, _ = np.linalg.qr(np.stack([np.ones(u.size), u.ravel(), v.ravel()], axis=1))
+        def detrend(values):
+            return values - (values @ background) @ background.T
+        observed = detrend(sample)
+        def local_model(parameters):
+            factors = [1/(1+1j*o*(p-c)/w) for o, p, c, w in
+                       zip(orientations, points, parameters[::2], parameters[1::2])]
+            design = _hypercomplex_design(_tensor_line(*factors))
+            design = np.stack([detrend(design[:, :, i]).ravel() for i in range(4)], axis=1)
+            coefficient = np.linalg.lstsq(design, observed.ravel(), rcond=None)[0]
+            return design @ coefficient-observed.ravel(), coefficient
+        initial = [center[0], widths[0], center[1], widths[1]]
+        lower = [center[0]-2*widths[0], .3, center[1]-2*widths[1], .3]
+        upper = [center[0]+2*widths[0], radii[0], center[1]+2*widths[1], radii[1]]
+        fit = optimize.least_squares(lambda p: local_model(p)[0], initial, bounds=(lower, upper),
+                                     max_nfev=80, ftol=1e-8, xtol=1e-8, gtol=1e-8)
+        residual, coefficient = local_model(fit.x)
+        left, singular, right = np.linalg.svd(coefficient.reshape(2, 2, order="F"))
+        amplitude = float(singular[0])
+        relative_rms = float(np.sqrt(np.mean(residual**2))/max(amplitude, 1e-15))
+        if (not fit.success or amplitude < cut or relative_rms > .04 or
+                singular[1] > .08*amplitude):
+            rejected.append({"points": center, "reason": "nonseparable_or_line_model_residual",
+                             "relative_rms": relative_rms})
+            continue
+        phase0 = float(np.rad2deg(np.arctan2(left[1, 0], left[0, 0])))
+        phase1 = float(np.rad2deg(np.arctan2(right[0, 1], right[0, 0])))
+        lines.append({"points": points, "parameters": fit.x, "amplitude": amplitude,
+                      "phases": [phase0, phase1], "sample": sample, "background": background,
+                      "radii": radii, "relative_rms": relative_rms})
+        if len(lines) == max_peaks:
+            break
+    needed = 2 if first_order else 1
+    if len(lines) < needed:
+        raise NMRNextError("AUTOPHASE_INSUFFICIENT_LINES", f"Need {needed} isolated separable hypercomplex lines; found {len(lines)}",
+                           details={"accepted_lines": len(lines), "rejected_candidates": rejected})
+    locations = np.array([line["parameters"][::2] for line in lines])
+    spans = np.ptp(locations, axis=0)/np.array([a.size for a in axes])
+    if first_order and np.any(spans < .15):
+        raise NMRNextError("AUTOPHASE_UNDERDETERMINED", "Accepted cross-peaks must span at least 15% of EACH axis to estimate first-order phase",
+                           details={"span_fraction": dict(zip(ids, spans.tolist()))})
+    gaps = np.max(np.diff(np.sort(locations, axis=0), axis=0), axis=0) / np.array([a.size for a in axes]) if len(lines) > 1 else np.zeros(2)
+    if first_order and np.any(gaps*max_p1 >= 90):
+        raise NMRNextError("AUTOPHASE_UNDERDETERMINED", "Cross-peak gaps permit multiple 180-degree phase branches within max_p1; reduce max_p1 using prior knowledge or supply more lines",
+                           details={"maximum_gap_fraction": dict(zip(ids, gaps.tolist()))})
+    # A positive tensor is unchanged by simultaneous 180-degree rotations.
+    # Fix the first axis branch, then recover the second with its positive sign.
+    phases = np.array([line["phases"] for line in lines])
+    order = np.argsort(locations[:, 0])
+    unwrapped = np.rad2deg(np.unwrap(np.deg2rad(2*phases[order, 0])))/2
+    phases[order, 0] = unwrapped
+    for index, line in enumerate(lines):
+        phases[index, 1] += 180*round((line["phases"][0]-phases[index, 0])/180)
+    order = np.argsort(locations[:, 1])
+    phases[order, 1] = np.rad2deg(np.unwrap(np.deg2rad(phases[order, 1])))
+    seed = []
+    for dim, a in enumerate(axes):
+        positions = (locations[:, dim]-pivots[dim])/a.size
+        slope, intercept = np.polyfit(positions, phases[:, dim], 1) if first_order else (0., float(np.mean(phases[:, dim])))
+        if abs(slope) >= max_p1:
+            raise NMRNextError("AUTOPHASE_BOUND_REACHED", "Phase slopes exceed bounds; mixed-sign or unsupported cross-peaks may be present")
+        seed.extend([intercept, slope] if first_order else [intercept])
+    global_count = len(seed)
+    lower, upper = [], []
+    for dim in range(2):
+        offset = dim*(2 if first_order else 1)
+        lower.extend([seed[offset]-90, -max_p1] if first_order else [seed[offset]-90])
+        upper.extend([seed[offset]+90, max_p1] if first_order else [seed[offset]+90])
+    for line in lines:
+        c0, w0, c1, w1 = line["parameters"]
+        seed.extend([c0, w0, c1, w1, line["amplitude"]])
+        lower.extend([c0-w0, .3, c1-w1, .3, .1*line["amplitude"]])
+        upper.extend([c0+w0, line["radii"][0], c1+w1, line["radii"][1], 3*line["amplitude"]])
+    def joint_residual(parameters, by_line=False):
+        errors = []
+        for index, line in enumerate(lines):
+            local = parameters[global_count+5*index:global_count+5*(index+1)]
+            factors = []
+            for dim, a in enumerate(axes):
+                offset = dim*(2 if first_order else 1)
+                p0, p1 = parameters[offset], parameters[offset+1] if first_order else 0.
+                points = line["points"][dim]
+                c, w = local[2*dim:2*dim+2]
+                factors.append(np.exp(1j*np.deg2rad(p0+p1*(points-pivots[dim])/a.size)) /
+                               (1+1j*orientations[dim]*(points-c)/w))
+            delta = local[4]*_tensor_line(*factors)-line["sample"]
+            background = line["background"]
+            delta -= (delta @ background) @ background.T
+            errors.append(delta.ravel()/line["amplitude"])
+        return errors if by_line else np.concatenate(errors)
+    fit = optimize.least_squares(joint_residual, seed, bounds=(lower, upper), max_nfev=120,
+                                 ftol=1e-8, xtol=1e-8, gtol=1e-8)
+    if not fit.success:
+        raise NMRNextError("AUTOPHASE_NOT_CONVERGED", "Shared two-axis phase model did not converge")
+    errors = [float(np.sqrt(np.mean(e*e))) for e in joint_residual(fit.x, True)]
+    if max(errors) > .04:
+        raise NMRNextError("AUTOPHASE_MODEL_MISMATCH", "Positive separable cross-peaks do not share a consistent two-axis phase ramp",
+                           details={"per_line_relative_rms": errors,
+                                    "line_centers_points": locations.tolist()})
+    p0s, p1s = [], []
+    for dim in range(2):
+        offset = dim*(2 if first_order else 1)
+        p0s.append(float(-fit.x[offset]))
+        p1s.append(float(-fit.x[offset+1]) if first_order else 0.)
+    if first_order and any(abs(p) > .98*max_p1 for p in p1s):
+        raise NMRNextError("AUTOPHASE_BOUND_REACHED", "First-order phase reached a fitting bound")
+    canonical0 = (p0s[0]+90)%180-90
+    p0s[1] += p0s[0]-canonical0
+    p0s = [canonical0, (p0s[1]+180)%360-180]
+    operations = [{"op": "phase", "axis": a.id, "p0": p0, "p1": p1, "pivot": p}
+                  for a, p0, p1, p in zip(axes, p0s, p1s, pivots)]
+    result = run_operations(dataset, operations, backend=backend, threads=threads)
+    report = _report(dataset, "autophase", {"axes": ids, "pivot": dict(zip(ids, pivots)),
+                     "pivot_unit": "points", "first_order": first_order, "max_p1": max_p1,
+                     "max_peaks": max_peaks, "min_snr": min_snr,
+                     "min_snr_semantics": "phase candidate variation multiplier, not amplitude SNR",
+                     "method": "isolated_positive_separable_hypercomplex_lorentzian_joint_two_axis_phase"})
+    report.update(operations=operations, result_dataset_digest=dataset_digest(result),
+                  axis_results={a.id: {"operation": op, "line_span_fraction": float(span),
+                                      "maximum_gap_fraction": float(gap)}
+                                for a, op, span, gap in zip(axes, operations, spans, gaps)},
+                  objective={"name": "full_four_quadrature_relative_least_squares",
+                             "normalized_rms": float(np.sqrt(np.mean(joint_residual(fit.x)**2))),
+                             "per_line_relative_rms": errors, "acceptance_limit": .04},
+                  convergence={"success": True, "evaluations": int(fit.nfev)},
+                  lines=[{"centers": dict(zip(ids, fit.x[global_count+5*i:global_count+5*i+4:2].tolist())),
+                          "widths": dict(zip(ids, fit.x[global_count+5*i+1:global_count+5*i+4:2].tolist())),
+                          "amplitude": float(fit.x[global_count+5*i+4]), "relative_rms": errors[i]}
+                         for i in range(len(lines))],
+                  rejected_candidates=rejected,
+                  candidate_screening={"scale": variation*scale, "not_amplitude_noise_sd": True,
+                                       "method": "adjacent_difference_MAD; four_quadrature_norm_seeds_only"},
+                  phase_gauge={"ambiguity": "simultaneous 180-degree shifts on both axes leave all four quadratures unchanged",
+                               "canonical_branch": "first logical axis correction p0 in [-90,90); second in [-180,180)"},
+                  resource_bounds={"candidate_fits": 32, "accepted_lines": 8, "samples_per_axis_per_line": 21,
+                                   "local_max_nfev": 80, "joint_max_nfev": 120},
+                  fit_units={"center": "zero-based points", "width": "HWHM points", "phase": "correction degrees",
+                             "p1": "degrees per N points", "amplitude": "normalized intensity", "intensity_scale": scale})
+    report["flags"] = ["inspect_phase", "positive_separable_lorentzian_cross_peak_assumption",
+                       "simultaneous_180_degree_axis_ambiguity", "background_fitted_for_estimation_only",
+                       "excluded_candidates_not_phase_certified"]
     if not first_order:
         report["flags"].append("first_order_not_estimated")
     return result, report

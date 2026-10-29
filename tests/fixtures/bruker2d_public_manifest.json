@@ -1,0 +1,396 @@
+{
+  "schema": 1,
+  "id": "bmse000001-two-2d-acquisitions",
+  "doi": "10.13018/BMSE000001",
+  "compound": "1,3-diaminopropane",
+  "authors": [
+    "Francisca Jofre",
+    "Mark E. Anderson",
+    "John L. Markley"
+  ],
+  "retrieved": "2026-10-29",
+  "source": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/",
+  "access_policy": "https://bmrb.io/metabolomics/data_policy.shtml",
+  "access_terms": "BMRB states community data are publicly available free of charge. No explicit redistribution license is assumed. Fetch original data locally into ignored .artifacts; do not commit or redistribute the acquisitions.",
+  "reference_software": "TopSpin 2.1, independently deposited processing and audit trail from April 2011",
+  "protocol": {
+    "declared_before_raw_comparison": true,
+    "calibration": "No peak-fitted shifts, reversals or gain. Archive ppm grid OFFSET - index*SW_p/(SF*SI); raw frequency axis calibrated with (SFO1-SF)*1e6/SF from acquisition and corresponding archived processing SF.",
+    "normalization": "Independent archived processed integer intensities scaled by 2**NC_proc. Raw-to-reference volumes compared as within-spectrum region ratios, canceling arbitrary receiver/FFT gain; no per-region gain fits.",
+    "volume_measure": "Signed 2D trapezoid in physical Hz, baseline none; multilinear interpolation at fixed ppm rectangle endpoints; no peak-height substitution.",
+    "volume_tolerance": "Processed-reference integration relative error <=1e-10 against separate NumPy array quadrature. Raw-to-TopSpin region-ratio relative error <=0.30 is a predeclared, coarse processing comparison, never absolute concentration validation.",
+    "positive_peak_truth": "Strong listed HSQC1JCH peaks are the predeclared main gate; all curated rows are retained, including the third weak LR entry as supplemental signal-neighborhood diagnostics. Unlisted signals are not counted as false positives. TOCSY uses predeclared multiplet rectangles and independent archived maxima, not a curated TOCSY peak list.",
+    "limitations": [
+      "Two acquisition cases from one compound and one instrument, not a broad independent cohort.",
+      "TopSpin processing differs in digital-filter/phase/apodization details. Raw ratio gate is coarse, not amplitude or full-array parity.",
+      "Archive has no quantified peak volumes. Integration correctness uses the independent immutable processed reference array as numerical oracle; volumes do not certify concentration.",
+      "First-order automatic phase may be unidentifiable because these small molecule peaks span a narrow fraction of the full sweep."
+    ],
+    "raw_apodization": "Exponential on each axis, lb_hz = log(100)/(pi*(original_raw_axis.size-1)*original_raw_axis.step), computed only from the ORIGINAL acquisition grid before digital-filter trimming. The target exponential factor is 1% at the original final acquisition time. After 69 direct samples are trimmed, actual retained direct endpoint factors are 1.8623389% for HSQC and 1.3642607% for TOCSY; indirect factors remain 1%. First-point scale 0.5 is a separate additional weight on each axis: the endpoint exponential factor is not the ratio to that weighted first point (that ratio is twice the endpoint factor). Parameters remain unchanged after trimming. This differs from archived squared-cosine windows.",
+    "phase_policy": "HSQC both-axis zero-order (first_order=false), since its only two isolated peaks span <15% of each sweep and cannot identify slopes. TOCSY both-axis zero/first-order (first_order=true), including reference-standard resonances selected without consulting archived peak positions. No TopSpin phase parameters used for automatic estimation.",
+    "peak_position_tolerance": "Raw positive ROI maximum vs independently archived positive ROI maximum <=2 processed bins per axis; this accommodates discretization and apodization shift within the fixed multiplet rectangle. Curated HSQC peak-list locations are separately checked within the same2bin tolerance; no omitted-peak false-positive assertion.",
+    "ratio_tolerance_rationale": "30% is a conservative predeclared engineering acceptance budget for finite fixed rectangles under different apodization and fitted phase policies, not a confidence interval or claimed measurement accuracy. The 128 complex indirect increments and an exponential window targeting 1% on the original acquisition grid (retained direct endpoints 1.8623389% HSQC / 1.3642607% TOCSY) broaden lines relative to the archived WDW4 SSB2 processing; signed tails leak across fixed rectangle boundaries. Within-spectrum ratios cancel arbitrary global gain but do not cancel region-dependent tails or phase errors. Report actual errors so readers can choose a stricter application-specific budget."
+  },
+  "cases": [
+    {
+      "id": "1H_13C_HSQC",
+      "experiment": "HSQC",
+      "path": "nmr/set01/1H_13C_HSQC",
+      "FnMODE": 6,
+      "acquisition": {
+        "TD": 1024,
+        "AQ_mod": 3,
+        "AQSEQ": 0,
+        "BYTORDA": 0,
+        "DTYPA": 0,
+        "SW_h": 6493.50649350649,
+        "SFO1": 499.842349248,
+        "GRPDLY": 67.985595703125
+      },
+      "indirect_acquisition": {
+        "TD": 256,
+        "FnMODE": 6,
+        "SW_h": 18854.049891114,
+        "SFO1": 125.69366594076
+      },
+      "processed": {
+        "direct": {
+          "SI": 1024,
+          "SW_p": 6493.50649350651,
+          "SF": 499.839929945238,
+          "OFFSET": 11.33574,
+          "NC_proc": -7,
+          "XDIM": 1024,
+          "PHC0": 12.91025,
+          "PHC1": -29.1125,
+          "WDW": 4,
+          "SSB": 2,
+          "FCOR": 0.5
+        },
+        "indirect": {
+          "SI": 1024,
+          "SW_p": 18854.049891114,
+          "SF": 125.684504753695,
+          "OFFSET": 147.8958,
+          "NC_proc": -7,
+          "XDIM": 128,
+          "PHC0": 1.446875,
+          "PHC1": 0,
+          "WDW": 4,
+          "SSB": 2,
+          "FCOR": 0.5
+        }
+      },
+      "regions": [
+        {
+          "id": "H3_C39",
+          "bounds_ppm": [
+            [
+              35.0,
+              44.0
+            ],
+            [
+              2.85,
+              3.35
+            ]
+          ]
+        },
+        {
+          "id": "H2_C28",
+          "bounds_ppm": [
+            [
+              24.0,
+              32.0
+            ],
+            [
+              1.85,
+              2.3
+            ]
+          ]
+        }
+      ],
+      "positive_peaks_ppm_indirect_direct": [
+        [
+          39.337,
+          3.104
+        ],
+        [
+          27.666,
+          2.077
+        ]
+      ],
+      "positive_peak_source": "bmse000001.str save_spectral_peak_HSQC _Peak_char rows1/2 1JCH; third listed LR peak is not required as a resolvable raw peak.",
+      "autophase_first_order": false,
+      "supplemental_curated_peaks": [
+        {
+          "ppm_indirect_direct": [
+            28.031,
+            3.112
+          ],
+          "coupling_pattern": "LR",
+          "experiment_id": 8,
+          "spectral_peak_list_id": 6,
+          "status": "Supplemental positive signal near the third curated HSQC row; excluded from strong1JCH volume-ratio gate before raw comparison because it is recorded LR and much weaker. Retain its observed reference/raw neighborhood, no separately resolved-peak claim."
+        }
+      ]
+    },
+    {
+      "id": "HH_TOCSY",
+      "experiment": "TOCSY",
+      "path": "nmr/set01/HH_TOCSY",
+      "FnMODE": 5,
+      "acquisition": {
+        "TD": 2048,
+        "AQ_mod": 3,
+        "AQSEQ": 0,
+        "BYTORDA": 0,
+        "DTYPA": 0,
+        "SW_h": 6493.50649350649,
+        "SFO1": 499.842349248,
+        "GRPDLY": 67.985595703125
+      },
+      "indirect_acquisition": {
+        "TD": 256,
+        "FnMODE": 5,
+        "SW_h": 6493.50194331569,
+        "SFO1": 499.842349248
+      },
+      "processed": {
+        "direct": {
+          "SI": 1024,
+          "SW_p": 6493.50649350651,
+          "SF": 499.83993003819,
+          "OFFSET": 11.33556,
+          "NC_proc": -2,
+          "XDIM": 1024,
+          "PHC0": 126.9344,
+          "PHC1": -70.4,
+          "WDW": 4,
+          "SSB": 2,
+          "FCOR": 0.5
+        },
+        "indirect": {
+          "SI": 1024,
+          "SW_p": 6493.50194331569,
+          "SF": 499.839932153801,
+          "OFFSET": 11.33132,
+          "NC_proc": -2,
+          "XDIM": 128,
+          "PHC0": 181.176,
+          "PHC1": -185,
+          "WDW": 4,
+          "SSB": 2,
+          "FCOR": 1
+        }
+      },
+      "regions": [
+        {
+          "id": "H2_to_H3",
+          "bounds_ppm": [
+            [
+              1.85,
+              2.3
+            ],
+            [
+              2.85,
+              3.35
+            ]
+          ]
+        },
+        {
+          "id": "H3_to_H2",
+          "bounds_ppm": [
+            [
+              2.85,
+              3.35
+            ],
+            [
+              1.85,
+              2.3
+            ]
+          ]
+        },
+        {
+          "id": "H3_diagonal",
+          "bounds_ppm": [
+            [
+              2.85,
+              3.35
+            ],
+            [
+              2.85,
+              3.35
+            ]
+          ]
+        },
+        {
+          "id": "H2_diagonal",
+          "bounds_ppm": [
+            [
+              1.85,
+              2.3
+            ],
+            [
+              1.85,
+              2.3
+            ]
+          ]
+        }
+      ],
+      "positive_peaks_ppm_indirect_direct": [],
+      "autophase_first_order": true
+    }
+  ],
+  "files": [
+    {
+      "path": "bmse000001.str",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/bmse000001.str",
+      "bytes": 62951,
+      "sha256": "cf191fe8a161019b5340022ea540cf64f2bbd6d53cb1b7a6118a04844c212bab"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/acqus",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/acqus",
+      "bytes": 9266,
+      "sha256": "f677fdabfbee8df71d8cf6bfc01235bd283dc1cad3d1090076dada3cdfbbb35e"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/acqu2s",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/acqu2s",
+      "bytes": 486,
+      "sha256": "d035b19357ecb03637b65c259bc2fe34ada4b63d4037595e13f1ecc298032ad8"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/ser",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/ser",
+      "bytes": 1048576,
+      "sha256": "797c5e25a7dd5a15630bddd69931e594b3f5d5df085c34279500c9ed5bdf0e31"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/pulseprogram",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/pulseprogram",
+      "bytes": 5402,
+      "sha256": "f82e7a0349b009faa8529d569d851a291ae20cc614d7f92c2481c1cb73d7b846"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/pdata/1/procs",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/pdata/1/procs",
+      "bytes": 1797,
+      "sha256": "bb0f9bbb048255b5e02d61367f94709ca245483db407244f8a01bc66308f17a9"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/pdata/1/proc2s",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/pdata/1/proc2s",
+      "bytes": 1722,
+      "sha256": "e6892ec7c5c542b74405f53ba3e85061fab7e9ca7cc700e092efaa3aaca5d0c9"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/pdata/1/auditp.txt",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/pdata/1/auditp.txt",
+      "bytes": 1709,
+      "sha256": "a923366c959ccee9f4981244da3456893d73bacf101de0a98ab1a74614a2a4c7"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/pdata/1/title",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/pdata/1/title",
+      "bytes": 57,
+      "sha256": "5c3296e3c63e0bd6491464a5ba217e162fc255ab17799850f4f55222fa12cefe"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/pdata/1/2rr",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/pdata/1/2rr",
+      "bytes": 4194304,
+      "sha256": "7edf172a3f22a99b1d03cf3d9d3a176c78d78cfe5448bfe25bae82966dcf408d"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/pdata/1/2ri",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/pdata/1/2ri",
+      "bytes": 4194304,
+      "sha256": "b9e78072e9561c9e7d2d17e2422ee97c4425e3575b32ffd63155d8dd6a6eb0a4"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/pdata/1/2ir",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/pdata/1/2ir",
+      "bytes": 4194304,
+      "sha256": "e162b69735c015535e49db52e3fdcf1d3a898a410bf96a78c3d3262467e2ad82"
+    },
+    {
+      "path": "nmr/set01/1H_13C_HSQC/pdata/1/2ii",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/1H_13C_HSQC/pdata/1/2ii",
+      "bytes": 4194304,
+      "sha256": "91b69f4c6301399bcdcf7cf0a2b85e6019aadf50be0fd1dfe061534c179a6a20"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/acqus",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/acqus",
+      "bytes": 8997,
+      "sha256": "00df59c2f381fd59d8026e504ec9dab3a2dfbfd5848df3b3d0196165cc42e646"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/acqu2s",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/acqu2s",
+      "bytes": 482,
+      "sha256": "886608ed7be407f8cd27203661ff4096af70b3e584d7e3dac045f3c2a1392d63"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/ser",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/ser",
+      "bytes": 2097152,
+      "sha256": "27ddf614ce051ea4dbfc992efd1aad1e01d9ea16bb5f69dbf1f0ed97e2034912"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/pulseprogram",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/pulseprogram",
+      "bytes": 4519,
+      "sha256": "810e8833cbcbe630482f9e367f4adc73e8c974d6a4b351ac81ca0f43afb1e99d"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/pdata/1/procs",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/pdata/1/procs",
+      "bytes": 1761,
+      "sha256": "8dc9121e6e41aaaa1887755c2b16459f3db488c2df12156cf28a81a00f440273"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/pdata/1/proc2s",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/pdata/1/proc2s",
+      "bytes": 1743,
+      "sha256": "ede5fe9ba72259de9133391acb354dc85feda732e5d2767d0e95d227f41209e6"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/pdata/1/auditp.txt",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/pdata/1/auditp.txt",
+      "bytes": 1935,
+      "sha256": "0dd88dd7358fe79f6fbd8919b4e04d7ca62b25b6c97e774549ed9562dc2ad871"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/pdata/1/title",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/pdata/1/title",
+      "bytes": 58,
+      "sha256": "f42909732c57e34650a60aa96e9358327fc97f1cc77f989868074967bfab8492"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/pdata/1/2rr",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/pdata/1/2rr",
+      "bytes": 4194304,
+      "sha256": "989ee810d63b8e0256c01ca862d54db5efccab07b930adf14402698421cf4852"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/pdata/1/2ri",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/pdata/1/2ri",
+      "bytes": 4194304,
+      "sha256": "faa0684156bc7200023a897a2531d35df61f6a13951dbc6a152eeaf5138f6377"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/pdata/1/2ir",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/pdata/1/2ir",
+      "bytes": 4194304,
+      "sha256": "d1c6483cb920287c82d143fda35dbd562e1d9b406e1b3bede940e588082247fd"
+    },
+    {
+      "path": "nmr/set01/HH_TOCSY/pdata/1/2ii",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000001/nmr/set01/HH_TOCSY/pdata/1/2ii",
+      "bytes": 4194304,
+      "sha256": "93d0d778275ae7bbc299650d61f128b41e065dcdbae703f07aaaa7957e01dfac"
+    }
+  ]
+}

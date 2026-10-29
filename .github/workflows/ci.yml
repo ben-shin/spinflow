@@ -88,7 +88,7 @@ jobs:
         run: .venv/bin/python -m pytest -q
 
   public-bruker:
-    name: Ubuntu 24.04 / public Bruker 1D
+    name: Ubuntu 24.04 / public Bruker 1D and 2D
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -107,3 +107,12 @@ jobs:
         run: |
           .venv/bin/python -m pytest -q tests/io/test_bruker_public.py
           .venv/bin/python tools/validate_public_bruker.py
+      - name: Fetch and verify the 25 public 2D BMRB files
+        run: .venv/bin/python tests/fixtures/fetch_bruker2d_public.py
+      - name: Validate acquired 2D phase, peaks, physical volumes and headless CLI replay
+        env:
+          SPINFLOW_BRUKER2D_ROOT: ${{ github.workspace }}/.artifacts/bruker2d-realdata/bmse000001
+        run: |
+          .venv/bin/python -m pytest -q tests/io/test_bruker2d_public.py tests/cli/test_bruker2d_public_cli.py
+          .venv/bin/python tools/validate_public_bruker2d.py --backend numpy
+          .venv/bin/python tools/validate_public_bruker2d.py --backend native

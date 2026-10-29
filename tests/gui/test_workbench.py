@@ -352,6 +352,57 @@ class WorkbenchTests(unittest.TestCase):
         np.testing.assert_array_equal(result.data, source.data)
         np.testing.assert_allclose(result.coordinates('f', 'ppm'), [3.7, 4.2, 4.7, 5.2])
 
+    def test_2d_auto_phase_preserves_both_operations_reports_and_native_workflow(self):
+        from nmrnext.model import Axis
+        from nmrnext.analysis import dataset_digest
+        from nmrnext import cli
+        data = np.zeros((4, 256, 320))
+        for y, x in ((55, 67), (130, 166), (203, 251)):
+            fy = np.exp(.6j)/(1+1j*(np.arange(256)-y)/2.5)
+            fx = np.exp(-.9j)/(1+1j*(np.arange(320)-x)/3.2)
+            for ch, values in enumerate(((fy.real, fx.real), (fy.imag, fx.real),
+                                         (fy.real, fx.imag), (fy.imag, fx.imag))):
+                data[ch] += np.outer(*values)
+        data += np.random.default_rng(76).normal(0, .0001, data.shape)
+        source = Dataset(data, [Axis('c', 256, domain='frequency', unit='Hz', step=2),
+                                Axis('h', 320, domain='frequency', unit='Hz', step=1.5)], ['c', 'h'])
+        w = self.window
+        w.load_dataset_now(source)
+        self.assertTrue(w.autophase_button.isEnabled())
+        w.first_order_check.setChecked(True)
+        w.p0_spin.setValue(90)  # Pending processing edit excluded from analysis.
+        result, report = w.analyze_now('autophase')
+        self.assertEqual(w.last_operations, report['operations'])
+        self.assertEqual(set(report['axis_results']), {'c', 'h'})
+        self.assertIn('points', w.analysis_summary.text())
+        self.assertIn('first logical axis', w.analysis_summary.text())
+        replay = run_operations(source, w.last_operations, backend='native')
+        np.testing.assert_array_equal(replay.data, result.data)
+        self.assertEqual(replay.to_metadata(), result.to_metadata())
+        for component in (3, 1, 0):
+            w.component_combo.setCurrentIndex(component)
+            w.view_combo.setCurrentIndex(1)
+            w.view_combo.setCurrentIndex(0)
+            w.axis_combo.setCurrentIndex(1)
+            self.assertEqual(w._current_analysis()['autophase'], report)
+            self.assertEqual(dataset_digest(w.current), report['result_dataset_digest'])
+        temp_root = Path(__file__).resolve().parents[2]/'.artifacts/gui-test-tmp'
+        temp_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temp_root) as folder:
+            recipe_path = w.export_workflow_now(Path(folder)/'workflow')
+            self.assertEqual(json.loads(recipe_path.read_text())['operations'], report['operations'])
+            self.assertEqual(cli.main(['run', str(recipe_path)]), 0)
+            saved = read_dataset(recipe_path.parent/'result.nmrh5')
+            np.testing.assert_array_equal(saved.data, result.data)
+            self.assertEqual(saved.to_metadata(), result.to_metadata())
+        w.process_now()
+        self.assertEqual(w.analysis_reports, {})
+        self.assertEqual(len(w.last_operations), 2)  # Manual phases, one per axis.
+        w.load_dataset_now(Dataset(source.data[:1], source.axes))
+        self.assertFalse(w.autophase_button.isEnabled())
+        w.load_dataset_now(Dataset(source.data[:2], source.axes, ['c']))
+        self.assertFalse(w.autophase_button.isEnabled())
+
     def test_automatic_phase_preserves_applied_crop_recipe_and_invalidates_on_process(self):
         from nmrnext.model import Axis
         w = self.window
@@ -433,6 +484,7 @@ class WorkbenchTests(unittest.TestCase):
         controls = [
             ("axis", self.window.axis_combo, lambda w: w.setCurrentIndex(1)),
             ("line broadening", self.window.lb_spin, lambda w: w.setValue(6)),
+            ("first point", self.window.first_point_spin, lambda w: w.setValue(.5)),
             ("zero fill", self.window.zf_combo, lambda w: w.setCurrentIndex(2)),
             ("transform", self.window.fft_check, lambda w: w.setChecked(False)),
             ("zero-order phase", self.window.p0_spin, lambda w: w.setValue(65)),

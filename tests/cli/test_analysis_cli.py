@@ -14,6 +14,59 @@ from nmrnext.analysis import dataset_digest
 from nmrnext.errors import NMRNextError
 from nmrnext.io import read_dataset, write_dataset
 from nmrnext.model import Axis, Dataset
+from nmrnext.operations import run_operations
+
+
+def hypercomplex_spectrum():
+    """Independent separable lines with different phases on each axis."""
+    data = np.zeros((4, 256, 320))
+    for i, (y, x) in enumerate(((55, 67), (130, 166), (203, 251))):
+        fy = np.exp(.6j)/(1+1j*(np.arange(256)-y)/2.5)
+        fx = np.exp(-.9j)/(1+1j*(np.arange(320)-x)/3.2)
+        for ch, values in enumerate(((fy.real, fx.real), (fy.imag, fx.real),
+                                     (fy.real, fx.imag), (fy.imag, fx.imag))):
+            data[ch] += (1-.1*i)*np.outer(*values)
+    data += np.random.default_rng(75).normal(0, .0001, data.shape)
+    return Dataset(data, [Axis('c', 256, domain='frequency', unit='Hz', step=2),
+                          Axis('h', 320, domain='frequency', unit='Hz', step=1.5)], ['c', 'h'])
+
+
+def test_2d_autophase_cli_replays_both_axes_with_explicit_point_pivots(tmp_path):
+    dataset = hypercomplex_spectrum()
+    source, output, report_path = (tmp_path/name for name in ('source.nmrh5', 'phased.nmrh5', 'phase.json'))
+    write_dataset(dataset, source, format='native')
+    status, _, err = invoke('autophase', source, output, '--report', report_path,
+                            '--axis-pivot', 'c=7', '--axis-pivot', 'h=21', '--backend', 'native')
+    assert status == 0, err
+    report = json.loads(report_path.read_text())
+    assert set(report['axis_results']) == {'c', 'h'}
+    assert report['parameters']['pivot_unit'] == 'points'
+    assert [op['pivot'] for op in report['operations']] == [7, 21]
+    assert all(op['p1'] == 0 for op in report['operations'])  # CLI default remains zero order.
+    replay = run_operations(dataset, report['operations'], backend='native')
+    saved = read_dataset(output)
+    np.testing.assert_array_equal(saved.data, replay.data)
+    assert saved.to_metadata() == replay.to_metadata()
+    assert report['result_dataset_digest'] == dataset_digest(saved)
+    assert report['phase_gauge'] and report['objective']['acceptance_limit'] == .04
+
+
+def test_2d_cli_invalid_pivot_mapping_and_incomplete_quadrature_refuse(tmp_path):
+    dataset = hypercomplex_spectrum()
+    source, output, report = (tmp_path/name for name in ('source.nmrh5', 'out.nmrh5', 'report.json'))
+    write_dataset(dataset, source, format='native')
+    for options in (('--pivot', 7), ('--axis-pivot', 'c=7'),
+                    ('--axis-pivot', 'c=7', '--axis-pivot', 'c=21'),
+                    ('--axis-pivot', 'c=-1', '--axis-pivot', 'h=21'),
+                    ('--axis-pivot', 'c=nan', '--axis-pivot', 'h=21'),
+                    ('--axis-pivot', 'bad')):
+        status, _, err = invoke('autophase', source, output, '--report', report, *options)
+        assert status == 2 and json.loads(err)['error']['code'] in ('INVALID_PARAMETER', 'INVALID_NUMBER')
+        assert not output.exists() and not report.exists()
+    write_dataset(Dataset(dataset.data[:2], dataset.axes, ['c']), tmp_path/'partial.nmrh5', format='native')
+    status, _, err = invoke('autophase', tmp_path/'partial.nmrh5', output, '--report', report)
+    assert status == 2 and 'error' in json.loads(err)
+    assert not output.exists() and not report.exists()
 
 
 def invoke(*args):

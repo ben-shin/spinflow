@@ -91,6 +91,8 @@ def _transition(axes, complex_axes, metadata, operation):
         new = replace(a, reference_ppm=op["reference_ppm"], reference_hz=op["reference_hz"], observation_mhz=op["observation_mhz"])
     elif name == "digital_filter":
         spec = correction_spec(axes, complex_axes, metadata)
+        if a.id != spec["axis"]:
+            raise NMRNextError("INVALID_DIGITAL_FILTER_AXIS", "Digital filter correction requires the acquired direct axis")
         new = replace(a, size=spec["output_complex_points"])
     elif name == "window":
         kind = op.get("kind", "exponential")
@@ -175,13 +177,18 @@ def _execute(dataset, op, new_axes, backend, threads, backend_info):
         result = data
     elif name == "digital_filter":
         spec = correction_spec(dataset.axes, dataset.complex_axes, metadata)
-        z = data[0].astype(np.complex128) + 1j*data[1]
+        i = dataset.axis_index(spec["axis"])
+        shape = list(data.shape)
+        shape[i+1] = spec["output_complex_points"]
+        result = np.empty(shape, dtype=data.dtype)
         def transform(values, inverse):
             if backend == "native":
-                return importlib.import_module("nmrnext._native").fft_complex(values, 0, inverse=inverse, threads=threads)
-            return (np.fft.ifft if inverse else np.fft.fft)(values)
-        corrected = correct_samples(z, spec, transform)
-        result = np.stack((corrected.real, corrected.imag)).astype(data.dtype)
+                return importlib.import_module("nmrnext._native").fft_complex(np.ascontiguousarray(values), values.ndim-1, inverse=inverse, threads=threads)
+            return (np.fft.ifft if inverse else np.fft.fft)(values, axis=-1)
+        for real, imag in _pairs(dataset, spec["axis"]):
+            z = np.moveaxis(data[real].astype(np.complex128) + 1j*data[imag], i, -1)
+            corrected = np.moveaxis(correct_samples(z, spec, transform), -1, i)
+            result[real], result[imag] = corrected.real, corrected.imag
     elif name == "transpose":
         order = [dataset.axis_index(i) + 1 for i in op["order"]]
         result = np.transpose(data, (0, *order))

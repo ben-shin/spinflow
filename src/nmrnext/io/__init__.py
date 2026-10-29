@@ -38,6 +38,7 @@ _ALIASES = {
     "nmrpipe": "nmrpipe-real", "pipe": "nmrpipe-real", "nmrpipe-real": "nmrpipe-real",
     "ucsf": "ucsf-real", "sparky": "ucsf-real", "ucsf-real": "ucsf-real",
     "bruker-raw-1d": "bruker-raw-1d", "bruker1d": "bruker-raw-1d",
+    "bruker-raw-2d": "bruker-raw-2d", "bruker2d": "bruker-raw-2d",
 }
 _EXTENSIONS = {".nmrh5": "nmrnext-hdf5", ".h5": "nmrnext-hdf5",
                ".ft1": "nmrpipe-real", ".ft2": "nmrpipe-real", ".ucsf": "ucsf-real"}
@@ -66,6 +67,15 @@ def capabilities():
          "read": True, "write": False, "preserved": ["raw acquired points", "raw acqus text", "digital-filter parameters"],
          "known_losses": ["padding outside TD"], "readback": "nmrglue 0.12 Bruker reader",
          "external_consumer": "source acquisition is left untouched"},
+        {"format":"bruker-raw-2d", "version":"controlled fully sampled ser profile v1",
+         "object":"raw 2D hypercomplex acquisition", "dimensions":[2],
+         "components":"RR, IR, RI, II; indirect bit 0, direct bit 1",
+         "read":True, "write":False,
+         "preserved":["acquisition parameters and text", "source hashes", "quadrature mapping", "digital-filter parameters"],
+         "known_losses":["padding outside TD"],
+         "supported_modes":["FnMODE=5 States-TPPI", "FnMODE=6 Echo-AntiEcho"],
+         "constraints":["AQ_mod=3", "AQSEQ=0", "PARMODE=1", "FnTYPE=0", "DIGMOD=1 when supplied", "SW*SFO1 agrees with SW_h within relative 2e-5 when SW is supplied", "positive recorded GRPDLY", "complete 1024-byte padded traces"],
+         "external_consumer":"source acquisition is left untouched"},
     ]
 
 
@@ -77,6 +87,8 @@ def _format(name, path, *, reading=False):
         return result
     if reading:
         if Path(path).is_dir():
+            if (Path(path)/"acqus").is_file() and (Path(path)/"ser").is_file() and (Path(path)/"acqu2s").is_file():
+                return "bruker-raw-2d"
             if (Path(path)/"acqus").is_file() and (Path(path)/"fid").is_file():
                 return "bruker-raw-1d"
             raise NMRNextError("AMBIGUOUS_FORMAT", "Directory does not contain a declared acquisition profile")
@@ -412,6 +424,9 @@ def inspect_dataset(path, *, format=None, max_bytes=MAX_BYTES):
             return _pipe_header(path, max_bytes)
         if fmt == "bruker-raw-1d":
             return _bruker_header(path, max_bytes)
+        if fmt == "bruker-raw-2d":
+            from .bruker2d import inspect_bruker_2d
+            return inspect_bruker_2d(path, max_bytes)
         return _ucsf_header(path, max_bytes)
     except OSError as exc:
         raise NMRNextError("INVALID_FILE", f"Cannot inspect input: {exc}") from exc
@@ -437,6 +452,9 @@ def read_dataset(path, *, format=None, max_bytes=MAX_BYTES):
             with h5py.File(path, "r") as h:
                 data = h["data"][:]
             return Dataset.from_metadata(data, head["metadata"])
+        if fmt == "bruker-raw-2d":
+            from .bruker2d import read_bruker_2d
+            return read_bruker_2d(path, head)
         ng = _nmrglue()
         if fmt == "bruker-raw-1d":
             header = head["header"]
@@ -528,7 +546,7 @@ def export_preflight(dataset, format, *, allow_losses=()):
     if fmt == "nmrnext-hdf5":
         return {"format": fmt, "ok": True, "losses": [], "errors": [], "unacknowledged": [],
                 "conversions": [], "preserved": ["all components", "dtype", "axis schema", "metadata", "provenance"]}
-    if fmt == "bruker-raw-1d":
+    if fmt in {"bruker-raw-1d", "bruker-raw-2d"}:
         return {"format": fmt, "ok": False, "losses": [], "errors": ["read_only_profile"],
                 "unacknowledged": [], "conversions": [], "preserved": []}
     errors, losses, conversions = [], [], []

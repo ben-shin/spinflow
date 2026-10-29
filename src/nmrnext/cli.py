@@ -308,7 +308,21 @@ def _analysis_dispatch(args):
     if args.command == "autophase":
         from .io import write_dataset
         _report_paths(args.report)
-        result, report = autophase(dataset, pivot=args.pivot,
+        pivot = args.pivot
+        if args.axis_pivot:
+            pivot = {}
+            for item in args.axis_pivot:
+                try:
+                    axis_id, point = item.rsplit('=', 1)
+                    value = float(point)
+                except ValueError:
+                    raise NMRNextError('INVALID_PARAMETER', '--axis-pivot requires AXIS=POINT') from None
+                if not axis_id or axis_id in pivot:
+                    raise NMRNextError('INVALID_PARAMETER', '--axis-pivot requires distinct axis IDs')
+                pivot[axis_id] = value
+            if len(dataset.axes) != 2:
+                raise NMRNextError('INVALID_PARAMETER', '--axis-pivot is for 2D; use --pivot for 1D')
+        result, report = autophase(dataset, pivot=pivot,
                                    first_order=args.first_order, max_p1=args.max_p1,
                                    max_peaks=args.max_peaks, min_snr=args.min_snr,
                                    backend=args.backend, threads=args.threads)
@@ -450,9 +464,12 @@ def _parser():
     compare=sub.add_parser("compare",help="Compare coordinates and numeric arrays without alignment")
     compare.add_argument("candidate");compare.add_argument("reference");compare.add_argument("--json",action="store_true")
     compare.add_argument("--rtol",type=float,default=1e-5);compare.add_argument("--atol",type=float,default=1e-5);compare.add_argument("--memory")
-    auto=sub.add_parser("autophase",help="Estimate bounded 1D phase and save a native result plus JSON report")
+    auto=sub.add_parser("autophase",help="Estimate bounded complex 1D or full-hypercomplex 2D phase; save native result and JSON")
     auto.add_argument("input");auto.add_argument("output");auto.add_argument("--report",required=True)
-    auto.add_argument("--pivot",type=float);auto.add_argument("--first-order",action="store_true")
+    pivots=auto.add_mutually_exclusive_group()
+    pivots.add_argument("--pivot",type=float,help="1D zero-based point pivot; default center")
+    pivots.add_argument("--axis-pivot",action="append",metavar="AXIS=POINT",help="2D point pivot; repeat for both axis IDs, or omit for both centers")
+    auto.add_argument("--first-order",action="store_true",help="Estimate slopes as well as zero-order corrections; requires identifiable separated lines on each axis")
     auto.add_argument("--max-p1",type=float,default=180.);auto.add_argument("--max-peaks",type=int,default=8)
     auto.add_argument("--min-snr",type=float,default=15.)
     auto.add_argument("--backend",choices=["native","numpy"],default="native")

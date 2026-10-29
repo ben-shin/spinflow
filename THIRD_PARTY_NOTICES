@@ -23,8 +23,10 @@ dependency under the upstream BSD-3-Clause license:
 https://github.com/jjhelmus/nmrglue/blob/master/LICENSE.txt .
 No nmrglue source is copied into this repository for that operation.
 
-The public BMRB acquisition used by optional integration validation is fetched
-at runtime to an ignored local directory and is not redistributed here. Its
+The public BMRB acquisitions used by optional integration validation are fetched
+at runtime to ignored local directories and are not redistributed here. Their
 source URLs, byte counts, hashes, original authors and independent TopSpin
-reference scope are recorded in tests/fixtures/bruker_public_manifest.json.
+reference scope are recorded in tests/fixtures/bruker_public_manifest.json
+and tests/fixtures/bruker2d_public_manifest.json. No explicit redistribution
+license is inferred from the public-access statement.
 BMRB's public-access policy is at https://bmrb.io/metabolomics/data_policy.shtml .

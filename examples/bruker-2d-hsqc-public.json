@@ -1,0 +1,60 @@
+{
+  "schema_version": "1",
+  "input": "../.artifacts/bruker2d-realdata/bmse000001/nmr/set01/1H_13C_HSQC",
+  "output": "../.artifacts/bruker2d-realdata/bmse000001/hsqc-transformed.nmrh5",
+  "backend": "native",
+  "threads": 1,
+  "memory_bytes": 536870912,
+  "operations": [
+    {
+      "op": "digital_filter",
+      "axis": "a1"
+    },
+    {
+      "op": "window",
+      "axis": "a0",
+      "kind": "exponential",
+      "lb_hz": 217.61896611411416,
+      "first_point_scale": 0.5
+    },
+    {
+      "op": "zero_fill",
+      "axis": "a0",
+      "size": 1024
+    },
+    {
+      "op": "fft",
+      "axis": "a0"
+    },
+    {
+      "op": "reference",
+      "axis": "a0",
+      "reference_ppm": 72.8903462121873,
+      "reference_hz": 0.0,
+      "observation_mhz": 125.684504753695
+    },
+    {
+      "op": "window",
+      "axis": "a1",
+      "kind": "exponential",
+      "lb_hz": 18.627483642448663,
+      "first_point_scale": 0.5
+    },
+    {
+      "op": "zero_fill",
+      "axis": "a1",
+      "size": 1024
+    },
+    {
+      "op": "fft",
+      "axis": "a1"
+    },
+    {
+      "op": "reference",
+      "axis": "a1",
+      "reference_ppm": 4.840155051782774,
+      "reference_hz": 0.0,
+      "observation_mhz": 499.839929945238
+    }
+  ]
+}

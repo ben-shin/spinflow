@@ -26,8 +26,8 @@ ALGORITHM = "bruker-grpdly-fourier-advance-fold-v1"
 
 def correction_spec(axes, complex_axes, metadata):
     imported = metadata.get("import")
-    if not isinstance(imported, dict) or imported.get("format") != "bruker-raw-1d":
-        raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "Correction requires an imported Bruker raw 1D acquisition")
+    if not isinstance(imported, dict) or imported.get("format") not in {"bruker-raw-1d", "bruker-raw-2d"}:
+        raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "Correction requires an imported Bruker raw 1D/2D acquisition")
     state = imported.get("digital_filter")
     if not isinstance(state, dict):
         raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "Acquisition digital-filter parameters are missing")
@@ -42,21 +42,41 @@ def correction_spec(axes, complex_axes, metadata):
     if not isinstance(params, dict) or params.get("AQ_mod") not in (1,3):
         raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "Supported acquisition mode must be preserved from import")
     sw = finite(params.get("SW_h"), "acquisition SW_h")
-    if len(axes) != 1 or complex_axes != (axes[0].id,):
-        raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "Correction supports one complex direct dimension only")
-    a = axes[0]
+    if imported["format"] == "bruker-raw-1d":
+        if len(axes) != 1 or complex_axes != (axes[0].id,):
+            raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "1D correction requires one complex direct dimension")
+        a = axes[0]
+    else:
+        # Raw 2D permits omitted DIGMOD, but an explicit non-digital or invalid
+        # mode contradicts DQD and cannot authorize filter removal. Recheck at
+        # this boundary for externally constructed or native-loaded datasets.
+        if "DIGMOD" in params and (type(params["DIGMOD"]) is not int or params["DIGMOD"] != 1):
+            raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "Raw 2D correction requires DIGMOD=1 when DIGMOD is supplied")
+        by_id = {a.id: a for a in axes}
+        direct, indirect = imported.get("direct_axis"), imported.get("indirect_axis")
+        if (len(axes) != 2 or direct == indirect or direct not in by_id or indirect not in by_id or
+                set(complex_axes) != {direct, indirect}):
+            raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "2D correction requires declared direct and indirect quadrature axes")
+        a, b = by_id[direct], by_id[indirect]
+        indirect_params = imported.get("indirect_acquisition_parameters", {})
+        if (not isinstance(indirect_params, dict) or b.domain != "time" or b.role != "spectral" or
+                b.encoding != "states" or b.start != 0 or b.time_origin_seconds != 0 or
+                b.size != b.acquired_size or indirect_params.get("TD") != 2*b.size or
+                b.step <= 0 or b.dwell_seconds != b.step or
+                not math.isclose(finite(indirect_params.get("SW_h"), "indirect SW_h"), 1/b.step, rel_tol=1e-14)):
+            raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "Correction requires the original indirect acquisition grid")
     if (a.role != "spectral" or a.domain != "time" or a.encoding != "complex" or
             a.start != 0 or a.time_origin_seconds != 0 or a.step <= 0 or
             a.dwell_seconds != a.step or a.size != a.acquired_size or
             params.get("TD") != 2*a.size or not math.isclose(sw, 1/a.step, rel_tol=1e-14)):
-        raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "Correction requires the original uncropped, unpadded, forward 1D acquisition grid")
+        raise NMRNextError("UNSUPPORTED_DIGITAL_FILTER", "Correction requires the original uncropped, unpadded, forward direct acquisition grid")
     if delay >= a.size-2:
         raise NMRNextError("INVALID_DIGITAL_FILTER", "Group delay leaves no usable acquired samples")
     trim = math.floor(delay)+2
     fold = max(trim-6,0)
     if fold > a.size-trim:
         raise NMRNextError("INVALID_DIGITAL_FILTER", "Acquisition is too short for the reverse-tail fold")
-    return {"algorithm": ALGORITHM, "version": "1", "delay_source": "acqus.GRPDLY",
+    return {"algorithm": ALGORITHM, "version": "1", "axis": a.id, "delay_source": "acqus.GRPDLY",
             "group_delay_complex_points": delay, "fractional_delay": True,
             "phase_bins": "unsigned DFT k=0..N-1; exp(+2*pi*i*delay*k/N)",
             "trim_complex_points": trim, "fold_complex_points": fold,
@@ -75,10 +95,10 @@ def corrected_metadata(metadata, spec):
 
 def correct_samples(z, spec, transform):
     """Apply the declared policy using the selected engine's complex FFT."""
-    n = z.size
+    n = z.shape[-1]
     phase = np.exp(2j*np.pi*spec["group_delay_complex_points"]*np.arange(n)/n)
     advanced = transform(transform(z, False)*phase, True)
     fold = spec["fold_complex_points"]
     if fold:
-        advanced[:fold] += advanced[-1:-fold-1:-1]
-    return advanced[:-spec["trim_complex_points"]]
+        advanced[..., :fold] += advanced[..., -1:-fold-1:-1]
+    return advanced[..., :-spec["trim_complex_points"]]

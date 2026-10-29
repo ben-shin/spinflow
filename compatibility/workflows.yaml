@@ -38,10 +38,18 @@ workflows:
     independent_reference: eight-archived-topspin-peak-positions-only
     nmrpipe_parity: unverified
     independent_export_consumer: unverified
+  - id: public-bruker-2d-to-native
+    status: experimental
+    input_profile: "fully sampled FnMODE 5/6, AQSEQ 0, AQ_mod 3, positive recorded GRPDLY"
+    output_profile: nmrnext-hdf5
+    recipes: [examples/bruker-2d-hsqc-public.json, examples/bruker-2d-tocsy-public.json]
+    evidence: [tests/fixtures/bruker2d_public_manifest.json, tests/io/test_bruker2d_public.py, tests/cli/test_bruker2d_public_cli.py, tests/gui/test_bruker2d_public_gui.py, tools/validate_public_bruker2d.py]
+    reference_scope: "two acquired datasets of one compound; fixed peaks and relative-volume ratios within predeclared 30% gate"
+    concentrations_and_absolute_vendor_parity: unverified
   - id: bounded-frequency-analysis
     status: experimental
     input_profile: fully-frequency-domain-1d-or-2d
-    features: [complex-1d-automatic-phase, signed-1d-2d-peak-extrema, rectangular-relative-integrals, optional-figures]
+    features: [complex-1d-and-full-hypercomplex-2d-automatic-phase, signed-1d-2d-peak-extrema, rectangular-relative-integrals, optional-figures]
     evidence: [tests/test_analysis.py, tests/cli/test_analysis_cli.py, tests/cli/test_plot_cli.py, tests/plot/test_figures.py]
     real_quantitative_validation: unverified
   - id: researcher-workbench
@@ -49,7 +57,7 @@ workflows:
     current_increment: [per-axis-settings, frequency-source-index-crop, last-applied-workflow-bundle-for-cli-replay, bounded-analysis-and-optional-figures]
     replay_scope: native-source-snapshot-and-strict-relative-path-json-recipe
     evidence: [tests/gui/test_workbench.py, tests/test_workflow_bundle.py]
-    real_acquisition_validation: public-1d-demonstration-only
+    real_acquisition_validation: "bounded public 1d plus two acquired 2d controller pipelines; no broad vendor or concentration claim"
     user_observation_sessions: not-yet-run
   - id: first-real-laboratory-raw-to-export
     status: unsupported
