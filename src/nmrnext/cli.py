@@ -447,6 +447,8 @@ def _analysis_dispatch(args):
 
 
 def _dispatch(args):
+    if args.command == "first-spectrum":
+        return _first_spectrum(args.output_dir), 0
     if args.command == "gui":
         try:
             from .gui import main as gui_main
@@ -498,6 +500,46 @@ def _dispatch(args):
     raise NMRNextError("UNKNOWN_COMMAND","Unknown command")
 
 
+def _first_spectrum(output_dir):
+    """Run a small, reproducible synthetic walkthrough using the public CLI paths."""
+    directory = Path(output_dir)
+    try:
+        directory.mkdir()
+    except FileExistsError as exc:
+        raise NMRNextError("OUTPUT_EXISTS", f"Choose a new output directory: {directory}") from exc
+    # The first workflow intentionally adds a known phase so that the second
+    # workflow demonstrates a correction without estimating an unknown phase.
+    recipes = {
+        "process.json": {"schema_version": "1", "input": "synthetic-raw.nmrh5",
+            "output": "processed.nmrh5", "backend": "native", "operations": [
+                {"op": "window", "axis": "t2", "kind": "exponential", "lb_hz": 1.0, "first_point_scale": 0.5},
+                {"op": "zero_fill", "axis": "t2", "size": 512},
+                {"op": "fft", "axis": "t2"},
+                {"op": "phase", "axis": "t2", "p0": 35.0, "p1": 0.0}]},
+        "phase.json": {"schema_version": "1", "input": "processed.nmrh5",
+            "output": "phased.nmrh5", "backend": "native", "operations": [
+                {"op": "phase", "axis": "t2", "p0": -35.0, "p1": 0.0}]},
+    }
+    _save_new_files([(directory / name, _write_bytes(_json_bytes(recipe)))
+                     for name, recipe in recipes.items()])
+    parser = _parser()
+    commands = [
+        ["demo", str(directory / "synthetic-raw.nmrh5"), "--dimensions", "1"],
+        ["run", str(directory / "process.json")],
+        ["run", str(directory / "phase.json")],
+        ["peaks", str(directory / "phased.nmrh5"), "--sign", "both", "--threshold", "10",
+         "--baseline", "none", "--min-separation", "6", "--integrate", "--half-width", "2",
+         "--output", str(directory / "analysis.json"), "--csv", str(directory / "analysis.csv")],
+    ]
+    for command in commands:
+        _dispatch(parser.parse_args(command))
+    return {"output_dir": str(directory), "synthetic": True,
+            "phase_example": "A known +35 degree phase was applied and explicitly corrected by -35 degrees; no automatic phase was estimated.",
+            "files": ["synthetic-raw.nmrh5", "process.json", "processed.nmrh5", "phase.json",
+                      "phased.nmrh5", "analysis.json", "analysis.csv"],
+            "next_step": f"Inspect {directory / 'analysis.json'} or open {directory / 'phased.nmrh5'} in the GUI."}
+
+
 def _parser():
     parser=argparse.ArgumentParser(prog="nmrnext",description="Experimental reproducible NMR processing; synthetic and declared processed profiles")
     parser.add_argument("--version",action="version",version=__version__)
@@ -505,6 +547,8 @@ def _parser():
     sub.add_parser("doctor",help="Report runtime and backend availability")
     sub.add_parser("formats",help="Report exact read/write profiles")
     sub.add_parser("gui",help="Open the optional spectrum workbench")
+    first=sub.add_parser("first-spectrum",help="Create an offline synthetic 1D walkthrough in a new directory")
+    first.add_argument("output_dir")
     demo=sub.add_parser("demo",help="Generate clearly synthetic fully sampled data")
     demo.add_argument("output");demo.add_argument("--dimensions",type=int,default=2)
     demo.add_argument("--points",type=int,nargs="+");demo.add_argument("--dtype",choices=["float32","float64"],default="float64")

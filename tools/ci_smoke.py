@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import importlib.metadata
 from pathlib import Path
 import subprocess
 import sys
@@ -32,6 +33,11 @@ def main() -> None:
     prefix = Path(sys.prefix)
     assert _inside(nmrnext.__file__, prefix), nmrnext.__file__
     assert _inside(_native.__file__, prefix), _native.__file__
+    distribution_version = importlib.metadata.version("spinflow")
+    cli_version = subprocess.run([sys.executable, "-I", "-m", "nmrnext", "--version"],
+                                 check=True, capture_output=True, text=True).stdout.strip()
+    assert distribution_version == nmrnext.__version__ == _native.__version__ == cli_version, (
+        distribution_version, nmrnext.__version__, _native.__version__, cli_version)
 
     impulse = np.array([1, 0, 0, 0], dtype=np.complex128)
     transformed = _native.fft_complex(impulse, 0)

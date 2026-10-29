@@ -82,7 +82,7 @@ py::array fft_complex(const py::object &object, py::ssize_t axis, bool inverse,
 
 PYBIND11_MODULE(_native, module) {
   module.doc() = "PocketFFT complex transforms; input is preserved and output is independently owned";
-  module.attr("__version__") = "0.1.0";
+  module.attr("__version__") = VERSION_INFO;
   module.attr("pocketfft_commit") = "4d865cba24359b05b37da4e75aee24498c3b78e7";
   module.def("fft_complex", &fft_complex, py::arg("array"), py::arg("axis"),
              py::arg("inverse") = false, py::arg("threads") = 1,

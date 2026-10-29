@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import sys
 import sysconfig
+import tomllib
 
 import pybind11
 
@@ -32,6 +33,8 @@ def main() -> None:
 
     zig = ROOT / ".tools" / "zig-x86_64-windows-0.17.0" / "zig.exe"
     if sys.platform == "win32" and zig.is_file():
+        with (ROOT / "pyproject.toml").open("rb") as project_file:
+            version = tomllib.load(project_file)["project"]["version"]
         lib_name = f"python{sys.version_info.major}{sys.version_info.minor}.lib"
         source_lib = Path(sys.base_prefix) / "libs" / lib_name
         local_lib_dir = ROOT / ".tools"
@@ -45,6 +48,7 @@ def main() -> None:
             raise RuntimeError("Python extension suffix unavailable")
         command = [
             str(zig), "c++", "-std=c++20", "-shared", "-O2",
+            f'-DVERSION_INFO="{version}"',
             "-I", sysconfig.get_path("include"),
             "-I", pybind11.get_include(),
             "-I", str(ROOT / "cpp"),

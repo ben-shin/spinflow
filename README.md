@@ -4,9 +4,29 @@ SpinFlow is an experimental, open source NMR processing workbench. It provides a
 
 **Scientific status:** this is an early processing slice, not a validated replacement for NMRPipe or a laboratory processing system. One public Bruker 1D acquisition has an archived peak-position check; two public 2D acquisitions add bounded both-axis automatic phase and fixed peak/relative-volume checks. Broader real workflows, NMRPipe parity, concentration accuracy and independent export reopening remain unverified. See [scope](docs/scope.md), [validation](docs/public-validation.md), and the [roadmap](ROADMAP.md).
 
-The current integrated Linux check passed the installed-package suite and automated public-data and virtual-desktop workflows under software emulation; the [validation record](docs/public-validation.md) gives the exact scope and limitations.
+Linux checks under software emulation passed the installed-package suite, public-data and automated virtual-desktop workflows, and a CPython 3.12 release-installer preflight. The [validation record](docs/public-validation.md) gives the exact tested candidates and limitations; final hosted release assets are a separate gate.
 
-## Install on Linux
+## Install the experimental release on Linux
+
+For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, download the release installer and run it with your chosen Python:
+
+```bash
+curl -fL -o install-spinflow.py https://github.com/ben-shin/spinflow/releases/download/v0.2.0/install-spinflow.py
+python3 install-spinflow.py --version 0.2.0
+"$HOME/.local/share/spinflow/0.2.0/bin/spinflow" doctor
+```
+
+Installation needs internet access to obtain the checked release assets and pinned Python dependencies. The matching prebuilt native wheel does not need a compiler. The provided wheels target Ubuntu 24.04 x86-64 for these Python versions; they are not general manylinux wheels. To include the optional desktop and figure support, rerun the installer with `--gui --plot`, then run `"$HOME/.local/share/spinflow/0.2.0/bin/spinflow" gui` on a desktop. Optional extras already installed are retained on later runs. Use `--prefix PATH` for another installation location; an existing installation must match the selected version and Python. See the [beginner tutorials](docs/tutorials/index.md) for the first spectrum and public-data workflows.
+
+After installation, this command works offline and creates a new folder containing a synthetic spectrum, processing recipe and analysis reports:
+
+```bash
+"$HOME/.local/share/spinflow/0.2.0/bin/spinflow" first-spectrum first-spectrum
+```
+
+The folder must not already exist. If a run fails after creating it, choose a new folder name before retrying. The synthetic example illustrates the workflow and is not evidence of experimental accuracy.
+
+## Install from source on Linux
 
 Ubuntu 24.04 and Python 3.12 or 3.13 are the initial Linux build targets. From a checkout:
 
@@ -64,4 +84,4 @@ bash tools/bootstrap.sh --gui --plot --test
 QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest -q
 ```
 
-The source tests import `src/nmrnext` directly, so they need the matching in-place extension from `tools/build_native.py`. Desktop GUI use is described in the [workbench guide](docs/gui.md). The [architecture](docs/architecture.md), [validation record](docs/public-validation.md), and [contribution guide](CONTRIBUTING.md) describe the implementation and evidence limits. The [published Stage 11 Linux CI run](https://github.com/ben-shin/spinflow/actions/runs/40785473323) passed both headless Python versions, native wheel/sdist smokes, Qt, Qt-free plotting and public 1D validation. The frozen Stage 12 candidate passed 438 tests and 101 subtests on Windows and in a Linux installed-wheel environment, plus acquired 2D CLI/picker checks and automated virtual-X11 workflows. The validation record gives artifact provenance, reused-environment and QEMU allowances; Stage 12 hosted CI remains pending. NUS reconstruction, broader automatic phase, automatic baseline correction, fitting, NEF and script migration remain future work.
+The source tests import `src/nmrnext` directly, so they need the matching in-place extension from `tools/build_native.py`. Desktop GUI use is described in the [workbench guide](docs/gui.md). The [architecture](docs/architecture.md), [validation record](docs/public-validation.md), and [contribution guide](CONTRIBUTING.md) describe the implementation and evidence limits. NUS reconstruction, broader automatic phase, automatic baseline correction, fitting, NEF and script migration remain future work.

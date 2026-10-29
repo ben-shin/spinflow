@@ -1,5 +1,12 @@
 # Changes
 
+## 0.2.0 — experimental release candidate, 2026-10-29
+
+- Adds controlled Varian/Agilent 1D and selected States 2D acquisition imports, plus an experimental real 1D JCAMP-DX reader with synthetic evidence only. See the [format profiles](docs/formats.md) for exact scope.
+- Adds explicit frequency orientation and quadrature-handedness tracking, selected phase/noise regions, reference-sample baseline integration and a crop-first large-spectrum workflow. Reports retain the selections and dataset digest.
+- Provides a binary-first Ubuntu 24.04 x86-64 installation path for CPython 3.12 and 3.13, alongside the source build. Qt and figure support remain optional; processing and the synthetic first workflow run offline after installation.
+- This is an experimental prerelease, not a validated laboratory replacement for NMRPipe. General vendor support, real JCAMP validation, independent export reopening, concentration accuracy and human usability remain unverified. The [validation record](docs/public-validation.md) describes the measured scope.
+
 ## Linux-first repository preparation — 2026-10-28
 
 - Renamed the public project and distribution SpinFlow while retaining the `nmrnext` Python module and command; added a `spinflow` command alias.

@@ -7,7 +7,11 @@ import sys
 import numpy as np
 import pytest
 
-from nmrnext import _native
+from nmrnext import _native, __version__
+
+
+def test_native_version_matches_python_package():
+    assert _native.__version__ == __version__
 
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
