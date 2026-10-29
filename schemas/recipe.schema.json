@@ -60,6 +60,16 @@
               },
               "first_point_scale": {
                 "type": "number"
+              },
+              "off": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "end": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
               }
             }
           },
@@ -212,6 +222,46 @@
                 },
                 "minItems": 1,
                 "uniqueItems": true
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "op",
+              "axis",
+              "reference_ppm",
+              "reference_hz"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "op": {
+                "const": "reference"
+              },
+              "version": {
+                "const": "1"
+              },
+              "axis": {
+                "type": "string",
+                "minLength": 1
+              },
+              "reference_ppm": {
+                "type": "number"
+              },
+              "reference_hz": {
+                "type": "number"
+              },
+              "observation_mhz": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "frequency_scale": {
+                "type": "integer",
+                "enum": [
+                  -1,
+                  1
+                ],
+                "default": 1
               }
             }
           }

@@ -156,7 +156,7 @@ class OperationTests(unittest.TestCase):
             with self.subTest(imported=imported):
                 metadata={'import':imported}
                 result=apply_operation(Dataset(d.data,d.axes,d.complex_axes,metadata),{'op':'fft','axis':'t'})
-                self.assertEqual(result.metadata,metadata)
+                self.assertEqual(result.metadata,{**metadata,'quadrature_index_orientation':{'t':1}})
         for value in ('unknown',[],False,{}):
             with self.subTest(filter=value):
                 raw=Dataset(d.data,d.axes,d.complex_axes,{'import':{'digital_filter':value}})

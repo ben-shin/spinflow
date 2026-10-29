@@ -1,0 +1,12 @@
+{
+  "schema_version": "1",
+  "input": "../.artifacts/coverage-formats/processed_2d/plot_2d/nmrpipe_2d/test.ft2",
+  "output": "../.artifacts/coverage-integration/hard-mask-crop.nmrh5",
+  "backend": "native",
+  "threads": 1,
+  "memory_bytes": 536870912,
+  "operations": [
+    {"op": "crop", "axis": "a0", "start": 512, "stop": 1536},
+    {"op": "crop", "axis": "a1", "start": 1536, "stop": 3072}
+  ]
+}

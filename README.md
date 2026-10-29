@@ -1,8 +1,10 @@
 # SpinFlow
 
-SpinFlow is an experimental, open source NMR processing workbench. It provides a headless command line and an optional Qt spectrum viewer for synthetic 1D/2D workflows and bounded public Bruker raw 1D/2D paths. The Python import package and command `nmrnext` retain their existing names; `spinflow` is also a command entry point. The original project code is [MIT licensed](LICENSE), with separate [third-party notices](THIRD_PARTY_NOTICES).
+SpinFlow is an experimental, open source NMR processing workbench. It provides a headless command line and an optional Qt spectrum viewer for synthetic 1D/2D workflows and bounded public Bruker and Varian/Agilent raw acquisition paths. The Python import package and command `nmrnext` retain their existing names; `spinflow` is also a command entry point. The original project code is [MIT licensed](LICENSE), with separate [third-party notices](THIRD_PARTY_NOTICES).
 
 **Scientific status:** this is an early processing slice, not a validated replacement for NMRPipe or a laboratory processing system. One public Bruker 1D acquisition has an archived peak-position check; two public 2D acquisitions add bounded both-axis automatic phase and fixed peak/relative-volume checks. Broader real workflows, NMRPipe parity, concentration accuracy and independent export reopening remain unverified. See [scope](docs/scope.md), [validation](docs/public-validation.md), and the [roadmap](ROADMAP.md).
+
+The current integrated Linux check passed the installed-package suite and automated public-data and virtual-desktop workflows under software emulation; the [validation record](docs/public-validation.md) gives the exact scope and limitations.
 
 ## Install on Linux
 
@@ -38,7 +40,9 @@ The [bounded real-data walkthrough](docs/real-bruker-and-analysis.md) fetches ni
 
 ## File interchange
 
-Native HDF5 retains the numeric channels, axes, metadata, and provenance. Narrow processed real NMRPipe 1D/2D and UCSF 2D profiles are available; export projects to one real float32 channel and reports losses. Bruker raw 1D and fully sampled 2D FnMODE 5/6 imports are controlled and experimental. FFT requires explicit correction when a supported positive `GRPDLY` is recorded; unknown/zero delays and broader vendor profiles remain blocked. See the [exact format profiles](docs/formats.md), [data model](docs/data-model.md), and [numerical conventions](docs/numerical-conventions.md).
+Native HDF5 retains the numeric channels, axes, metadata, and provenance. Narrow processed real NMRPipe 1D/2D and UCSF 2D profiles are available; export projects to one real float32 channel and reports losses. Controlled Bruker raw 1D/2D and [Varian/Agilent 1D and selected States 2D](docs/real-varian.md) imports are experimental. The Varian profile requires an explicit reference with `frequency_scale=-1` and a known anchor for physical ppm. A narrow experimental real 1D JCAMP-DX Hz/AFFN reader has synthetic evidence only. Bruker FFT requires explicit correction when a supported positive `GRPDLY` is recorded; unknown/zero delays and broader vendor profiles remain blocked. See the [exact format profiles](docs/formats.md), [data model](docs/data-model.md), and [numerical conventions](docs/numerical-conventions.md).
+
+[Explicit analysis regions](docs/analysis-regions.md) support phase anchors, noise estimation and a reference-sample baseline in both CLI and GUI. They are user-selected, digest-bound inputs; inspect the reports and the spectrum. On one difficult public protein spectrum the masked and default picker each found all five predeclared boxes; automatic phase refused that spectrum under the fixed protocol. These checks do not establish general peak recovery or concentration accuracy.
 
 Use `convert ... --dry-run` to inspect losses before export. Acknowledgment is required for every permitted loss; unrepresentable values or headers fail. Import never executes acquisition scripts, and output files are not overwritten by default.
 

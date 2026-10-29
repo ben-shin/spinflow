@@ -35,12 +35,17 @@ def test_2d_autophase_cli_replays_both_axes_with_explicit_point_pivots(tmp_path)
     dataset = hypercomplex_spectrum()
     source, output, report_path = (tmp_path/name for name in ('source.nmrh5', 'phased.nmrh5', 'phase.json'))
     write_dataset(dataset, source, format='native')
+    mask = tmp_path/'phase-mask.json'
+    mask.write_text(json.dumps({'dataset_digest': dataset_digest(dataset), 'regions': [{'c': [0, 255], 'h': [0, 319]}]}))
     status, _, err = invoke('autophase', source, output, '--report', report_path,
-                            '--axis-pivot', 'c=7', '--axis-pivot', 'h=21', '--backend', 'native')
+                            '--axis-pivot', 'c=7', '--axis-pivot', 'h=21', '--backend', 'native',
+                            '--phase-mask', mask)
     assert status == 0, err
     report = json.loads(report_path.read_text())
     assert set(report['axis_results']) == {'c', 'h'}
     assert report['parameters']['pivot_unit'] == 'points'
+    assert report['parameters']['inclusion_mask_digest']
+    assert report['mask_selections']['phase'] == json.loads(mask.read_text())
     assert [op['pivot'] for op in report['operations']] == [7, 21]
     assert all(op['p1'] == 0 for op in report['operations'])  # CLI default remains zero order.
     replay = run_operations(dataset, report['operations'], backend='native')
@@ -84,6 +89,66 @@ def spectrum(path):
                                     reference_ppm=4.7)])
     write_dataset(dataset, path, format='native')
     return dataset
+
+
+def test_point_mask_boxes_are_inclusive_and_reject_invalid_bounds(tmp_path):
+    dataset = spectrum(tmp_path/'spectrum.nmrh5')
+    path = tmp_path/'mask.json'
+    path.write_text(json.dumps({'dataset_digest': dataset_digest(dataset), 'regions': [{'f': [1, 3]}, {'f': [6, 6]}]}))
+    mask = cli._point_mask(dataset, path)
+    assert np.flatnonzero(mask).tolist() == [1, 2, 3, 6]
+    for regions in ([{'f': [1, 64]}], [{'f': [True, 2]}], [{'other': [0, 1]}], []):
+        path.write_text(json.dumps({'dataset_digest': dataset_digest(dataset), 'regions': regions}))
+        try:
+            cli._point_mask(dataset, path)
+        except NMRNextError as exc:
+            assert exc.code == 'INVALID_MASK'
+        else:
+            raise AssertionError('invalid mask accepted')
+
+
+def test_oversized_mask_prompts_to_crop_before_analysis(tmp_path):
+    dataset = Dataset(np.zeros((1, 2_000_001), dtype=np.float32),
+                      [Axis('f', 2_000_001, domain='frequency', unit='Hz')])
+    path = tmp_path/'mask.json'
+    path.write_text(json.dumps({'dataset_digest': 'unused', 'regions': [{'f': [0, 1]}]}))
+    try:
+        cli._point_mask(dataset, path)
+    except NMRNextError as exc:
+        assert exc.code == 'ANALYSIS_SIZE_LIMIT'
+        assert 'crop' in str(exc).lower()
+    else:
+        raise AssertionError('oversized spectrum accepted')
+
+
+def test_cli_noise_and_reference_baseline_masks_are_used(tmp_path):
+    source = tmp_path/'spectrum.nmrh5'
+    dataset = spectrum(source)
+    mask = tmp_path/'mask.json'
+    mask.write_text(json.dumps({'dataset_digest': dataset_digest(dataset), 'regions': [{'f': [0, 10]}, {'f': [54, 63]}]}))
+    peaks = tmp_path/'peaks.json'
+    status, _, err = invoke('peaks', source, '--output', peaks, '--threshold', '1', '--noise-mask', mask)
+    assert status == 0, err
+    result = json.loads(peaks.read_text())
+    assert result['noise']['selection'] == 'explicit_noise_mask'
+    assert result['noise']['sample_count'] == 21
+    assert result['mask_selections']['noise'] == json.loads(mask.read_text())
+    regions = tmp_path/'regions.json'
+    regions.write_text(json.dumps([{'id': 'peak', 'bounds': {'f': [14, 18]}, 'unit': 'points'}]))
+    output = tmp_path/'integral.json'
+    status, _, err = invoke('integrate', source, regions, '--output', output,
+                            '--baseline', 'reference_linear', '--baseline-mask', mask)
+    assert status == 0, err
+    report = json.loads(output.read_text())
+    assert report['parameters']['baseline'] == 'reference_linear'
+    assert report['parameters']['baseline_mask_digest']
+    assert report['mask_selections']['baseline'] == json.loads(mask.read_text())
+    assert report['regions'][0]['integral'] == 8.0
+    mask.write_text(json.dumps({'dataset_digest': 'stale', 'regions': [{'f': [0, 10]}]}))
+    stale_output = tmp_path/'stale.json'
+    status, _, err = invoke('peaks', source, '--output', stale_output, '--threshold', '1', '--noise-mask', mask)
+    assert status == 2 and json.loads(err)['error']['code'] == 'STALE_ANALYSIS'
+    assert not stale_output.exists()
 
 
 def test_peaks_integral_json_csv(tmp_path):

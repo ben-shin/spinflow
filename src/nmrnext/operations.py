@@ -13,13 +13,56 @@ from .bruker import correction_spec, corrected_metadata, correct_samples
 
 _FIELDS = {
     "digital_filter": {"axis"},
-    "reference": {"axis", "reference_ppm", "reference_hz", "observation_mhz"},
-    "window": {"axis", "kind", "lb_hz", "power", "first_point_scale"},
+    "reference": {"axis", "reference_ppm", "reference_hz", "observation_mhz", "frequency_scale"},
+    "window": {"axis", "kind", "lb_hz", "power", "first_point_scale", "off", "end"},
     "zero_fill": {"axis", "size"}, "fft": {"axis", "inverse"},
     "phase": {"axis", "p0", "p1", "pivot"},
     "crop": {"axis", "start", "stop"}, "reverse": {"axis"},
     "transpose": {"order"},
 }
+
+
+_ORIENTATION_KEY = "quadrature_index_orientation"
+
+
+def quadrature_index_orientation(dataset):
+    """Resolve complex-line handedness in index order, not physical Hz order.
+
+    Canonical negative DFT output has +1 handedness. Sample reversal changes it;
+    a coordinate-only reference reflection does not. Older constructed frequency
+    datasets retain their historical sign(step) convention. For older operation
+    records, undo only coordinate reflections after the most recent FFT so that
+    saved pre-field native spectra retain their original quadrature meaning.
+    """
+    axes = {a.id: a for a in dataset.axes
+            if a.domain == "frequency" and a.id in dataset.complex_axes}
+    metadata = dataset.metadata
+    if _ORIENTATION_KEY in metadata:
+        declared = metadata[_ORIENTATION_KEY]
+        if (not isinstance(declared, dict) or set(declared) != set(axes) or
+                any(type(value) is not int or value not in (-1, 1) for value in declared.values())):
+            raise NMRNextError("INVALID_QUADRATURE_ORIENTATION",
+                               "quadrature_index_orientation must map every current frequency complex axis to integer +1 or -1")
+        return dict(declared)
+    result = {identity: 1 if axis.step > 0 else -1 for identity, axis in axes.items()}
+    history = dataset.provenance
+    for identity in axes:
+        for entry in reversed(history):
+            if not isinstance(entry, dict):
+                continue
+            operation = entry.get("operation")
+            if not isinstance(operation, dict) or operation.get("axis") != identity:
+                continue
+            if operation.get("op") == "fft":
+                if type(operation.get("inverse", False)) is not bool:
+                    raise NMRNextError("INVALID_QUADRATURE_ORIENTATION", "Recorded FFT inverse flag must be boolean")
+                break
+            if operation.get("op") == "reference":
+                scale = operation.get("frequency_scale", 1)
+                if type(scale) is not int or scale not in (-1, 1):
+                    raise NMRNextError("INVALID_QUADRATURE_ORIENTATION", "Recorded reference frequency_scale must be integer +1 or -1")
+                result[identity] *= scale
+    return result
 
 
 def validate_backend(backend, threads):
@@ -88,7 +131,11 @@ def _transition(axes, complex_axes, metadata, operation):
         op["observation_mhz"] = finite(op.get("observation_mhz", a.observation_mhz), "observation_mhz")
         if op["observation_mhz"] <= 0:
             raise NMRNextError("INVALID_PARAMETER", "Reference observation_mhz must be positive")
-        new = replace(a, reference_ppm=op["reference_ppm"], reference_hz=op["reference_hz"], observation_mhz=op["observation_mhz"])
+        op["frequency_scale"] = op.get("frequency_scale", 1)
+        if type(op["frequency_scale"]) is not int or op["frequency_scale"] not in (-1, 1):
+            raise NMRNextError("INVALID_PARAMETER", "Reference frequency_scale must be integer +1 or -1")
+        new = replace(a, start=a.start*op["frequency_scale"], step=a.step*op["frequency_scale"],
+                      reference_ppm=op["reference_ppm"], reference_hz=op["reference_hz"], observation_mhz=op["observation_mhz"])
     elif name == "digital_filter":
         spec = correction_spec(axes, complex_axes, metadata)
         if a.id != spec["axis"]:
@@ -101,8 +148,8 @@ def _transition(axes, complex_axes, metadata, operation):
         op["kind"] = kind
         op["first_point_scale"] = finite(op.get("first_point_scale", 1), "first_point_scale")
         if kind == "exponential":
-            if "power" in op:
-                raise NMRNextError("INVALID_PARAMETER", "power is only valid for sine window")
+            if any(key in op for key in ("power", "off", "end")):
+                raise NMRNextError("INVALID_PARAMETER", "power, off and end are only valid for sine window")
             op["lb_hz"] = finite(op.get("lb_hz", 0), "lb_hz")
             if op["lb_hz"] < 0:
                 raise NMRNextError("INVALID_PARAMETER", "lb_hz must be nonnegative")
@@ -110,6 +157,10 @@ def _transition(axes, complex_axes, metadata, operation):
             if "lb_hz" in op:
                 raise NMRNextError("INVALID_PARAMETER", "lb_hz is only valid for exponential window")
             op["power"] = finite(op.get("power", 1), "power")
+            op["off"] = finite(op.get("off", 0), "off")
+            op["end"] = finite(op.get("end", 1), "end")
+            if not 0 <= op["off"] <= op["end"] <= 1:
+                raise NMRNextError("INVALID_PARAMETER", "Sine window requires 0 <= off <= end <= 1")
             if op["power"] <= 0 or a.size < 2:
                 raise NMRNextError("INVALID_PARAMETER", "Sine window needs positive power and at least two points")
         else:
@@ -172,6 +223,7 @@ def _execute(dataset, op, new_axes, backend, threads, backend_info):
     name = op["op"]
     data = dataset.data
     metadata = dataset.metadata
+    orientation = quadrature_index_orientation(dataset)
     spec = None
     if name == "reference":
         result = data
@@ -210,7 +262,17 @@ def _execute(dataset, op, new_axes, backend, threads, backend_info):
             if op["kind"] == "exponential":
                 window = np.exp(-np.pi*op["lb_hz"]*k*a.step)
             else:
-                window = np.sin(np.pi*k/(a.size-1))**op["power"]
+                if op["off"] == 0 and op["end"] == 1:
+                    # Keep the original default expression bit-for-bit.
+                    window = np.sin(np.pi*k/(a.size-1))**op["power"]
+                else:
+                    sine = np.sin(np.pi*op["off"]+np.pi*(op["end"]-op["off"])*k/(a.size-1))
+                    # The validated angle interval is [0, pi]. Arithmetic
+                    # can put its endpoint just above pi, producing a tiny
+                    # negative sine that is invalid for fractional powers.
+                    # Clip only that roundoff scale, not arbitrary negatives.
+                    rounded_negative = (sine < 0) & (sine >= -4*np.finfo(np.float64).eps)
+                    window = np.where(rounded_negative, 0., sine)**op["power"]
             window[0] *= op["first_point_scale"]
             shape = [1]*data.ndim; shape[i+1] = a.size
             result = data*window.astype(data.dtype).reshape(shape)
@@ -236,6 +298,17 @@ def _execute(dataset, op, new_axes, backend, threads, backend_info):
                 result[real], result[imag] = transformed.real, transformed.imag
     if not np.isfinite(result).all():
         raise NMRNextError("NUMERICAL_OVERFLOW", f"Operation {name} produced nonfinite values")
+    if name == "fft":
+        if op["inverse"]:
+            orientation.pop(op["axis"], None)
+        else:
+            orientation[op["axis"]] = 1
+    elif name == "reverse" and op["axis"] in orientation:
+        orientation[op["axis"]] *= -1
+    if orientation:
+        metadata[_ORIENTATION_KEY] = orientation
+    else:
+        metadata.pop(_ORIENTATION_KEY, None)
     entry = {"operation": op, "backend": backend_info, "input_shape": list(data.shape),
              "output_shape": list(result.shape), "dtype": str(result.dtype)}
     if spec is not None:
@@ -246,6 +319,8 @@ def _execute(dataset, op, new_axes, backend, threads, backend_info):
 
 def run_operations(dataset, operations, *, backend="numpy", threads=1, memory_bytes=None):
     from .planning import plan_operations
+    if isinstance(dataset, Dataset):
+        quadrature_index_orientation(dataset)
     plan = plan_operations(dataset, operations, backend=backend, threads=threads, memory_bytes=memory_bytes)
     current = dataset
     for step in plan["steps"]:

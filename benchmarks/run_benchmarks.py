@@ -57,6 +57,19 @@ WORKLOADS = {
             {"op": "phase", "axis": "t1", "p0": -7.0, "p1": 5.0, "pivot": 64},
         ],
     },
+    "larger-2d": {
+        "points": [256, 1024], "output_points": [512, 2048], "dtype": "float64",
+        "operations": [
+            {"op": "window", "axis": "t2", "kind": "exponential", "lb_hz": 4.0},
+            {"op": "zero_fill", "axis": "t2", "size": 2048},
+            {"op": "fft", "axis": "t2"},
+            {"op": "phase", "axis": "t2", "p0": 15.0, "p1": -10.0, "pivot": 512},
+            {"op": "window", "axis": "t1", "kind": "exponential", "lb_hz": 3.0},
+            {"op": "zero_fill", "axis": "t1", "size": 512},
+            {"op": "fft", "axis": "t1"},
+            {"op": "phase", "axis": "t1", "p0": -7.0, "p1": 5.0, "pivot": 128},
+        ],
+    },
 }
 
 

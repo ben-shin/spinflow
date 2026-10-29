@@ -40,6 +40,56 @@ class WorkbenchTests(unittest.TestCase):
         self.window = None
         gc.collect()
 
+    def test_acquisition_folder_uses_shared_reader(self):
+        self.assertIn("acquisition folder", self.window.bruker_button.text().lower())
+        with patch("nmrnext.gui.QtWidgets.QFileDialog.getExistingDirectory", return_value="sample.fid") as choose, \
+             patch("nmrnext.gui.read_dataset") as reader, \
+             patch.object(self.window, "_start_job") as start:
+            self.window._open_bruker()
+            self.assertEqual(choose.call_args.args[1], "Choose acquisition folder")
+            start.call_args.args[0]()
+            reader.assert_called_once_with("sample.fid")
+
+    def test_analysis_region_files_pass_masks_to_shared_engine(self):
+        w = self.window
+        w.load_dataset_now(run_operations(generate_demo(dimensions=1, points=[64]),
+                                           [{'op': 'fft', 'axis': 't2'}], backend='native'))
+        scratch = Path.cwd() / '.tmp'
+        scratch.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=scratch) as directory:
+            path = Path(directory) / 'mask.json'
+            from nmrnext.analysis import dataset_digest
+            path.write_text(json.dumps({'dataset_digest': dataset_digest(w.current), 'regions': [{'t2': [0, 10]}]}))
+            w.phase_mask_path.setText(str(path))
+            w.noise_mask_path.setText(str(path))
+            w.baseline_mask_path.setText(str(path))
+            w.baseline_combo.setCurrentText('reference_linear')
+            for kind, function, keyword in [('autophase', 'autophase', 'inclusion_mask'),
+                                            ('peaks', 'pick_peaks', 'noise_mask'),
+                                            ('integrate', 'integrate_regions', 'baseline_mask')]:
+                with patch('nmrnext.analysis.' + function) as engine:
+                    engine.return_value = (w.current, {}) if kind == 'autophase' else {}
+                    work = w._analysis_request(kind)
+                    selected = json.loads(path.read_text())
+                    path.write_text(json.dumps({'dataset_digest': 'changed', 'regions': []}))
+                    result = work()
+                    self.assertEqual(np.flatnonzero(engine.call_args.kwargs[keyword]).tolist(), list(range(11)))
+                    report = result[1] if kind == 'autophase' else result
+                    role = {'autophase': 'phase', 'peaks': 'noise', 'integrate': 'baseline'}[kind]
+                    self.assertEqual(report['mask_selections'][role], selected)
+                    path.write_text(json.dumps(selected))
+
+    def test_unreferenced_frequency_spectrum_uses_hz_and_prompts_for_anchor(self):
+        source = run_operations(generate_demo(dimensions=1, points=[64]),
+                                [{'op': 'fft', 'axis': 't2'}], backend='native')
+        axis = replace(source.axes[0], reference_ppm=None)
+        source = Dataset(source.data, (axis,), source.complex_axes)
+        self.window.load_dataset_now(source)
+        self.assertIsNone(self.window.current.axes[0].reference_ppm)
+        self.assertEqual(self.window._axis_values(source, axis)[1], 'Hz')
+        self.assertIn('reference is unknown', self.window.plot_note.text())
+        self.assertFalse(self.window.reference_check.isChecked())
+
     def test_2d_demo_recipe_preview_process_and_reset_use_same_engine(self):
         self.window.demo2_button.click()
         source = self.window.source

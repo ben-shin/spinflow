@@ -23,7 +23,7 @@ from scipy import ndimage, optimize, signal
 
 from .errors import NMRNextError
 from .model import Dataset, finite
-from .operations import run_operations
+from .operations import quadrature_index_orientation, run_operations
 
 
 MAX_POINTS = 2_000_000
@@ -67,19 +67,26 @@ def _validate(dataset, channel=0):
         raise NMRNextError("INSUFFICIENT_DATA", "Each analysis axis needs at least two points")
     if any(not math.isfinite(a.start+(a.size-1)*a.step) for a in dataset.axes):
         raise NMRNextError("UNAVAILABLE_COORDINATES", "Axis endpoint exceeds finite coordinate range")
+    quadrature_index_orientation(dataset)
     return dataset.data[channel].astype(np.float64)
 
 
 def dataset_digest(dataset):
     """SHA256 of dtype/shape, stable axes, quadrature IDs and C-order samples.
 
-    Metadata/provenance are excluded: numerical replay of the same snapshot
-    retains its identity. Hashing uses the immutable buffer without a data copy.
+    Unrelated metadata/provenance are excluded. Nondefault index-handedness
+    overrides are included because they change complex-line interpretation;
+    equivalent explicit and legacy-derived forms have the same identity. Hashing uses the immutable buffer without a data copy.
     """
     if not isinstance(dataset, Dataset):
         raise NMRNextError("INVALID_DATASET", "Digest requires a Dataset")
     header = {"axes": [a.to_dict() for a in dataset.axes], "complex_axes": list(dataset.complex_axes),
               "dtype": dataset.data.dtype.str, "shape": list(dataset.data.shape)}
+    orientation = quadrature_index_orientation(dataset)
+    overrides = {a.id: orientation[a.id] for a in dataset.axes if a.id in orientation
+                 and orientation[a.id] != (1 if a.step > 0 else -1)}
+    if overrides:
+        header["quadrature_index_orientation"] = overrides
     digest = hashlib.sha256(json.dumps(header, sort_keys=True, separators=(",", ":"), allow_nan=False).encode())
     digest.update(memoryview(dataset.data).cast("B"))
     return digest.hexdigest()
@@ -107,6 +114,33 @@ def _valid_mask(mask, shape):
     if arr.dtype != np.bool_ or arr.shape != shape or not arr.any():
         raise NMRNextError("INVALID_MASK", "mask must be boolean, match spectral shape, and include at least one point")
     return arr
+
+
+def _mask_digest(valid, supplied):
+    return hashlib.sha256(valid.tobytes()).hexdigest() if supplied is not None else None
+
+
+def _selection_record(valid):
+    return {"included_points": int(valid.sum()), "total_points": int(valid.size),
+            "scope": "Only accepted, fully included fit windows inform phase; excluded regions are not certified"}
+
+
+def _masked_phase_variation(channels, valid):
+    scales = []
+    for dim in range(valid.ndim):
+        left = [slice(None)]*valid.ndim
+        right = list(left)
+        left[dim], right[dim] = slice(None, -1), slice(1, None)
+        pairs = valid[tuple(left)] & valid[tuple(right)]
+        if int(pairs.sum()) < 3:
+            continue
+        for channel in channels:
+            differences = np.diff(channel, axis=dim)[pairs]
+            for part in ((differences.real, differences.imag) if np.iscomplexobj(differences) else (differences,)):
+                scales.append(float(np.median(np.abs(part-np.median(part)))/(_MAD_NORMAL*math.sqrt(2))))
+    if not scales:
+        raise NMRNextError("INSUFFICIENT_NOISE_POINTS", "Phase inclusion mask needs at least three adjacent sample pairs")
+    return max(scales)
 
 
 def _noise(data, valid=None):
@@ -183,7 +217,7 @@ def _coordinates(dataset, point):
 @_guard
 def pick_peaks(dataset, *, channel=0, sign="positive", threshold=None, snr=5.,
                min_separation=1., separation_unit="points", mask=None,
-               baseline="median", baseline_value=None, max_peaks=1000):
+               baseline="median", baseline_value=None, max_peaks=1000, noise_mask=None):
     """Pick local extrema in an explicit real quadrature component.
 
     The threshold is absolute height above the declared constant baseline, or
@@ -192,6 +226,8 @@ def pick_peaks(dataset, *, channel=0, sign="positive", threshold=None, snr=5.,
     separation is in a box: suppress when every coordinate distance is strictly
     less than its minimum. Strongest absolute height wins, then point order.
     mask=True includes a point; mask boundaries are retained and flagged.
+    noise_mask selects separate user-declared signal-free samples for the MAD
+    amplitude scale; it does not restrict detection or estimate a local baseline.
     """
     data = _validate(dataset, channel)
     if sign not in ("positive", "negative", "both"):
@@ -199,7 +235,9 @@ def pick_peaks(dataset, *, channel=0, sign="positive", threshold=None, snr=5.,
     if isinstance(max_peaks, bool) or not isinstance(max_peaks, int) or not 1 <= max_peaks <= 10000:
         raise NMRNextError("INVALID_PARAMETER", "max_peaks must be an integer in [1,10000]")
     valid = _valid_mask(mask, data.shape)
-    noise = _noise(data, valid)
+    noise_valid = valid if noise_mask is None else _valid_mask(noise_mask, data.shape)
+    noise = _noise(data, noise_valid)
+    noise["selection"] = "detection_mask" if noise_mask is None else "explicit_noise_mask"
     snr = _positive(snr, "snr")
     cut = snr * noise["sigma"] if threshold is None else _positive(threshold, "threshold", True)
     separations = _widths(dataset, min_separation, separation_unit, "min_separation")
@@ -259,7 +297,8 @@ def pick_peaks(dataset, *, channel=0, sign="positive", threshold=None, snr=5.,
               "min_separation": min_separation, "separation_unit": separation_unit,
               "separation_rule": "axis-aligned exclusion box, strict <; strongest first; lexicographic ties",
               "baseline": baseline, "baseline_value": baseline_value, "max_peaks": max_peaks,
-              "mask_digest": hashlib.sha256(valid.tobytes()).hexdigest() if mask is not None else None}
+              "mask_digest": hashlib.sha256(valid.tobytes()).hexdigest() if mask is not None else None,
+              "noise_mask_digest": hashlib.sha256(noise_valid.tobytes()).hexdigest() if noise_mask is not None else None}
     report = _report(dataset, "peak_picking", params)
     report.update(noise=noise, threshold=float(cut), baseline={"method": baseline, "value": offset})
     report["peaks"] = [{"id": f"peak-{i+1}", "points": dict(zip((a.id for a in dataset.axes), point)),
@@ -363,6 +402,8 @@ def _sample_region(data, axes, bounds):
     pairs = [bounds[a.id] for a in axes]
     starts = [math.floor(p[0]) for p in pairs]
     block = data[tuple(slice(start, math.ceil(pair[1])+1) for start, pair in zip(starts, pairs))]
+    if all(lo == int(lo) and hi == int(hi) for lo, hi in pairs):
+        return block, [np.arange(lo, hi+1) for lo, hi in pairs]
     grids = []
     for dimension, ((lo, hi), start) in enumerate(zip(pairs, starts)):
         grid = np.unique(np.concatenate(([lo], np.arange(math.ceil(lo), math.floor(hi)+1, dtype=float), [hi])))
@@ -377,8 +418,31 @@ def _sample_region(data, axes, bounds):
     return block, grids
 
 
+def _reference_baseline(data, axes, regions, mask):
+    valid = _valid_mask(mask, data.shape)
+    # Fractional endpoints sample floor/ceil centers: exclude their full support.
+    for region in regions:
+        support = tuple(slice(math.floor(region["point_bounds"][a.id][0]),
+                              math.ceil(region["point_bounds"][a.id][1])+1) for a in axes)
+        if valid[support].any():
+            raise NMRNextError("CONTAMINATED_BASELINE_MASK", "Baseline reference mask must exclude every integration region and its interpolation support")
+    points = np.nonzero(valid)
+    count = len(points[0])
+    if count < data.ndim+2:
+        raise NMRNextError("INSUFFICIENT_BASELINE_POINTS", "Affine baseline needs at least dimension+2 reference samples")
+    design = np.column_stack([np.ones(count), *(p/(a.size-1)-.5 for p, a in zip(points, axes))])
+    coef, _, rank, singular = np.linalg.lstsq(design, data[valid], rcond=None)
+    if rank != data.ndim+1 or singular[-1] < singular[0]*1e-8:
+        raise NMRNextError("UNDERDETERMINED_BASELINE", "Reference samples must identify a well-conditioned affine baseline on every axis")
+    rms = float(np.sqrt(np.mean((design@coef-data[valid])**2)))
+    return {"method": "reference_linear", "coefficients": coef.tolist(), "sample_count": count,
+            "coordinate_convention": "intercept + sum(coefficient[axis+1]*(point/(axis.size-1)-0.5)) in logical axis order",
+            "mask_digest": _mask_digest(valid, mask), "reference_rms": rms,
+            "assumption": "User-selected reference samples are signal-free and share one affine baseline with integrated regions; off-region signal contamination is not automatically detectable"}
+
+
 @_guard
-def integrate_regions(dataset, regions, *, channel=0, baseline="none", baseline_value=None, allow_overlap=False):
+def integrate_regions(dataset, regions, *, channel=0, baseline="none", baseline_value=None, allow_overlap=False, baseline_mask=None):
     """Signed trapezoidal area/volume with absolute Hz steps, never peak height.
 
     Bounds are inclusive sample-center coordinates (fractional endpoints are
@@ -386,23 +450,28 @@ def integrate_regions(dataset, regions, *, channel=0, baseline="none", baseline_
     (line between endpoints in 1D, least-squares perimeter plane in 2D).
     Edge fits can remove real tails and are flagged. Overlap fails unless the
     caller explicitly allows independent overlapping integrals. No sum is given.
+    reference_linear fits an affine baseline once to an explicit baseline_mask
+    outside all region interpolation supports. Selected samples must be signal
+    free; off-region signal contamination cannot be automatically certified.
     """
     data = _validate(dataset, channel)
     if not isinstance(allow_overlap, bool):
         raise NMRNextError("INVALID_PARAMETER", "allow_overlap must be boolean")
-    if baseline not in ("none", "constant", "edge_linear") or (baseline == "constant") != (baseline_value is not None):
-        raise NMRNextError("INVALID_BASELINE", "Use none, edge_linear, or constant with baseline_value")
+    if baseline not in ("none", "constant", "edge_linear", "reference_linear") or (baseline == "constant") != (baseline_value is not None):
+        raise NMRNextError("INVALID_BASELINE", "Use none, edge_linear, reference_linear with baseline_mask, or constant with baseline_value")
+    if (baseline == "reference_linear") != (baseline_mask is not None):
+        raise NMRNextError("INVALID_BASELINE", "baseline_mask is required only for reference_linear")
     value = finite(baseline_value, "baseline_value") if baseline == "constant" else 0.
     parsed = _region_bounds(dataset, regions)
     overlaps = _overlaps(parsed)
     if not allow_overlap and any(overlaps.values()):
         raise NMRNextError("OVERLAPPING_REGIONS", "Regions overlap; edit bounds or explicitly allow independent overlap", details={"overlaps": overlaps})
+    reference = _reference_baseline(data, dataset.axes, parsed, baseline_mask) if baseline_mask is not None else None
     for region in parsed:
         block, grids = _sample_region(data, dataset.axes, region["point_bounds"])
         baseline_record = {"method": baseline, "value": value if baseline == "constant" else None}
         if baseline == "edge_linear":
             normalized = [(g-g[0])/(g[-1]-g[0]) for g in grids]
-            mesh = np.meshgrid(*normalized, indexing="ij")
             if data.ndim == 1:
                 correction = block[0] + (block[-1]-block[0])*normalized[0]
                 baseline_record["coefficients"] = [float(block[0]), float(block[-1]-block[0])]
@@ -410,12 +479,23 @@ def integrate_regions(dataset, regions, *, channel=0, baseline="none", baseline_
                 edge = np.zeros(block.shape, dtype=bool)
                 edge[[0, -1], :] = True
                 edge[:, [0, -1]] = True
-                design = np.column_stack([np.ones(int(edge.sum())), *(m[edge] for m in mesh)])
+                edge_points = np.nonzero(edge)
+                design = np.column_stack([np.ones(int(edge.sum())), *(g[i] for g, i in zip(normalized, edge_points))])
                 coef = np.linalg.lstsq(design, block[edge], rcond=None)[0]
-                correction = coef[0] + sum(c*m for c, m in zip(coef[1:], mesh))
+                correction = coef[0] + coef[1]*normalized[0][:, None] + coef[2]*normalized[1][None, :]
                 baseline_record["coefficients"] = coef.tolist()
             block = block-correction
             region["flags"].append("edge_baseline_may_remove_signal")
+        elif baseline == "reference_linear":
+            baseline_record = dict(reference)
+            coef = reference["coefficients"]
+            correction = coef[0]
+            for dim, (grid, axis) in enumerate(zip(grids, dataset.axes)):
+                shape = [1]*data.ndim
+                shape[dim] = len(grid)
+                correction = correction + coef[dim+1]*(grid/(axis.size-1)-.5).reshape(shape)
+            block = block-correction
+            region["flags"].append("reference_baseline_requires_signal_free_mask")
         elif baseline == "constant":
             block = block-value
         integral = block
@@ -433,7 +513,7 @@ def integrate_regions(dataset, regions, *, channel=0, baseline="none", baseline_
             region["flags"].append("overlap_allowed_independent_integral")
         region["flags"] = sorted(set(region["flags"]))
     report = _report(dataset, "integration", {"channel": channel, "baseline": baseline, "baseline_value": baseline_value,
-                                            "allow_overlap": allow_overlap, "quadrature": "trapezoid, multilinear endpoint interpolation",
+                                            "allow_overlap": allow_overlap, "baseline_mask_digest": None if reference is None else reference["mask_digest"], "quadrature": "trapezoid, multilinear endpoint interpolation",
                                             "coordinate_measure": "positive absolute Hz steps; signed intensity",
                                             "bounds_convention": "inclusive sample centers"})
     report["regions"] = parsed
@@ -443,7 +523,7 @@ def integrate_regions(dataset, regions, *, channel=0, baseline="none", baseline_
 
 @_guard
 def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
-              max_peaks=8, min_snr=15., backend="numpy", threads=1):
+              max_peaks=8, min_snr=15., backend="numpy", threads=1, inclusion_mask=None):
     """Estimate a phase ramp from isolated positive Lorentzian-like resonances.
 
     Fits up to eight well-resolved lines with complex affine local backgrounds.
@@ -457,12 +537,15 @@ def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
     For 2D, both independent complex axes are estimated together; axis must be
     omitted and pivot, if supplied, maps both axis IDs to points. The report
     contains operations (plural), axis_results and an explicit 180-degree gauge.
+    inclusion_mask selects trusted positive anchors; entire line-fit windows
+    must be included. Correction applies to all data, but excluded regions are
+    not phase-certified. Every accepted 1D line must satisfy relative RMS <=.05.
     """
     _validate(dataset)
     if len(dataset.axes) == 2:
         return _autophase_2d(dataset, axis=axis, pivot=pivot, first_order=first_order,
                              max_p1=max_p1, max_peaks=max_peaks, min_snr=min_snr,
-                             backend=backend, threads=threads)
+                             backend=backend, threads=threads, inclusion_mask=inclusion_mask)
     if len(dataset.axes) != 1 or dataset.complex_axes != (dataset.axes[0].id,):
         raise NMRNextError("UNSUPPORTED_AUTOPHASE", "Automatic phase requires complex frequency data")
     a = dataset.axes[0]
@@ -481,26 +564,33 @@ def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
         raise NMRNextError("INVALID_PARAMETER", "pivot must be an in-range zero-based point")
     if a.size < 64:
         raise NMRNextError("INSUFFICIENT_DATA", "Automatic phase requires at least 64 points")
+    valid = _valid_mask(inclusion_mask, tuple(a.size for a in dataset.axes))
     original = dataset.data[0].astype(float) + 1j*dataset.data[1].astype(float)
-    scale = float(np.max(np.abs(original)))
+    scale = float(np.max(np.abs(original[valid])))
     if scale == 0:
         raise NMRNextError("AUTOPHASE_NO_SIGNAL", "Zero spectrum cannot determine phase")
     z = original/scale
-    candidate_scale = max(_phase_candidate_scale(z.real), _phase_candidate_scale(z.imag))
+    candidate_scale = max(_phase_candidate_scale(z.real[valid]), _phase_candidate_scale(z.imag[valid])) if inclusion_mask is None else _masked_phase_variation(z[None], valid)
     magnitude = np.abs(z)
-    centers, properties = signal.find_peaks(magnitude, prominence=max(min_snr*candidate_scale, .02*float(magnitude.max())), distance=5)
+    centers, properties = signal.find_peaks(magnitude, prominence=max(min_snr*candidate_scale, .02*float(magnitude[valid].max())), distance=5)
+    selected = valid[centers]
+    centers = centers[selected]
+    properties["prominences"] = properties["prominences"][selected]
     if centers.size == 0:
         raise NMRNextError("AUTOPHASE_NO_SIGNAL", "No resolved high-prominence resonance found")
     widths = signal.peak_widths(magnitude, centers, rel_height=.5)[0] / (2*math.sqrt(3))
     ranked = sorted(range(len(centers)), key=lambda i: (-properties["prominences"][i], int(centers[i])))
-    lines = []
-    orientation = 1. if a.step > 0 else -1.
+    lines, rejected = [], []
+    orientation = quadrature_index_orientation(dataset)[a.id]
     # A fixed candidate budget also bounds rejected-line nonlinear fits.
     for index in ranked[:32]:
         center, width = int(centers[index]), float(widths[index])
         radius = max(8, int(math.ceil(width*5)))
         # Reject unresolved/edge lines; a local line model is not deconvolution.
         if width < .8 or radius > a.size//8 or center-radius < 0 or center+radius >= a.size:
+            continue
+        if not valid[center-radius:center+radius+1].all():
+            rejected.append({"points": [center], "reason": "fit_window_outside_inclusion_mask"})
             continue
         if any(abs(center-other) < radius for other in centers if other != center):
             continue
@@ -551,15 +641,15 @@ def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
         initial.extend([line["center"], line["width"], line["amplitude"], *line["background"]])
         lower.extend([line["center"]-line["width"], .3, 0., -5., -5., -5., -5.])
         upper.extend([line["center"]+line["width"], line["radius"], 5., 5., 5., 5., 5.])
-    def joint_residual(params):
+    def joint_residual(params, by_line=False):
         p0, p1 = params[0], params[1] if first_order else 0.
         residuals = []
         for index, line in enumerate(lines):
             c, w, amp, br, bi, sr, si = params[count_global+7*index:count_global+7*(index+1)]
             model = amp/(1+1j*orientation*(line["points"]-c)/w)*np.exp(1j*np.deg2rad(p0+p1*(line["points"]-pivot)/a.size))
             delta = model + br+1j*bi+(sr+1j*si)*line["local"] - line["samples"]
-            residuals.extend((delta.real, delta.imag))
-        return np.concatenate(residuals)
+            residuals.append(np.concatenate((delta.real, delta.imag)))
+        return residuals if by_line else np.concatenate(residuals)
     fit = optimize.least_squares(joint_residual, initial, bounds=(lower, upper), max_nfev=120,
                                 ftol=1e-9, xtol=1e-9, gtol=1e-9)
     p0, p1 = float(fit.x[0]), float(fit.x[1]) if first_order else 0.
@@ -568,16 +658,23 @@ def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
     if first_order and abs(p1) > .98*max_p1:
         raise NMRNextError("AUTOPHASE_BOUND_REACHED", "First-order phase reached the fitting bound")
     rms = float(np.sqrt(np.mean(joint_residual(fit.x)**2)))
-    if rms > .05*max(line["amplitude"] for line in lines):
-        raise NMRNextError("AUTOPHASE_MODEL_MISMATCH", "Isolated-line model does not adequately fit this spectrum")
+    per_line_rms = [float(np.sqrt(np.mean(delta**2))/line["amplitude"])
+                    for delta, line in zip(joint_residual(fit.x, True), lines)]
+    if max(per_line_rms) > .05:
+        raise NMRNextError("AUTOPHASE_MODEL_MISMATCH", "Accepted lines do not share a consistent positive phase model",
+                           details={"per_line_relative_rms": per_line_rms, "acceptance_limit": .05})
     operation = {"op": "phase", "axis": a.id, "p0": float((-p0+180)%360-180), "p1": -p1, "pivot": pivot}
     result = run_operations(dataset, [operation], backend=backend, threads=threads)
     report = _report(dataset, "autophase", {"axis": a.id, "pivot": pivot, "pivot_unit": "points",
                     "first_order": first_order, "max_p1": max_p1, "max_peaks": max_peaks, "min_snr": min_snr,
                     "min_snr_semantics": "phase candidate variation multiplier, not amplitude SNR",
-                    "method": "isolated_positive_complex_lorentzian_joint_phase_with_local_affine_background"})
+                    "method": "isolated_positive_complex_lorentzian_joint_phase_with_local_affine_background",
+                    "inclusion_mask_digest": _mask_digest(valid, inclusion_mask)})
     report.update(operation=operation, result_dataset_digest=dataset_digest(result),
+                  quadrature_index_orientation={a.id: orientation},
+                  selection=_selection_record(valid), rejected_candidates=rejected,
                   objective={"name": "complex_least_squares", "normalized_rms": rms,
+                             "per_line_relative_rms": per_line_rms, "acceptance_limit": .05,
                              "initial_rms": float(np.sqrt(np.mean(joint_residual(np.array(initial))**2)))},
                   convergence={"success": True, "evaluations": int(fit.nfev)},
                   noise={"sigma": float(max(_noise(z.real)["sigma"], _noise(z.imag)["sigma"])*scale),
@@ -593,6 +690,8 @@ def autophase(dataset, *, axis=None, pivot=None, first_order=True, max_p1=180.,
                              "amplitude": "normalized intensity", "intensity_scale": scale,
                              "reported_lines": "initial independent fits used to seed shared phase refinement"})
     report["flags"] = ["inspect_phase", "positive_lorentzian_line_assumption", "background_fitted_for_estimation_only"]
+    if inclusion_mask is not None:
+        report["flags"].append("excluded_regions_not_phase_certified")
     if not first_order:
         report["flags"].append("first_order_not_estimated")
     return result, report
@@ -614,7 +713,7 @@ def _hypercomplex_design(line):
 
 
 def _autophase_2d(dataset, *, axis, pivot, first_order, max_p1, max_peaks,
-                  min_snr, backend, threads):
+                  min_snr, backend, threads, inclusion_mask=None):
     """Bounded full-quadrature fit of isolated, positive, separable 2D lines.
 
     This is an original extension of the isolated-line estimator, not an
@@ -650,19 +749,23 @@ def _autophase_2d(dataset, *, axis, pivot, first_order, max_p1, max_peaks,
         raise NMRNextError("INVALID_PARAMETER", "pivot must be an in-range zero-based point")
     bits = [1 << dataset.complex_axes.index(a.id) for a in axes]
     canonical_channels = [0, bits[0], bits[1], bits[0] | bits[1]]
-    scale = float(np.max(np.abs(dataset.data)))
+    valid = _valid_mask(inclusion_mask, tuple(a.size for a in axes))
+    scale = float(np.max(np.abs(dataset.data[:, valid])))
     if not scale:
         raise NMRNextError("AUTOPHASE_NO_SIGNAL", "Zero spectrum cannot determine phase")
     z = dataset.data[canonical_channels].astype(float)/scale
     magnitude = np.sqrt(np.sum(z*z, axis=0))
     variation = max(float(np.median(np.abs(d-np.median(d))) / (_MAD_NORMAL*math.sqrt(2)))
                     for dim in (1, 2) for d in [np.diff(z, axis=dim)])
-    cut = max(min_snr*variation, .02*float(magnitude.max()))
-    maxima = (magnitude == ndimage.maximum_filter(magnitude, size=5)) & (magnitude > cut)
+    if inclusion_mask is not None:
+        variation = _masked_phase_variation(z, valid)
+    cut = max(min_snr*variation, .02*float(magnitude[valid].max()))
+    maxima = (magnitude == ndimage.maximum_filter(magnitude, size=5)) & (magnitude > cut) & valid
     centers = np.argwhere(maxima)
     ranked = sorted(centers.tolist(), key=lambda c: (-float(magnitude[tuple(c)]), c))[:32]
     lines, rejected = [], []
-    orientations = [1 if a.step > 0 else -1 for a in axes]
+    orientation = quadrature_index_orientation(dataset)
+    orientations = [orientation[a.id] for a in axes]
     for center in ranked:
         widths, radii = [], []
         for dim in range(2):
@@ -676,6 +779,10 @@ def _autophase_2d(dataset, *, axis, pivot, first_order, max_p1, max_peaks,
         if len(widths) != 2 or any(w < .7 or r > a.size//6 or c-r < 0 or c+r >= a.size
                                   for c, w, r, a in zip(center, widths, radii, axes)):
             rejected.append({"points": center, "reason": "edge_or_unresolved_width"})
+            continue
+        window = tuple(slice(c-r, c+r+1) for c, r in zip(center, radii))
+        if not valid[window].all():
+            rejected.append({"points": center, "reason": "fit_window_outside_inclusion_mask"})
             continue
         if any(other != center and all(abs(other[d]-center[d]) < radii[d] for d in range(2))
                for other in ranked):
@@ -803,8 +910,11 @@ def _autophase_2d(dataset, *, axis, pivot, first_order, max_p1, max_peaks,
                      "pivot_unit": "points", "first_order": first_order, "max_p1": max_p1,
                      "max_peaks": max_peaks, "min_snr": min_snr,
                      "min_snr_semantics": "phase candidate variation multiplier, not amplitude SNR",
-                     "method": "isolated_positive_separable_hypercomplex_lorentzian_joint_two_axis_phase"})
+                     "method": "isolated_positive_separable_hypercomplex_lorentzian_joint_two_axis_phase",
+                     "inclusion_mask_digest": _mask_digest(valid, inclusion_mask)})
     report.update(operations=operations, result_dataset_digest=dataset_digest(result),
+                  quadrature_index_orientation=orientation,
+                  selection=_selection_record(valid),
                   axis_results={a.id: {"operation": op, "line_span_fraction": float(span),
                                       "maximum_gap_fraction": float(gap)}
                                 for a, op, span, gap in zip(axes, operations, spans, gaps)},
@@ -830,4 +940,6 @@ def _autophase_2d(dataset, *, axis, pivot, first_order, max_p1, max_peaks,
                        "excluded_candidates_not_phase_certified"]
     if not first_order:
         report["flags"].append("first_order_not_estimated")
+    if inclusion_mask is not None:
+        report["flags"].append("excluded_regions_not_phase_certified")
     return result, report

@@ -265,9 +265,9 @@ class Workbench(QtWidgets.QMainWindow):
         self.open_button = QtWidgets.QPushButton("Open spectrum…")
         self.open_button.clicked.connect(self._open_file)
         layout.addWidget(self.open_button)
-        self.bruker_button = QtWidgets.QPushButton("Open Bruker acquisition…")
+        self.bruker_button = QtWidgets.QPushButton("Open acquisition folder…")
         self.bruker_button.clicked.connect(self._open_bruker)
-        self.bruker_button.setToolTip("Controlled 1D acqus/fid or fully sampled 2D acqus/acqu2s/ser profile; recorded-delay correction is explicit.")
+        self.bruker_button.setToolTip("Open a supported acquisition folder; the format is detected from its contents.")
         layout.addWidget(self.bruker_button)
         demo_row = QtWidgets.QHBoxLayout()
         self.demo1_button = QtWidgets.QPushButton("1D demo")
@@ -420,8 +420,13 @@ class Workbench(QtWidgets.QMainWindow):
         crop_tip.setWordWrap(True)
         layout.addWidget(crop_tip)
         self.reference_check = QtWidgets.QCheckBox('Apply explicit frequency reference')
+        self.reference_check.setToolTip('Enter a known shift and frequency anchor for each axis. A zero shown in an unknown field is only an editable placeholder, not an inferred reference.')
         self.reference_check.stateChanged.connect(lambda: self._setting_changed('reference'))
         layout.addWidget(self.reference_check)
+        self.reference_reverse_check = QtWidgets.QCheckBox('Reverse frequency orientation when referencing')
+        self.reference_reverse_check.setToolTip('Use only when your acquisition convention requires reflecting the mathematical frequency grid. Samples are not reversed or conjugated.')
+        self.reference_reverse_check.stateChanged.connect(lambda: self._setting_changed('reference_reverse'))
+        layout.addWidget(self.reference_reverse_check)
         for key, attr, label in [('reference_ppm', 'reference_ppm_spin', 'Anchor shift (ppm)'),
                                  ('reference_hz', 'reference_hz_spin', 'Anchor frequency (Hz)'),
                                  ('reference_mhz', 'reference_mhz_spin', 'Observation frequency (MHz)')]:
@@ -509,6 +514,7 @@ class Workbench(QtWidgets.QMainWindow):
         self.first_order_check = QtWidgets.QCheckBox('Estimate first-order phase')
         self.first_order_check.setToolTip('Requires sufficiently separated usable peaks; underdetermined fits are refused.')
         layout.addWidget(self.first_order_check)
+        self.phase_mask_path = self._mask_control(layout, 'Phase anchor regions (optional JSON)')
         form = QtWidgets.QFormLayout()
         self.sign_combo = QtWidgets.QComboBox()
         self.sign_combo.addItems(['positive', 'negative', 'both'])
@@ -526,6 +532,7 @@ class Workbench(QtWidgets.QMainWindow):
         self.threshold_spin.setValue(1)
         form.addRow('Absolute threshold', self.threshold_spin)
         layout.addLayout(form)
+        self.noise_mask_path = self._mask_control(layout, 'Noise reference regions (optional JSON)')
         self.peaks_button = QtWidgets.QPushButton('Pick peaks')
         self.peaks_button.clicked.connect(lambda: self._analysis_job('peaks'))
         layout.addWidget(self.peaks_button)
@@ -540,9 +547,10 @@ class Workbench(QtWidgets.QMainWindow):
         self.region_bounds = {}
         layout.addLayout(self.region_form)
         self.baseline_combo = QtWidgets.QComboBox()
-        self.baseline_combo.addItems(['none', 'constant', 'edge_linear'])
+        self.baseline_combo.addItems(['none', 'constant', 'edge_linear', 'reference_linear'])
         self.baseline_combo.setToolTip('Baseline policy; inspect the report for method and flags. Edge-linear is limited to supported profiles.')
         layout.addWidget(self.baseline_combo)
+        self.baseline_mask_path = self._mask_control(layout, 'Baseline reference regions (optional JSON)')
         layout.addWidget(QtWidgets.QLabel('Constant baseline intensity (only for constant)'))
         self.baseline_value_spin = QtWidgets.QDoubleSpinBox()
         self.baseline_value_spin.setRange(-1e15, 1e15)
@@ -571,6 +579,23 @@ class Workbench(QtWidgets.QMainWindow):
         scroll.setWidget(panel)
         self.analysis_panel = panel
         return scroll
+
+    def _mask_control(self, layout, label):
+        layout.addWidget(QtWidgets.QLabel(label))
+        row = QtWidgets.QHBoxLayout()
+        field = QtWidgets.QLineEdit()
+        field.setPlaceholderText('No regions selected')
+        field.setToolTip('JSON regions use inclusive point indices keyed by the current axis IDs. Clear the path to remove the selection.')
+        button = QtWidgets.QPushButton('Choose…')
+        def choose():
+            path, _ = QtWidgets.QFileDialog.getOpenFileName(self, label, '', 'JSON (*.json);;All files (*)')
+            if path:
+                field.setText(path)
+        button.clicked.connect(choose)
+        row.addWidget(field, 1)
+        row.addWidget(button)
+        layout.addLayout(row)
+        return field
 
     def _refresh_analysis_bounds(self):
         while self.region_form.rowCount():
@@ -636,22 +661,28 @@ class Workbench(QtWidgets.QMainWindow):
 
     def _analysis_request(self, kind):
         from .analysis import autophase, integrate_regions, pick_peaks
+        from .cli import _point_mask_selection, _attach_mask_selection
         if self.current is None or self.preview is not None:
             raise NMRNextError('ANALYSIS_STATE', 'Process the current result before analysis; previews are excluded')
         dataset = self.current
         if kind == 'autophase':
+            mask, selection = _point_mask_selection(dataset, self.phase_mask_path.text().strip() or None)
             options = {'backend': self.last_backend or self.backend_combo.currentData(),
-                       'first_order': self.first_order_check.isChecked()}
-            return lambda: autophase(dataset, **options)
+                       'first_order': self.first_order_check.isChecked(),
+                       'inclusion_mask': mask}
+            return lambda: _attach_mask_selection(autophase(dataset, **options), 'phase', selection)
         if kind == 'peaks':
+            mask, selection = _point_mask_selection(dataset, self.noise_mask_path.text().strip() or None)
             options = {'channel': 0, 'sign': self.sign_combo.currentText(), 'snr': self.snr_spin.value(),
-                       'threshold': self.threshold_spin.value() if self.threshold_check.isChecked() else None}
-            return lambda: pick_peaks(dataset, **options)
+                       'threshold': self.threshold_spin.value() if self.threshold_check.isChecked() else None,
+                       'noise_mask': mask}
+            return lambda: _attach_mask_selection(pick_peaks(dataset, **options), 'noise', selection)
         region = {'id': 'region-1', 'unit': self.region_unit.currentText(),
                   'bounds': {axis: [field.value() for field in fields] for axis, fields in self.region_bounds.items()}}
         baseline = self.baseline_combo.currentText()
         value = self.baseline_value_spin.value() if baseline == 'constant' else None
-        return lambda: integrate_regions(dataset, [region], channel=0, baseline=baseline, baseline_value=value)
+        mask, selection = _point_mask_selection(dataset, self.baseline_mask_path.text().strip() or None)
+        return lambda: _attach_mask_selection(integrate_regions(dataset, [region], channel=0, baseline=baseline, baseline_value=value, baseline_mask=mask), 'baseline', selection)
 
     def _accept_analysis(self, kind, result):
         if kind == 'autophase':
@@ -808,10 +839,10 @@ class Workbench(QtWidgets.QMainWindow):
                             lambda ds: self.load_dataset_now(ds, Path(path).name), "Opening spectrum…")
 
     def _open_bruker(self):
-        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose Bruker acquisition directory")
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose acquisition folder")
         if path:
             self._start_job(lambda: read_dataset(path),
-                            lambda ds: self.load_dataset_now(ds, Path(path).name), "Opening Bruker acquisition…")
+                            lambda ds: self.load_dataset_now(ds, Path(path).name), "Opening acquisition…")
 
     def load_dataset_now(self, dataset, name="Dataset"):
         """Install a validated source. Used by dialogs, demos and offscreen tests."""
@@ -912,8 +943,11 @@ class Workbench(QtWidgets.QMainWindow):
                 if settings['fft']:
                     ops.append({"op": "fft", "axis": axis.id})
             if settings['reference']:
-                ops.append({'op': 'reference', 'axis': axis.id, 'reference_ppm': settings['reference_ppm'],
-                            'reference_hz': settings['reference_hz'], 'observation_mhz': settings['reference_mhz']})
+                reference = {'op': 'reference', 'axis': axis.id, 'reference_ppm': settings['reference_ppm'],
+                             'reference_hz': settings['reference_hz'], 'observation_mhz': settings['reference_mhz']}
+                if settings['reference_reverse']:
+                    reference['frequency_scale'] = -1
+                ops.append(reference)
             if (settings['p0'] or settings['p1']) and axis.id in self.source.complex_axes:
                 ops.append({"op": "phase", "axis": axis.id, "p0": settings['p0'],
                             "p1": settings['p1'], "pivot": settings['pivot']})
@@ -927,7 +961,7 @@ class Workbench(QtWidgets.QMainWindow):
         self.filter_check.blockSignals(False)
         self._axis_settings = {
             a.id: dict(lb=3.0, first_point=1.0, zf=1, fft=True, p0=0.0, p1=0.0, pivot=0.0,
-                       crop=False, start=0, stop=a.size, reference=False,
+                       crop=False, start=0, stop=a.size, reference=False, reference_reverse=False,
                        reference_ppm=a.reference_ppm or 0.0, reference_hz=a.reference_hz,
                        reference_mhz=a.observation_mhz or 0.0)
             for a in self.source.axes if a.role == 'spectral'
@@ -937,7 +971,7 @@ class Workbench(QtWidgets.QMainWindow):
         return {'lb': self.lb_spin, 'first_point': self.first_point_spin, 'zf': self.zf_combo, 'fft': self.fft_check,
                 'p0': self.p0_spin, 'p1': self.p1_spin, 'pivot': self.pivot_spin,
                 'crop': self.crop_check, 'start': self.crop_start_spin, 'stop': self.crop_stop_spin,
-                'reference': self.reference_check, 'reference_ppm': self.reference_ppm_spin,
+                'reference': self.reference_check, 'reference_reverse': self.reference_reverse_check, 'reference_ppm': self.reference_ppm_spin,
                 'reference_hz': self.reference_hz_spin, 'reference_mhz': self.reference_mhz_spin}
 
     def _eligible_setting_axes(self, key, axes):
@@ -953,7 +987,7 @@ class Workbench(QtWidgets.QMainWindow):
         self._discard_extra_operations()
         widget = self._setting_controls()[key]
         value = (widget.currentIndex() if key == 'zf' else widget.isChecked()
-                 if key in ('fft', 'crop', 'reference') else widget.value())
+                 if key in ('fft', 'crop', 'reference', 'reference_reverse') else widget.value())
         for axis in self._eligible_setting_axes(key, self._selected_axes()):
             self._axis_settings[axis.id][key] = value
         self._update_recipe()
@@ -976,7 +1010,7 @@ class Workbench(QtWidgets.QMainWindow):
                 widget.blockSignals(True)
                 if key == 'zf':
                     widget.setCurrentIndex(settings[key])
-                elif key in ('fft', 'crop', 'reference'):
+                elif key in ('fft', 'crop', 'reference', 'reference_reverse'):
                     widget.setChecked(settings[key])
                 else:
                     widget.setValue(settings[key])
@@ -1120,7 +1154,7 @@ class Workbench(QtWidgets.QMainWindow):
         has_frequency = any(a.domain == 'frequency' for a in selected)
         for control in (self.crop_check, self.crop_start_spin, self.crop_stop_spin):
             control.setEnabled(has_frequency and not self._busy)
-        for control in (self.reference_check, self.reference_ppm_spin, self.reference_hz_spin, self.reference_mhz_spin):
+        for control in (self.reference_check, self.reference_reverse_check, self.reference_ppm_spin, self.reference_hz_spin, self.reference_mhz_spin):
             control.setEnabled(bool(selected) and not self._busy)
         self.process_button.setEnabled(has and bool(self.build_recipe()) and not self._busy)
         self.preview_button.setEnabled(has and bool(self.build_recipe()) and not self._busy)
@@ -1141,7 +1175,7 @@ class Workbench(QtWidgets.QMainWindow):
 
     def _update_details(self):
         if self.source is None:
-            self.details.setHtml("<p>Open SpinFlow native data, a supported processed spectrum, or a declared Bruker 1D/2D acquisition.</p><p>Try a synthetic example to explore the workflow.</p>")
+            self.details.setHtml("<p>Open SpinFlow native data, a supported processed spectrum, or a supported acquisition folder.</p><p>Try a synthetic example to explore the workflow.</p>")
             return
         d = self.source
         rows = [f"<p><b>{len(d.axes)}D · {d.data.dtype.name} · {d.data.shape[0]} component(s)</b></p>"]
@@ -1230,7 +1264,10 @@ class Workbench(QtWidgets.QMainWindow):
         else:
             self.plot_caption.setText("Plot supports 1D and 2D data; metadata and export remain available.")
             sampled = ""
-        self.plot_note.setText(f"{sampled} Wheel to zoom; drag to pan. Intensities retain their sign.")
+        unreferenced = any(a.domain == 'frequency' and a.reference_ppm is None for a in dataset.axes)
+        reference_note = (' Chemical-shift reference is unknown: axes show mathematical frequency offsets in Hz. '
+                          'Confirm the orientation and enter a known anchor for ppm.' if unreferenced else '')
+        self.plot_note.setText(f"{sampled} Wheel to zoom; drag to pan. Intensities retain their sign.{reference_note}")
         self.plot.autoRange()
 
     def preflight_export(self, fmt):

@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "access_terms": "Public nmrglue example archives. No explicit redistribution license located for the acquisition data; private validation cache only. nmrglue code BSD-3-Clause is a separate license.",
+  "sources": [
+    "https://nmrglue.readthedocs.io/en/latest/examples/agilent2pipe_1d.html",
+    "https://nmrglue.readthedocs.io/en/latest/examples/agilent2pipe_2d.html",
+    "https://nmrglue.readthedocs.io/en/latest/examples/process_pipe_1d.html",
+    "https://nmrglue.readthedocs.io/en/latest/examples/process_pipe_2d.html",
+    "https://nmrglue.readthedocs.io/en/latest/examples/plot_1d_freq.html",
+    "https://nmrglue.readthedocs.io/en/latest/examples/plot_2d_spectrum.html"
+  ],
+  "protocol": {
+    "declared_before_candidate_comparison": true,
+    "raw_tolerance": {
+      "rtol": 0,
+      "atol": 0
+    },
+    "native_fft_relative_max_tolerance": 2e-06,
+    "canonical_convention": "Negative DFT: 1D original [R,I], 2D original [even.R,odd.R,even.I,odd.I]. Archived NMRPipe components convert with fixed signs [1,-1] or [1,-1,-1,1], independently derived before candidate validation.",
+    "no_fitting": "No fitted phases, alignment, sign selection, scaling or tolerance relaxation",
+    "processed_reference_scope": "Entire real arrays from independent stored archives with fixed source sine/zero-fill/phase recipe. Native phase angles are negative archived NMRPipe angles because independent-axis conjugation changes exp(+i phase) to exp(-i phase).",
+    "processed_relative_max_tolerance": 2e-05,
+    "processed_window_sum_relative_tolerance": 2e-05,
+    "processed_peak_bin_tolerance": 0,
+    "physical_coordinate_tolerance_ppm": 2e-05,
+    "physical_frequency_direction": {
+      "a0": -1,
+      "a1": -1
+    },
+    "coordinate_scope": "Every physical axis uses explicit reference.frequency_scale=-1 in the frozen example recipe. FFT mathematical grid unchanged. Compare calibrated physical ppm against independently decoded archived header; no candidate-based convention choice."
+  },
+  "archives": [
+    {
+      "url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_agilent2pipe_1d.zip",
+      "path": "agilent_1d.zip",
+      "bytes": 18652,
+      "sha256": "28bd76f70fb3907b6a3c65352e40924976b3f20c225fbd13e3dca3c011bb6855",
+      "members": [
+        {
+          "member": "agilent2pipe_1d/agilent2pipe_1d.py",
+          "path": "1d/agilent2pipe_1d/agilent2pipe_1d.py",
+          "bytes": 612,
+          "sha256": "295e381f81c64b88cc476ebd3ac88f480d75fb79f49669d80f81a2e09165b240"
+        },
+        {
+          "member": "agilent2pipe_1d/agilent2pipe_1d.com",
+          "path": "1d/agilent2pipe_1d/agilent2pipe_1d.com",
+          "bytes": 308,
+          "sha256": "2c3bac2993a690e68f50eda932a473327ffe1590496d38824f85f26f9aed1726"
+        },
+        {
+          "member": "agilent2pipe_1d/compare.py",
+          "path": "1d/agilent2pipe_1d/compare.py",
+          "bytes": 547,
+          "sha256": "dc06126da3f2ea2bb40d8ef5624c3a467d537ee5a95eb3fcfcd29d6f3c3180e3"
+        },
+        {
+          "member": "agilent2pipe_1d/README",
+          "path": "1d/agilent2pipe_1d/README",
+          "bytes": 1337,
+          "sha256": "bc86cbad6b74ae3d8bff7e400d4a4cbcb98487cbb30e53d0bd26a266d3fd7992"
+        },
+        {
+          "member": "agilent2pipe_1d/agilent_1d/fid",
+          "path": "1d/agilent2pipe_1d/agilent_1d/fid",
+          "bytes": 12060,
+          "sha256": "4a4ccf9b8a8c20e4dd5d151564d84585fd13a15f53cc967cbaa77c556b29e145"
+        },
+        {
+          "member": "agilent2pipe_1d/agilent_1d/procpar",
+          "path": "1d/agilent2pipe_1d/agilent_1d/procpar",
+          "bytes": 20189,
+          "sha256": "423d25e161adc5b5ad5a504ece04667c89835f698b4ba19ddd0a2de545bd2fbb"
+        }
+      ]
+    },
+    {
+      "url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_agilent2pipe_2d.zip",
+      "path": "agilent_2d.zip",
+      "bytes": 3689027,
+      "sha256": "f2b617fec93da7ff5c92344c98127a1ec8fef9398daebe92b1fea1e6a33847aa",
+      "members": [
+        {
+          "member": "agilent2pipe_2d/agilent2pipe_2d.py",
+          "path": "2d/agilent2pipe_2d/agilent2pipe_2d.py",
+          "bytes": 947,
+          "sha256": "292a82d433c254b156d293926906d2a7b7657fe17a18930290c811b6fef0f01e"
+        },
+        {
+          "member": "agilent2pipe_2d/agilent2pipe_2d.com",
+          "path": "2d/agilent2pipe_2d/agilent2pipe_2d.com",
+          "bytes": 493,
+          "sha256": "71622387d57b4d80e677e2facddeb1e92273429424a40641ae889fc7789eeb6b"
+        },
+        {
+          "member": "agilent2pipe_2d/compare.py",
+          "path": "2d/agilent2pipe_2d/compare.py",
+          "bytes": 547,
+          "sha256": "aa551136235f761f6093bb47a5eac566bc1bd2253f17775bad89c1802c256064"
+        },
+        {
+          "member": "agilent2pipe_2d/README",
+          "path": "2d/agilent2pipe_2d/README",
+          "bytes": 1337,
+          "sha256": "7025d4b5f083fcba911c4597aab434c0eb0aca631c286ffd3535e029b093dce1"
+        },
+        {
+          "member": "agilent2pipe_2d/agilent_2d/fid",
+          "path": "2d/agilent2pipe_2d/agilent_2d/fid",
+          "bytes": 3993328,
+          "sha256": "4a35f4b98f9116ba67760d1c0c83cc48a17b4e53897b5dbe1e25f85f28b1eac8"
+        },
+        {
+          "member": "agilent2pipe_2d/agilent_2d/procpar",
+          "path": "2d/agilent2pipe_2d/agilent_2d/procpar",
+          "bytes": 22523,
+          "sha256": "54cf12841987ec3a05f5ca76f2b09dff09b7648d84b2936627f2c9757472c817"
+        }
+      ]
+    },
+    {
+      "url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_process_pipe_1d.zip",
+      "path": "process_1d.zip",
+      "bytes": 13518,
+      "sha256": "99dc373f6aaf398a87a62622958da1c91e07226bc8d6b0bb4031de99834af695",
+      "members": [
+        {
+          "member": "processing/README",
+          "path": "reference_1d/processing/README",
+          "bytes": 1012,
+          "sha256": "5eda37f56687f78631ed22e80da5df553f3e421ee4122db66bdf7e5cbb365a4b"
+        },
+        {
+          "member": "processing/process_pipe_1d.py",
+          "path": "reference_1d/processing/process_pipe_1d.py",
+          "bytes": 499,
+          "sha256": "7a8176276940f4388c5f822b68c456eca1784b865f1ef3660088fb2e33b3e4ce"
+        },
+        {
+          "member": "processing/compare_1d.py",
+          "path": "reference_1d/processing/compare_1d.py",
+          "bytes": 509,
+          "sha256": "76f27ac8fcd63cb712933afcae7acae8990777e281a431970fe266ca6ec7db66"
+        },
+        {
+          "member": "processing/pipe2pipe_1d.com",
+          "path": "reference_1d/processing/pipe2pipe_1d.com",
+          "bytes": 315,
+          "sha256": "43aefcec43ceb2774daf23f5ed703c56c975df35708f64b5a9ce4b4131bb8c55"
+        },
+        {
+          "member": "processing/nmrpipe_1d/test.fid",
+          "path": "reference_1d/processing/nmrpipe_1d/test.fid",
+          "bytes": 14048,
+          "sha256": "e143b5d617b55af47e52b15cbe3486c756a726a2e04d473ef31416248eeab421"
+        }
+      ]
+    },
+    {
+      "url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_process_pipe_2d.zip",
+      "path": "process_2d.zip",
+      "bytes": 3679921,
+      "sha256": "859eafae26e0ffb1f6c197ebe204165b1f6e1eb24df7a0461644f253878f9be7",
+      "members": [
+        {
+          "member": "processing/README",
+          "path": "reference_2d/processing/README",
+          "bytes": 1012,
+          "sha256": "5eda37f56687f78631ed22e80da5df553f3e421ee4122db66bdf7e5cbb365a4b"
+        },
+        {
+          "member": "processing/process_pipe_2d.py",
+          "path": "reference_2d/processing/process_pipe_2d.py",
+          "bytes": 876,
+          "sha256": "43fc82a3fecd5eaef39d6f4e1e20898360ad7000858a953e2d10570203d82678"
+        },
+        {
+          "member": "processing/compare_2d.py",
+          "path": "reference_2d/processing/compare_2d.py",
+          "bytes": 511,
+          "sha256": "c0961bfe8673b71a6d008e2333534bda41e563c8856d3f4f9ce915133dcfb124"
+        },
+        {
+          "member": "processing/pipe2pipe_2d.com",
+          "path": "reference_2d/processing/pipe2pipe_2d.com",
+          "bytes": 656,
+          "sha256": "62279f8e94d8122c89128759cc7eb633541217573b1c73a834642c3825503282"
+        },
+        {
+          "member": "processing/nmrpipe_2d/test.fid",
+          "path": "reference_2d/processing/nmrpipe_2d/test.fid",
+          "bytes": 3986048,
+          "sha256": "da31afa472b8aed429b43297b094d61824979eb0984919df70bf85322d6b2739"
+        }
+      ]
+    },
+    {
+      "url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_plot_1d.zip",
+      "path": "processed_1d.zip",
+      "bytes": 29164,
+      "sha256": "5cb959ba140f5fea944f7bc6bea9535c686ceeb0fbee0362ca0e72e2d8e93b4c",
+      "members": [
+        {
+          "member": "plot_1d/plot_1d_pipe_freq.py",
+          "path": "processed_1d/plot_1d/plot_1d_pipe_freq.py",
+          "bytes": 1059,
+          "sha256": "0212c2da5055ba2347c050e3bc7e1c83b022cf3974c79fd42848e55d59e45990"
+        },
+        {
+          "member": "plot_1d/plot_1d_pipe_time.py",
+          "path": "processed_1d/plot_1d/plot_1d_pipe_time.py",
+          "bytes": 585,
+          "sha256": "0f954d0d87fa8e369b3758f5c1fe3c00b03d9b18e617d8fafb397175a7ae1049"
+        },
+        {
+          "member": "plot_1d/README",
+          "path": "processed_1d/plot_1d/README",
+          "bytes": 825,
+          "sha256": "006fe7d86e6400baaf9acac49710e9d0a68baf8ea3f0ce147c79e4219d3a636e"
+        },
+        {
+          "member": "plot_1d/nmrpipe_1d/test.fid",
+          "path": "processed_1d/plot_1d/nmrpipe_1d/test.fid",
+          "bytes": 14048,
+          "sha256": "e143b5d617b55af47e52b15cbe3486c756a726a2e04d473ef31416248eeab421"
+        },
+        {
+          "member": "plot_1d/nmrpipe_1d/test.ft",
+          "path": "processed_1d/plot_1d/nmrpipe_1d/test.ft",
+          "bytes": 18432,
+          "sha256": "f3a1fa0b795b52c8600f5317a3f641262e1ac9389be9e513efc482c7864308e7"
+        }
+      ]
+    },
+    {
+      "url": "https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/nmrglue/example_plot_2d.zip",
+      "path": "processed_2d.zip",
+      "bytes": 31081854,
+      "sha256": "ce2ca56535b931fafc004067a4cef05b9d3bb45a836d2ae8cdb6a0b8ffd22f29",
+      "members": [
+        {
+          "member": "plot_2d/plot_spectrum.py",
+          "path": "processed_2d/plot_2d/plot_spectrum.py",
+          "bytes": 1599,
+          "sha256": "0f84c03834f9c76348d244f70c7e2f3dc4afba5d7895a2760191468e0fb82d66"
+        },
+        {
+          "member": "plot_2d/plot_spectrum_pts.py",
+          "path": "processed_2d/plot_2d/plot_spectrum_pts.py",
+          "bytes": 1348,
+          "sha256": "74c08a9c8d13e4e1f7b129255deae8275e63551585f524156362570bf49011c0"
+        },
+        {
+          "member": "plot_2d/plot_assignments.py",
+          "path": "processed_2d/plot_2d/plot_assignments.py",
+          "bytes": 1387,
+          "sha256": "df1cd73fb5d66bc9f506c4121156e19e92c2eef431b427b4b643348cded67b55"
+        },
+        {
+          "member": "plot_2d/plot_boxes.py",
+          "path": "processed_2d/plot_2d/plot_boxes.py",
+          "bytes": 1856,
+          "sha256": "927947f74544703d387ded527759465ee8a38553c002ea019d6dfda937266b95"
+        },
+        {
+          "member": "plot_2d/limits.in",
+          "path": "processed_2d/plot_2d/limits.in",
+          "bytes": 513,
+          "sha256": "6005999fa04472d700562189219eabf6da26f7542bd7d7363b50619225cdf4b4"
+        },
+        {
+          "member": "plot_2d/README",
+          "path": "processed_2d/plot_2d/README",
+          "bytes": 998,
+          "sha256": "f78466d046cb6125b98f5316c2446638e903f8c3effc66ac760f1eff12ccb27b"
+        },
+        {
+          "member": "plot_2d/nmrpipe_2d/test.ft2",
+          "path": "processed_2d/plot_2d/nmrpipe_2d/test.ft2",
+          "bytes": 33556480,
+          "sha256": "7baaaf03137561a39a362ee35dfff0c5a7e480c3c2e0e9fdfe9befc7f6c503b8"
+        }
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "agilent-1d",
+      "format": "varian-raw-1d",
+      "raw": "1d/agilent2pipe_1d/agilent_1d",
+      "raw_reference": "reference_1d/processing/nmrpipe_1d/test.fid",
+      "processed_reference": "processed_1d/plot_1d/nmrpipe_1d/test.ft",
+      "shape": [
+        2,
+        1500
+      ],
+      "reference_ppm": [
+        99.0
+      ],
+      "reference_observation_mhz": [
+        125.681
+      ]
+    },
+    {
+      "id": "agilent-2d",
+      "format": "varian-raw-2d",
+      "raw": "2d/agilent2pipe_2d/agilent_2d",
+      "raw_reference": "reference_2d/processing/nmrpipe_2d/test.fid",
+      "processed_reference": "processed_2d/plot_2d/nmrpipe_2d/test.ft2",
+      "shape": [
+        4,
+        166,
+        1500
+      ],
+      "reference_ppm": [
+        120.0,
+        55.0
+      ],
+      "reference_observation_mhz": [
+        50.648,
+        125.691
+      ]
+    }
+  ]
+}

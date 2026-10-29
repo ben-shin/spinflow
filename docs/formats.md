@@ -9,8 +9,19 @@ The profile name is part of the contract. `nmrpipe-real` and `ucsf-real` are pro
 | `ucsf-real` (UCSF NMR version 2) | yes | yes | 2D | one real float32 tiled array | nmrglue 0.12 `sparky.read` (shared codec family) |
 | `bruker-raw-1d` (controlled `acqus`/`fid`) | yes | no | 1D | complex time-domain points | synthetic checks plus one hash-pinned public acquisition |
 | `bruker-raw-2d` (controlled `acqus`/`acqu2s`/`ser`) | yes | no | 2D | four time-domain quadratures | independent literal row/DFT tests and two acquired public cases |
+| `varian-raw-1d` | yes | no | 1D | complex float32 time-domain points | acquired example and independent archived NMRPipe data |
+| `varian-raw-2d` | yes | no | 2D | four time-domain quadratures, selected States sequence | acquired example and independent archived NMRPipe data |
+| `jcamp-real-1d` (experimental) | yes | no | 1D | real frequency spectrum, Hz/AFFN | constructed fixtures only |
 
 NMRPipe raw, complex, hypercomplex, 3D/4D streams or series, and unknown header dialects are not declared. UCSF 1D, time domain, and complex files are not declared. Bruker 3D/4D, processed data, writes and 2D modes beyond the declared profile are not supported. External NMRPipe and Sparky/Poky reopening has not been checked. The installed NMRPipe executable has not been used as a reference, so no legacy parity claim follows from these adapters.
+
+## Controlled Varian and experimental JCAMP
+
+The [Varian/Agilent profile](real-varian.md) reads an unarrayed float32 1D FID and one specific fully sampled States 2D sequence. It preserves original quadratures and acquisition metadata. Following the mathematical FFT, its retained-sign convention requires an explicit `reference` operation with `frequency_scale=-1` and a known anchor for each axis to obtain the physical ppm orientation. The original source remains untouched. Other vendor encodings, writes and general VNMR/VnmrJ support are not claimed.
+
+`jcamp-real-1d` reads a single JCAMP-DX 5.00 `NMR SPECTRUM` block with one real `XYDATA` `(X++(Y..Y))` table, AFFN numbers, Hz coordinates, arbitrary ordinate units, explicit observation frequency and nucleus. It validates the count, factors, row positions and finite values; source text and checksum are retained, and the ppm reference is unknown. Compressed ASDF, FIDs, complex channels, multiple blocks, NTUPLES, peak tables and writes are refused. Its evidence is synthetic, not a real acquisition or independent consumer validation. Source: [IUPAC JCAMP-DX for NMR](https://iupac.org/wp-content/uploads/2021/08/JCAMP-DX_NMR_1993.pdf).
+
+The allowed row-X discrepancy is the larger of one millionth of the grid step and four float64 units in the last place for the relevant calculation. If the floating-point allowance exceeds one hundredth of a step, the grid is refused as unresolvable. This limited rounding tolerance never grows with the absolute axis origin to admit a point displacement.
 
 ## Native HDF5 schema 1
 

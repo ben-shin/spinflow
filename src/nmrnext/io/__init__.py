@@ -39,6 +39,9 @@ _ALIASES = {
     "ucsf": "ucsf-real", "sparky": "ucsf-real", "ucsf-real": "ucsf-real",
     "bruker-raw-1d": "bruker-raw-1d", "bruker1d": "bruker-raw-1d",
     "bruker-raw-2d": "bruker-raw-2d", "bruker2d": "bruker-raw-2d",
+    "varian-raw-1d": "varian-raw-1d", "varian1d": "varian-raw-1d", "agilent1d": "varian-raw-1d",
+    "varian-raw-2d": "varian-raw-2d", "varian2d": "varian-raw-2d", "agilent2d": "varian-raw-2d",
+    "jcamp-real-1d": "jcamp-real-1d", "jcamp": "jcamp-real-1d", "jcampdx": "jcamp-real-1d",
 }
 _EXTENSIONS = {".nmrh5": "nmrnext-hdf5", ".h5": "nmrnext-hdf5",
                ".ft1": "nmrpipe-real", ".ft2": "nmrpipe-real", ".ucsf": "ucsf-real"}
@@ -76,6 +79,20 @@ def capabilities():
          "supported_modes":["FnMODE=5 States-TPPI", "FnMODE=6 Echo-AntiEcho"],
          "constraints":["AQ_mod=3", "AQSEQ=0", "PARMODE=1", "FnTYPE=0", "DIGMOD=1 when supplied", "SW*SFO1 agrees with SW_h within relative 2e-5 when SW is supplied", "positive recorded GRPDLY", "complete 1024-byte padded traces"],
          "external_consumer":"source acquisition is left untouched"},
+        *[{"format":f"varian-raw-{d}d", "version":"1", "read":True, "write":False,
+           "object":"raw float32 acquisition", "dimensions":[d],
+           "components":"R,I" if d == 1 else "RR,IR,RI,II; indirect bit 0, direct bit 1",
+           "constraints":["big endian float32 status 73/201", "one trace/header per block",
+                          "unarrayed 1D" if d == 1 else "cpjdcptan2d C13/N15 phase=[1,2] States only"],
+           "preserved":["all acquired quadratures", "procpar text and fields", "all block headers", "source hashes"],
+           "known_losses":[], "reference_policy":"physical ppm requires explicit reference with frequency_scale=-1 after FFT for this retained-sign profile",
+           "external_consumer":"independent archived NMRPipe time-domain reference; no vendor write"}
+          for d in (1, 2)],
+        {"format":"jcamp-real-1d", "version":"controlled Hz/AFFN profile 1",
+         "object":"processed real 1D spectrum", "dimensions":[1], "components":"real only",
+         "read":True, "write":False, "preserved":["intensities", "Hz grid", "source text", "source checksum"],
+         "known_losses":[], "constraints":["single spectrum block", "Hz units", "AFFN numeric encoding"],
+         "external_consumer":"unverified; constructed fixtures only"},
     ]
 
 
@@ -87,6 +104,16 @@ def _format(name, path, *, reading=False):
         return result
     if reading:
         if Path(path).is_dir():
+            if (Path(path)/"procpar").is_file() and (Path(path)/"fid").is_file():
+                if (Path(path)/"acqus").exists():
+                    raise NMRNextError("AMBIGUOUS_FORMAT", "Directory contains both Varian and Bruker parameters")
+                # Only use the small binary header to select dimensionality;
+                # the selected profile still validates every acquisition field.
+                with (Path(path)/"fid").open("rb") as handle:
+                    raw = handle.read(4)
+                if len(raw) != 4:
+                    raise NMRNextError("INVALID_HEADER", "Truncated Varian header")
+                return "varian-raw-1d" if struct.unpack(">i",raw)[0] == 1 else "varian-raw-2d"
             if (Path(path)/"acqus").is_file() and (Path(path)/"ser").is_file() and (Path(path)/"acqu2s").is_file():
                 return "bruker-raw-2d"
             if (Path(path)/"acqus").is_file() and (Path(path)/"fid").is_file():
@@ -98,6 +125,8 @@ def _format(name, path, *, reading=False):
             return "nmrnext-hdf5"
         if head.startswith(b"UCSF NMR"):
             return "ucsf-real"
+        if head.lstrip().startswith(b"##TITLE=") and b"##JCAMP-DX=" in head:
+            return "jcamp-real-1d"
         if len(head) >= 2048:
             marker = np.frombuffer(head[8:12], dtype="<f4")[0]
             swapped = np.frombuffer(head[8:12], dtype=">f4")[0]
@@ -427,6 +456,12 @@ def inspect_dataset(path, *, format=None, max_bytes=MAX_BYTES):
         if fmt == "bruker-raw-2d":
             from .bruker2d import inspect_bruker_2d
             return inspect_bruker_2d(path, max_bytes)
+        if fmt in {"varian-raw-1d", "varian-raw-2d"}:
+            from .varian import inspect_varian
+            return inspect_varian(path, max_bytes, dimensions=1 if fmt.endswith("1d") else 2)
+        if fmt == "jcamp-real-1d":
+            from .jcamp import inspect_jcamp
+            return inspect_jcamp(path, max_bytes)
         return _ucsf_header(path, max_bytes)
     except OSError as exc:
         raise NMRNextError("INVALID_FILE", f"Cannot inspect input: {exc}") from exc
@@ -455,6 +490,12 @@ def read_dataset(path, *, format=None, max_bytes=MAX_BYTES):
         if fmt == "bruker-raw-2d":
             from .bruker2d import read_bruker_2d
             return read_bruker_2d(path, head)
+        if fmt in {"varian-raw-1d", "varian-raw-2d"}:
+            from .varian import read_varian
+            return read_varian(path, head)
+        if fmt == "jcamp-real-1d":
+            from .jcamp import read_jcamp
+            return read_jcamp(path, head)
         ng = _nmrglue()
         if fmt == "bruker-raw-1d":
             header = head["header"]
@@ -546,7 +587,7 @@ def export_preflight(dataset, format, *, allow_losses=()):
     if fmt == "nmrnext-hdf5":
         return {"format": fmt, "ok": True, "losses": [], "errors": [], "unacknowledged": [],
                 "conversions": [], "preserved": ["all components", "dtype", "axis schema", "metadata", "provenance"]}
-    if fmt in {"bruker-raw-1d", "bruker-raw-2d"}:
+    if fmt in {"bruker-raw-1d", "bruker-raw-2d", "varian-raw-1d", "varian-raw-2d", "jcamp-real-1d"}:
         return {"format": fmt, "ok": False, "losses": [], "errors": ["read_only_profile"],
                 "unacknowledged": [], "conversions": [], "preserved": []}
     errors, losses, conversions = [], [], []

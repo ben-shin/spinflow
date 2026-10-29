@@ -84,7 +84,11 @@ jobs:
         run: bash tools/bootstrap.sh --gui --plot --test
       - name: Build in-place extension for source-path tests
         run: .venv/bin/python tools/build_native.py
+      - name: Fetch public Agilent acquisitions for GUI workflows
+        run: .venv/bin/python tests/fixtures/fetch_varian_public.py --root .artifacts/coverage-formats
       - name: Test complete source suite with Qt
+        env:
+          SPINFLOW_VARIAN_ROOT: ${{ github.workspace }}/.artifacts/coverage-formats
         run: .venv/bin/python -m pytest -q
 
   public-bruker:
@@ -116,3 +120,13 @@ jobs:
           .venv/bin/python -m pytest -q tests/io/test_bruker2d_public.py tests/cli/test_bruker2d_public_cli.py
           .venv/bin/python tools/validate_public_bruker2d.py --backend numpy
           .venv/bin/python tools/validate_public_bruker2d.py --backend native
+      - name: Fetch public Agilent acquisitions and stored reference spectra
+        run: .venv/bin/python tests/fixtures/fetch_varian_public.py --root .artifacts/coverage-formats
+      - name: Validate Agilent import and difficult public spectrum
+        env:
+          SPINFLOW_VARIAN_ROOT: ${{ github.workspace }}/.artifacts/coverage-formats
+        run: |
+          .venv/bin/python -m pytest -q tests/io/test_varian_public.py tests/io/test_hard_spectra_public.py tests/cli/test_analysis_crop_public.py
+          .venv/bin/python tools/validate_public_varian.py --root .artifacts/coverage-formats --backend numpy
+          .venv/bin/python tools/validate_public_varian.py --root .artifacts/coverage-formats --backend native
+          .venv/bin/python tools/validate_public_hard_spectra.py --root .artifacts/coverage-formats

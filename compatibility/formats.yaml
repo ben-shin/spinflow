@@ -70,6 +70,28 @@ profiles:
     evidence: [tests/io/test_bruker_2d.py, tests/unit/test_bruker_2d_filter.py, tests/io/test_bruker2d_public.py]
     independent_reference: "two acquired HSQC/TOCSY cases; archived TopSpin peak positions and fixed relative-volume ratios; docs/real-bruker-2d.md"
     external_consumer: unverified
+  - id: varian-raw-1d
+    dialect: "unarrayed big-endian float32 procpar/fid profile"
+    read: implemented_bounded_1d
+    write: not_implemented
+    evidence: [tests/io/test_varian.py, tests/io/test_varian_public.py, docs/real-varian.md]
+    calibration: "explicit reference frequency_scale=-1 and known anchor after FFT"
+    external_consumer: unverified
+  - id: varian-raw-2d
+    dialect: "fully sampled cpjdcptan2d C13/N15 States phase=[1,2] profile"
+    read: implemented_bounded_2d
+    write: not_implemented
+    evidence: [tests/io/test_varian.py, tests/io/test_varian_public.py, docs/real-varian.md]
+    calibration: "explicit reference frequency_scale=-1 and known anchor after FFT"
+    external_consumer: unverified
+  - id: jcamp-real-1d
+    dialect: "experimental single-block JCAMP-DX 5.00 real XYDATA, Hz and AFFN"
+    read: implemented_experimental
+    write: not_implemented
+    evidence: [tests/io/test_jcamp_profile.py]
+    real_data: unverified
+    chemical_shift_reference: unknown
+    external_consumer: unverified
   - id: nmrpipe-complex-or-stream
     dialect: "no declared profile"
     read: not_implemented

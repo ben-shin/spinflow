@@ -290,6 +290,53 @@ def _analysis_input(path, memory):
     return read_dataset(path, max_bytes=(_memory(memory) or 256 * 1024**2) // 8)
 
 
+def _point_mask_selection(dataset, path):
+    """Build a union of inclusive point-index boxes from an explicit JSON file."""
+    if path is None:
+        return None, None
+    import numpy as np
+    document = _json_file(Path(path), analysis=True)
+    if not isinstance(document, dict) or set(document) != {"dataset_digest", "regions"}:
+        raise NMRNextError("INVALID_MASK", "Mask JSON must contain dataset_digest and a regions list")
+    shape = tuple(axis.size for axis in dataset.axes)
+    if len(shape) not in (1, 2):
+        raise NMRNextError("INVALID_MASK", "Mask requires a supported 1D or 2D analysis dataset")
+    if np.prod(shape) > 2_000_000:
+        raise NMRNextError("ANALYSIS_SIZE_LIMIT", "Analysis is limited to 2,000,000 points per component; crop the spectrum first")
+    from .analysis import dataset_digest
+    if document["dataset_digest"] != dataset_digest(dataset):
+        raise NMRNextError("STALE_ANALYSIS", "Mask dataset digest must match the current spectrum")
+    regions = document["regions"]
+    if not isinstance(regions, list) or not 1 <= len(regions) <= 1000:
+        raise NMRNextError("INVALID_MASK", "Mask requires 1 to 1000 point-index regions")
+    mask = np.zeros(shape, dtype=bool)
+    ids = [axis.id for axis in dataset.axes]
+    for region in regions:
+        if not isinstance(region, dict) or set(region) != set(ids):
+            raise NMRNextError("INVALID_MASK", "Each mask region must bound every axis ID")
+        slices = []
+        for identity, size in zip(ids, shape):
+            bounds = region[identity]
+            if (not isinstance(bounds, list) or len(bounds) != 2 or
+                    any(isinstance(v, bool) or not isinstance(v, int) for v in bounds) or
+                    not 0 <= bounds[0] <= bounds[1] < size):
+                raise NMRNextError("INVALID_MASK", "Mask bounds must be ordered inclusive point indices within each axis")
+            slices.append(slice(bounds[0], bounds[1] + 1))
+        mask[tuple(slices)] = True
+    return mask, document
+
+
+def _point_mask(dataset, path):
+    return _point_mask_selection(dataset, path)[0]
+
+
+def _attach_mask_selection(result, role, selection):
+    if selection is not None:
+        report = result[1] if isinstance(result, tuple) else result
+        report.setdefault("mask_selections", {})[role] = selection
+    return result
+
+
 def _analysis_report(path):
     report = _json_file(Path(path), analysis=True)
     if not isinstance(report, dict):
@@ -322,10 +369,12 @@ def _analysis_dispatch(args):
                 pivot[axis_id] = value
             if len(dataset.axes) != 2:
                 raise NMRNextError('INVALID_PARAMETER', '--axis-pivot is for 2D; use --pivot for 1D')
-        result, report = autophase(dataset, pivot=pivot,
+        phase_mask, phase_selection = _point_mask_selection(dataset, args.phase_mask)
+        result, report = _attach_mask_selection(autophase(dataset, pivot=pivot,
                                    first_order=args.first_order, max_p1=args.max_p1,
                                    max_peaks=args.max_peaks, min_snr=args.min_snr,
-                                   backend=args.backend, threads=args.threads)
+                                   backend=args.backend, threads=args.threads,
+                                   inclusion_mask=phase_mask), "phase", phase_selection)
         cleanup_warnings = _save_new_files([(args.output, lambda path: write_dataset(result, path, format="native")),
                                             (args.report, _write_bytes(_json_bytes(report)))])
         return {"output": str(args.output), "report": str(args.report),
@@ -335,21 +384,27 @@ def _analysis_dispatch(args):
         _report_paths(args.output, args.csv)
         if args.allow_overlap and not args.integrate:
             raise NMRNextError("INVALID_PARAMETER", "--allow-overlap requires --integrate")
-        report = pick_peaks(dataset, channel=args.channel, sign=args.sign,
+        if args.baseline_mask and not args.integrate:
+            raise NMRNextError("INVALID_PARAMETER", "--baseline-mask requires --integrate")
+        noise_mask, noise_selection = _point_mask_selection(dataset, args.noise_mask)
+        report = _attach_mask_selection(pick_peaks(dataset, channel=args.channel, sign=args.sign,
                             threshold=args.threshold, snr=args.snr,
                             min_separation=args.min_separation,
                             separation_unit=args.separation_unit,
                             baseline=args.baseline, baseline_value=args.baseline_value,
-                            max_peaks=args.max_peaks)
+                            max_peaks=args.max_peaks,
+                            noise_mask=noise_mask), "noise", noise_selection)
         if args.integrate:
             if not report["peaks"]:
                 raise NMRNextError("NO_PEAKS", "No peaks met the threshold; no regions were integrated")
             proposal = propose_regions(dataset, report, half_width=args.half_width,
                                        unit=args.half_width_unit)
-            integrated = integrate_regions(dataset, proposal["regions"], channel=args.channel,
+            baseline_mask, baseline_selection = _point_mask_selection(dataset, args.baseline_mask)
+            integrated = _attach_mask_selection(integrate_regions(dataset, proposal["regions"], channel=args.channel,
                                            baseline=args.integral_baseline,
                                            baseline_value=args.integral_baseline_value,
-                                           allow_overlap=args.allow_overlap)
+                                           allow_overlap=args.allow_overlap,
+                                           baseline_mask=baseline_mask), "baseline", baseline_selection)
             report = {"peaks": report, "proposal": proposal, "integrals": integrated}
         outputs = [(args.output, _write_bytes(_json_bytes(report)))]
         if args.csv:
@@ -366,9 +421,11 @@ def _analysis_dispatch(args):
             if source.get("schema_version") != "1" or source.get("kind") != "region_proposal" or source.get("dataset_digest") != dataset_digest(dataset):
                 raise NMRNextError("STALE_ANALYSIS", "Region proposal must match the current dataset")
             source = source.get("regions")
-        report = integrate_regions(dataset, source, channel=args.channel,
+        baseline_mask, baseline_selection = _point_mask_selection(dataset, args.baseline_mask)
+        report = _attach_mask_selection(integrate_regions(dataset, source, channel=args.channel,
                                    baseline=args.baseline, baseline_value=args.baseline_value,
-                                   allow_overlap=args.allow_overlap)
+                                   allow_overlap=args.allow_overlap,
+                                   baseline_mask=baseline_mask), "baseline", baseline_selection)
         outputs = [(args.output, _write_bytes(_json_bytes(report)))]
         if args.csv:
             outputs.append((args.csv, _write_bytes(_analysis_csv(report))))
@@ -472,12 +529,14 @@ def _parser():
     auto.add_argument("--first-order",action="store_true",help="Estimate slopes as well as zero-order corrections; requires identifiable separated lines on each axis")
     auto.add_argument("--max-p1",type=float,default=180.);auto.add_argument("--max-peaks",type=int,default=8)
     auto.add_argument("--min-snr",type=float,default=15.)
+    auto.add_argument("--phase-mask",help="JSON file of inclusive point-index boxes for phase fitting")
     auto.add_argument("--backend",choices=["native","numpy"],default="native")
     auto.add_argument("--threads",type=int,default=1);auto.add_argument("--memory")
     peaks=sub.add_parser("peaks",help="Pick signed 1D/2D peaks and optionally integrate proposed regions")
     peaks.add_argument("input");peaks.add_argument("--output",required=True);peaks.add_argument("--csv")
     peaks.add_argument("--channel",type=int,default=0);peaks.add_argument("--sign",choices=["positive","negative","both"],default="positive")
     peaks.add_argument("--threshold",type=float);peaks.add_argument("--snr",type=float,default=5.)
+    peaks.add_argument("--noise-mask",help="JSON file of inclusive point-index boxes for noise estimation")
     peaks.add_argument("--min-separation",type=float,default=1.)
     peaks.add_argument("--separation-unit",choices=["points","Hz","ppm"],default="points")
     peaks.add_argument("--baseline",choices=["median","none","constant"],default="median")
@@ -485,14 +544,16 @@ def _parser():
     peaks.add_argument("--integrate",action="store_true")
     peaks.add_argument("--half-width",type=float,default=8.)
     peaks.add_argument("--half-width-unit",choices=["points","Hz","ppm"],default="points")
-    peaks.add_argument("--integral-baseline",choices=["none","constant","edge_linear"],default="none")
+    peaks.add_argument("--integral-baseline",choices=["none","constant","edge_linear","reference_linear"],default="none")
+    peaks.add_argument("--baseline-mask",help="JSON file of off-region point-index boxes for reference_linear")
     peaks.add_argument("--integral-baseline-value",type=float)
     peaks.add_argument("--allow-overlap",action="store_true");peaks.add_argument("--memory")
     integrate=sub.add_parser("integrate",help="Integrate explicitly bounded 1D/2D regions")
     integrate.add_argument("input");integrate.add_argument("regions")
     integrate.add_argument("--output",required=True);integrate.add_argument("--csv")
     integrate.add_argument("--channel",type=int,default=0)
-    integrate.add_argument("--baseline",choices=["none","constant","edge_linear"],default="none")
+    integrate.add_argument("--baseline",choices=["none","constant","edge_linear","reference_linear"],default="none")
+    integrate.add_argument("--baseline-mask",help="JSON file of off-region point-index boxes for reference_linear")
     integrate.add_argument("--baseline-value",type=float)
     integrate.add_argument("--allow-overlap",action="store_true");integrate.add_argument("--memory")
     figure=sub.add_parser("figure",help="Save an optional Matplotlib SVG, PDF or PNG from frequency data")

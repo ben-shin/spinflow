@@ -1,0 +1,76 @@
+{
+  "schema_version": "1",
+  "input": "../.artifacts/coverage-formats/2d/agilent2pipe_2d/agilent_2d",
+  "output": "../.artifacts/coverage-formats/native-varian-2d-calibrated.nmrh5",
+  "backend": "native",
+  "threads": 1,
+  "memory_bytes": 2147483648,
+  "operations": [
+    {
+      "op": "window",
+      "axis": "a1",
+      "kind": "sine",
+      "off": 0.35,
+      "end": 0.98,
+      "power": 1,
+      "first_point_scale": 1
+    },
+    {
+      "op": "zero_fill",
+      "axis": "a1",
+      "size": 4096
+    },
+    {
+      "op": "fft",
+      "axis": "a1"
+    },
+    {
+      "op": "phase",
+      "axis": "a1",
+      "p0": 29,
+      "p1": 0,
+      "pivot": 0
+    },
+    {
+      "op": "reference",
+      "axis": "a1",
+      "reference_ppm": 55,
+      "reference_hz": 0,
+      "observation_mhz": 125.691,
+      "frequency_scale": -1
+    },
+    {
+      "op": "window",
+      "axis": "a0",
+      "kind": "sine",
+      "off": 0.35,
+      "end": 0.9,
+      "power": 1,
+      "first_point_scale": 0.5
+    },
+    {
+      "op": "zero_fill",
+      "axis": "a0",
+      "size": 2048
+    },
+    {
+      "op": "fft",
+      "axis": "a0"
+    },
+    {
+      "op": "phase",
+      "axis": "a0",
+      "p0": 0,
+      "p1": 0,
+      "pivot": 0
+    },
+    {
+      "op": "reference",
+      "axis": "a0",
+      "reference_ppm": 120,
+      "reference_hz": 0,
+      "observation_mhz": 50.648,
+      "frequency_scale": -1
+    }
+  ]
+}
