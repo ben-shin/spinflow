@@ -59,6 +59,13 @@ workflows:
     evidence: [tests/gui/test_workbench.py, tests/test_workflow_bundle.py]
     real_acquisition_validation: "bounded public 1d plus two acquired 2d controller pipelines; no broad vendor or concentration claim"
     user_observation_sessions: not-yet-run
+  - id: public-varian-protein-nmrpipe13-case
+    status: experimental
+    acceptance: "scoped PASS as of code commit 03cd13aa1517f19cd5f2f4933be9292c8020e061; one previously studied public case, not a holdout"
+    output_profiles: [nmrpipe-real, ucsf-real]
+    evidence: docs/laboratory-workflow-results.md
+    reference_and_consumers: "NMRPipe 13, NMRDraw 13 and Sparky 3.115 for the fixed case and files only"
+    broader_nmrpipe_parity_and_lab_reliability: unverified
   - id: first-real-laboratory-raw-to-export
     status: unsupported
     blockers: [broader-permitted-real-fixtures, quantitative-phase-and-integral-reference, independent-export-consumer, nmrpipe-parity]

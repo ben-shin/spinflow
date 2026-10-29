@@ -1,18 +1,18 @@
 # First laboratory-workflow comparison: results
 
-**Status: UNVERIFIED overall.** The original candidate failed the UCSF coordinate gate; the repaired candidate passed the numerical recheck, consumer checks and measured benchmark. Final independent adjudication and publication remain pending. The selected case is the cached public Agilent/Varian protein example, previously studied in this project; it is not an independent holdout. The fixed [protocol](laboratory-workflow-protocol.md) and [case record](../tests/fixtures/lab_workflow_case.json) define the inputs, steps, gates and limitations. These measurements are complete; final independent review remains pending.
+**Status: SCOPED PASS as of code commit `03cd13aa1517f19cd5f2f4933be9292c8020e061`.** The independent judge accepted R1–R7 for the declared single-case workflow after publication and CI verification on 29 October 2026. The original candidate failed the UCSF coordinate gate; the repaired candidate passed the fixed numerical and consumer checks. The selected cached public Agilent/Varian protein example was previously studied in this project and is not an independent holdout. The [protocol](laboratory-workflow-protocol.md) and [case record](../tests/fixtures/lab_workflow_case.json) define the exact scope; this acceptance does not establish general laboratory or format compatibility.
 
 | Gate | Required evidence | Status |
 |---|---|---|
-| R1 — protocol and reference | Fixed source and original scripts; actual pinned NMRPipe 13 execution and version-semantics lock | Executed; independent final review pending |
-| R2 — resource prerequisites | Header-only planning and explicit GUI budget propagation, tested before larger processing | UNVERIFIED — integrated local prerequisite tests passed; independent review pending |
-| R3 — intermediate quadratures | S00–S10 and S03P available quadratures, including isolated FFT gates | Numerical reports pass; review pending |
-| R4 — final scientific comparison | Complete signed arrays, every absolute ppm coordinate, fixed manual phase and all five predeclared weak/strong ROIs | Repaired numerical reports pass; original UCSF failure retained; review pending |
-| R5 — independent consumers | Actual NMRDraw and UCSF Sparky reopening, signed contours, coordinates, and prescribed views | Scoped consumer checks pass; independent panel review pending |
-| R6 — end-to-end benchmark | Equal-precision, equal-work single-core comparisons including conversion and output; wall, CPU, memory, I/O and scratch evidence | Measured; independent review pending |
-| R7 — publication and scope | Measured results, limitations, and only evidence-supported compatibility entries | UNVERIFIED |
+| R1 — protocol and reference | Fixed source and original scripts; actual pinned NMRPipe 13 execution and version-semantics lock | PASS, scoped |
+| R2 — resource prerequisites | Header-only planning and explicit GUI budget propagation, tested before larger processing | PASS, scoped |
+| R3 — intermediate quadratures | S00–S10 and S03P available quadratures, including isolated FFT gates | PASS, scoped |
+| R4 — final scientific comparison | Complete signed arrays, every absolute ppm coordinate, fixed manual phase and all five predeclared weak/strong ROIs | PASS after repair; original UCSF failure retained |
+| R5 — independent consumers | Actual NMRDraw and UCSF Sparky reopening, signed contours, coordinates, and prescribed views | PASS, scoped |
+| R6 — end-to-end benchmark | Equal-precision, equal-work single-core comparisons including conversion and output; wall, CPU, memory, I/O and scratch evidence | PASS for measurement protocol; SpinFlow slower |
+| R7 — publication and scope | Measured results, limitations, and only evidence-supported compatibility entries | PASS as of code commit and CI below |
 
-Each gate will be reported as PASS, FAIL or UNVERIFIED against the preregistered limits. Missing checkpoints, unavailable applications, unequal work, or failed tests will remain visible; successful codec readback does not substitute for opening files in the named applications. Working-array estimates do not establish a process RSS limit, and one selected case cannot establish general laboratory or format compatibility.
+Gate statuses are reported against the preregistered limits. Missing checkpoints, unavailable applications, unequal work, or failed tests will remain visible; successful codec readback does not substitute for opening files in the named applications. Working-array estimates do not establish a process RSS limit, and one selected case cannot establish general laboratory or format compatibility.
 
 ## Original candidate numerical comparison
 
@@ -61,7 +61,7 @@ The repaired recipe explicitly applies the original script’s predeclared 50000
 
 All 12 repaired checkpoint comparisons and both isolated FFT checks pass their original gates. S10 signed-array relative maximum remains **1.6183475296127254e-7**; maximum absolute ppm errors are **5.139000066378685e-6** for a0 and **1.2523987322765606e-5** for a1. The global and all five ROI peak bins agree, and all fixed signed-sum gates pass.
 
-The independently executed Sparky `ucsfdata` decoder reproduced the full candidate and reference UCSF matrices exactly against their own accepted S10 arrays. Across the two UCSF files, each axis’s maximum ppm difference is **1.52587890625e-5**, below the unchanged **2e-5 ppm** gate. This is an independent binary decoder check; it does not by itself prove an interactive application reopening. The [sanitized repaired record](evidence/laboratory-workflow-science-v4.json) includes report and output hashes, all checkpoint measurements and bitwise-preservation evidence. Its scientific lock SHA-256 is `bf502422a34b698276fc7382dfe0fb6cf5937b140c28f1786d69d20b3756d57b` and its exact working-byte source snapshot SHA-256 is `c93565a83abc7bfcc2a9fddcfca5a759d84352c270d3febc8aa9cf17f16bcade`. The earlier failed output and failure record remain preserved; this recheck does not rewrite that result. The scoped consumer checks, full repaired installed suite and benchmark are reported below; final independent review remains pending.
+The independently executed Sparky `ucsfdata` decoder reproduced the full candidate and reference UCSF matrices exactly against their own accepted S10 arrays. Across the two UCSF files, each axis’s maximum ppm difference is **1.52587890625e-5**, below the unchanged **2e-5 ppm** gate. This is an independent binary decoder check; it does not by itself prove an interactive application reopening. The [sanitized repaired record](evidence/laboratory-workflow-science-v4.json) includes report and output hashes, all checkpoint measurements and bitwise-preservation evidence. Its scientific lock SHA-256 is `bf502422a34b698276fc7382dfe0fb6cf5937b140c28f1786d69d20b3756d57b` and its exact working-byte source snapshot SHA-256 is `c93565a83abc7bfcc2a9fddcfca5a759d84352c270d3febc8aa9cf17f16bcade`. The earlier failed output and failure record remain preserved; this recheck does not rewrite that result. The scoped consumer checks, full repaired installed suite and benchmark are reported below.
 
 ## Independent application reopening
 
@@ -106,3 +106,17 @@ The test used a single-vCPU WHPX guest with 4 GiB memory and one pinned host log
 ## Validation environment closure
 
 The owned test guest shut down gracefully and its local forwarded port closed on 29 October 2026. Its earlier 765-file science seal is a **pre-shutdown snapshot**: the live serial log subsequently received an authorized 8,456-byte shutdown append. Its exact 60,650-byte sealed prefix remains intact; the original log was not truncated, restored or rewritten. The other 1,550 sealed evidence files and all ten prior manifest files remained unchanged. The [sanitized closure record](evidence/laboratory-operational-closure.json) gives the prefix, suffix, full-log and manifest hashes. This operational qualification does not change the scientific or timing measurements.
+
+## Publication and independent acceptance
+
+On 29 October 2026 the independent judge accepted this scoped R1–R7 result on published code commit [`03cd13aa1517f19cd5f2f4933be9292c8020e061`](https://github.com/ben-shin/spinflow/commit/03cd13aa1517f19cd5f2f4933be9292c8020e061), tree `a958a5fee303e489f641b7529ffaa296666e7a63`. All five jobs in the [exact-commit hosted CI run](https://github.com/ben-shin/spinflow/actions/runs/40940807897) passed:
+
+| Hosted job | Result |
+|---|---|
+| Ubuntu 24.04, Python 3.12 | 730 passed, 11 skipped, 3 deselected, 87 subtests; installed wheel and source distribution checks passed |
+| Ubuntu 24.04, Python 3.13 | 730 passed, 11 skipped, 3 deselected, 87 subtests; installed wheel and source distribution checks passed |
+| Python 3.13, Qt offscreen | 805 passed, 9 skipped, 101 subtests |
+| Python 3.13, plotting without Qt | 4 passed |
+| Public acquisition validation | 1 Bruker 1D, 16 Bruker 2D and 11 Varian/hard-spectrum/crop tests passed, with their validators |
+
+The skips reflect unavailable public-data roots in those general jobs; deselections exclude GUI cases from the headless runs. They are not counted as acquired-data validation. The dedicated public job supplies its own data and checks. The separate final installed Linux validation passed 814 tests and 101 subtests without skips, as described above. Scientific and benchmark measurements remain attributed to the earlier v4 build, not the later code commit's rebuilt binary. The observed 5.463× and 3.905× median wall-time ratios show SpinFlow was slower in this one virtualized case. The published v0.2.0 prerelease remains unchanged and does not include this later source update.
