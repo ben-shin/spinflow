@@ -304,6 +304,35 @@ def _execution_records(dataset):
     return dataset.metadata, dataset.provenance
 
 
+def _operation_entry(axes, complex_axes, input_shape, output_shape, dtype, op, backend_info,
+                     *, output_axes, output_complex_axes, digital_filter_spec=None):
+    """Build the unchanged scientific history using scalar global array facts."""
+    name = op["op"]
+    entry = {"operation": op, "backend": backend_info, "input_shape": list(input_shape),
+             "output_shape": list(output_shape), "dtype": str(dtype)}
+    if digital_filter_spec is not None:
+        entry["digital_filter"] = digital_filter_spec
+    if name == "reference" and "spectral_width_hz" in op:
+        prior = next(axis for axis in axes if axis.id == op["axis"])
+        calibrated = next(axis for axis in output_axes if axis.id == op["axis"])
+        def grid(axis):
+            return {"size":axis.size, "start_hz":axis.start, "step_hz":axis.step,
+                    "spectral_width_hz":axis.size*abs(axis.step)}
+        entry["reference_calibration"] = {
+            "requested_spectral_width_hz":op["spectral_width_hz"],
+            "width_definition":"current grid size times absolute bin spacing; scale about zero Hz",
+            "prior_grid":grid(prior), "new_grid":grid(calibrated),
+            "acquisition_dwell_seconds":prior.dwell_seconds}
+    if name == "discard_imaginary":
+        mask = 1 << complex_axes.index(op["axis"])
+        selected = [c for c in range(input_shape[0]) if not c & mask]
+        entry["losses"] = ["discarded_imaginary_quadrature"]
+        entry["discard_imaginary"] = {"axis":op["axis"], "input_complex_axes":list(complex_axes),
+                                      "output_complex_axes":list(output_complex_axes), "retained_input_components":selected,
+                                      "input_axis_encoding":next(axis.encoding for axis in axes if axis.id == op["axis"])}
+    return entry
+
+
 def _execute(dataset, op, new_axes, new_bits, new_metadata, backend, threads, backend_info,
              *, public=True, buffers=None):
     name = op["op"]
@@ -397,26 +426,13 @@ def _execute(dataset, op, new_axes, new_bits, new_metadata, backend, threads, ba
     if (legacy_boundary or (not public and name in {"window", "phase", "fft", "digital_filter"})) and not np.isfinite(result).all():
         raise NMRNextError("NUMERICAL_OVERFLOW", f"Operation {name} produced nonfinite values")
     metadata = new_metadata
-    entry = {"operation": op, "backend": backend_info, "input_shape": list(data.shape),
-             "output_shape": list(result.shape), "dtype": str(result.dtype)}
-    if spec is not None:
-        entry["digital_filter"] = spec
-    if name == "reference" and "spectral_width_hz" in op:
-        prior = dataset.axis(op["axis"])
-        calibrated = next(a for a in new_axes if a.id == op["axis"])
-        def grid(a):
-            return {"size":a.size, "start_hz":a.start, "step_hz":a.step,
-                    "spectral_width_hz":a.size*abs(a.step)}
-        entry["reference_calibration"] = {
-            "requested_spectral_width_hz":op["spectral_width_hz"],
-            "width_definition":"current grid size times absolute bin spacing; scale about zero Hz",
-            "prior_grid":grid(prior), "new_grid":grid(calibrated),
-            "acquisition_dwell_seconds":prior.dwell_seconds}
-    if name == "discard_imaginary":
-        entry["losses"] = ["discarded_imaginary_quadrature"]
-        entry["discard_imaginary"] = {"axis":op["axis"], "input_complex_axes":list(dataset.complex_axes),
-                                      "output_complex_axes":list(new_bits), "retained_input_components":selected,
-                                      "input_axis_encoding":dataset.axis(op["axis"]).encoding}
+    entry_axes = dataset.axes
+    if legacy_boundary and (name == "discard_imaginary" or (name == "reference" and "spectral_width_hz" in op)):
+        # Preserve the pre-extraction public axis() annotation hook too.
+        entry_axes = tuple(dataset.axis(axis.id) if axis.id == op["axis"] else axis for axis in entry_axes)
+    entry = _operation_entry(entry_axes, dataset.complex_axes, data.shape, result.shape,
+                             result.dtype, op, backend_info, output_axes=new_axes,
+                             output_complex_axes=new_bits, digital_filter_spec=spec)
     history = provenance+[entry]
     if name == "reference" and _has_immutable_storage(dataset):
         return dataset._share_samples(new_axes, new_bits, metadata, history)

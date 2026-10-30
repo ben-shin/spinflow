@@ -1,0 +1,62 @@
+{
+  "status": "GRACEFUL_SHUTDOWN_COMPLETE_CLOSED_EVIDENCE_RETAINED",
+  "new_vm": "NewS17qcow2 overlay over CLOSED S16 read-only backing, newUEFI/logs; onlynewS17overlay expanded48\u2192128GiB beforealltimings; physical1CPU4GiB unchanged.",
+  "retention": "Allprimary112trialbinaries/observations andsupersededv1/v2diagnostic/source/build/sciencerecords retained; no outputs deleted; no hostglobalsetting changes.",
+  "closed_history": "S16closedserialSHA46f32ddb2de7a10dfdae089a46c48ffe390f66e33db42978b809972255d34fec verified unchanged. S15historicalseals remainqualified1550unchangedmembers+previouslyauthorizedsealedserialprefix/shutdownappend; S16twohistoricalhardware-snapshotlossqualification remains in earlierreport, not repaired or rewritten.",
+  "rss_scope_adjudication": {
+    "judge_note": {
+      "path": "C:\\Users\\Ben\\Desktop\\spinflow\\.artifacts\\blocks\\judge\\rss-method-adjudication-v2.md",
+      "bytes": 4409,
+      "sha256": "4feb41a2f05e018d89cc94b87daf3485a1c61a55c536a8a7db3fdf3f7d790506"
+    },
+    "decision": "No new collector required for frozen lifetime-RSS scope; preserve112rawmetrics and explicitly qualify fork floor; no small-control/postexec/flat-scaling claims"
+  },
+  "raw_reports_archive": {
+    "path": "C:\\Users\\Ben\\Desktop\\spinflow\\.artifacts\\blocks\\reports-v2.tar",
+    "bytes": 30965760,
+    "sha256": "a831fded85055122b33e7d61a84c93685922c23b386188b455ca1f6c9a9017e1"
+  },
+  "private_endpoints": {
+    "path": "C:\\Users\\Ben\\Desktop\\spinflow\\.artifacts\\blocks\\final-products-v2\\manifest.json",
+    "bytes": 2568,
+    "sha256": "77ca3b079d33f9e50f69cca09a13c331f79e9d67d83b1bc14eb09eee0ee760f4"
+  },
+  "final_guest_graph_audit": {
+    "receipt": {
+      "path": "C:\\Users\\Ben\\Desktop\\spinflow\\.artifacts\\blocks\\guest-evidence-v2\\final-graph-audit-v2.json",
+      "bytes": 412021,
+      "sha256": "80e374528be4546ed053437b873a8feb6ea29b24d590f859e88f0d71c17bb119"
+    },
+    "verified_references": 1430,
+    "trial_output_hashes": 112,
+    "agreement_reports": 56,
+    "errors": 0,
+    "conflicts": 0
+  },
+  "closure": {
+    "status": "GRACEFUL_SHUTDOWN_COMPLETE",
+    "utc": "2026-10-30T14:49:02.3325414Z",
+    "owned_pid": 55180,
+    "process_exited": true,
+    "port22231_closed": true,
+    "scientific_jobs_before_shutdown": 0,
+    "force_kill_used": false,
+    "outputs_deleted": 0,
+    "all112_trial_outputs_retained": true,
+    "old_backings_read_only": true,
+    "host_global_settings_changed": false,
+    "old_s16_closed_serial_unchanged": true,
+    "closed_serial_path": "C:/Users/Ben/Desktop/spinflow/.artifacts/blocks/runtime/run-02-128g/serial.log",
+    "closed_serial_bytes": 69110,
+    "closed_serial_sha256": "3fb298768fe002e7f2f3441cdd3cfed9baa862c8d0d4fdd6d2be446195074ce9",
+    "final_graph_status": "PASS",
+    "four_private_host_endpoint_hashes_verified": true
+  },
+  "closure_receipt": {
+    "path": "C:\\Users\\Ben\\Desktop\\spinflow\\.artifacts\\blocks\\runtime\\final-closure-v2\\closure.json",
+    "bytes": 804,
+    "sha256": "8ebbe91ac1d82a407ca87c43e7a93575c1d1030ba0884f754fa553c9d8d1d7bd"
+  },
+  "precheck_failure": "FirstprivateclosureprecheckstoppedbeforepoweroffwhenWindowsargumenttransportremovedregexquotes;failedrecordsretained,correctedplainprocesslistinPowerShellusedfreshclosure-v2paths.No forcekill/deletion orsource/harness/timingchange.",
+  "live_log_policy": "All runtime serial/QEMUlogs closed by actual graceful shutdown before final seal; no live log sealed as immutable. OpaqueVMdisk/UEFI/large unrelated testtemps excluded from explicit source/evidence seal."
+}

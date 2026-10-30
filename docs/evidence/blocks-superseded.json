@@ -1,0 +1,30 @@
+{
+  "v1_source": {
+    "path": "C:\\Users\\Ben\\Desktop\\spinflow\\.artifacts\\blocks\\candidates\\v1\\source-candidate-v1.tar",
+    "bytes": 6420480,
+    "sha256": "617f86f18059e3ca68d5be74a0623c6d6ce33166e144f23ed8f9f506de6cc2bb"
+  },
+  "v1_wheel": {
+    "path": "C:\\Users\\Ben\\Desktop\\spinflow\\.artifacts\\blocks\\candidates\\v1\\linux-dist\\spinflow-0.2.0-cp312-cp312-linux_x86_64.whl",
+    "bytes": 339600,
+    "sha256": "2339e4979e038e293767ffcbc32567506e668b5c9f7ce9db4653dec5a4c873c8"
+  },
+  "scope": "V1 was diagnostic only:14observations/7singlepairs,14prefixes,7independentFFTaxischecks andprofiles, allretained separately; nofinal7pairv1cohort/no mixing/selectiveoutlierexclusion.",
+  "v1_diagnostic_receipt": {
+    "path": "C:\\Users\\Ben\\Desktop\\spinflow\\.artifacts\\blocks\\diagnostic-v1-receipt.json",
+    "bytes": 5916,
+    "sha256": "ef302b5362fe98acf28da671b1ae6cbb0728699108a1ecbd41f628bb45a15eb6"
+  },
+  "repair_round": 1,
+  "repairs": [
+    "O(rank) wrapper scanner replacing materialized itertools.product ranges",
+    "Keep verified owned UNBUFFERED file descriptors through h5py fileobj writing; preserve replacement foreign paths",
+    "API elapsed includes cleanup with explicit scope"
+  ],
+  "math_engine_native_change": "None between v1 and v2; repaired v2 separatelybuilt/retested/reprofiled/remeasuredall7cases.",
+  "authoring_diagnostics": [
+    "Pre-freeze anchor serialization NumPyint64\u2192plainint correction, failed empty anchor-v1 retained",
+    "First private v2 build shell launch stopped on Windows CRLF before extraction/build; failed driver retained, explicit-LF corrected driver used; no product/harness/input change"
+  ],
+  "new_s17_hardware_history": "All baseline/v1/v2/finalcohort snapshots uniquely named and retained; no hardware-current overwrite."
+}

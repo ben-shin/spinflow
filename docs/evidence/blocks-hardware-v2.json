@@ -1,0 +1,18 @@
+{
+  "utc": "2026-10-30T14:20:34.443826+00:00",
+  "platform": "Linux-6.8.0-147-generic-x86_64-with-glibc2.39",
+  "cpuinfo": "processor\t: 0\nvendor_id\t: AuthenticAMD\ncpu family\t: 26\nmodel\t\t: 68\nmodel name\t: AMD Ryzen 7 9800X3D 8-Core Processor\nstepping\t: 0\nmicrocode\t: 0xffffffff\ncpu MHz\t\t: 4691.073\ncache size\t: 1024 KB\nphysical id\t: 0\nsiblings\t: 1\ncore id\t\t: 0\ncpu cores\t: 1\napicid\t\t: 0\ninitial apicid\t: 0\nfpu\t\t: yes\nfpu_exception\t: yes\ncpuid level\t: 13\nwp\t\t: yes\nflags\t\t: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm rep_good nopl cpuid extd_apicid tsc_known_freq pni pclmulqdq ssse3 fma cx16 sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand hypervisor lahf_lm cmp_legacy svm cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw perfctr_core ssbd ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 erms invpcid avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves user_shstk avx_vnni avx512_bf16 clzero xsaveerptr arat npt nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold v_vmsave_vmload avx512vbmi umip avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg avx512_vpopcntdq rdpid fsrm avx512_vp2intersect\nbugs\t\t: sysret_ss_attrs null_seg spectre_v1 spectre_v2 spec_store_bypass ibpb_no_ret\nbogomips\t: 9382.14\nTLB size\t: 192 4K pages\nclflush size\t: 64\ncache_alignment\t: 64\naddress sizes\t: 40 bits physical, 48 bits virtual\npower management:\n\n",
+  "meminfo": "MemTotal:        4004108 kB\nMemFree:          139548 kB\nMemAvailable:    3562816 kB\nBuffers:            7292 kB\nCached:          3521124 kB\nSwapCached:            0 kB\nActive:          1309592 kB\nInactive:        2237716 kB\nActive(anon):      28552 kB\nInactive(anon):     9776 kB\nActive(file):    1281040 kB\nInactive(file):  2227940 kB\nUnevictable:       18756 kB\nMlocked:               0 kB\nSwapTotal:             0 kB\nSwapFree:              0 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:            248040 kB\nWriteback:             0 kB\nAnonPages:         37660 kB\nMapped:            40860 kB\nShmem:              4668 kB\nKReclaimable:     206544 kB\nSlab:             256980 kB\nSReclaimable:     206544 kB\nSUnreclaim:        50436 kB\nKernelStack:        1520 kB\nPageTables:         1620 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:     2002052 kB\nCommitted_AS:      92804 kB\nVmallocTotal:   34359738367 kB\nVmallocUsed:       15856 kB\nVmallocChunk:          0 kB\nPercpu:              548 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nUnaccepted:            0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:       47244 kB\nDirectMap2M:     4141056 kB\nDirectMap1G:     2097152 kB\n",
+  "swaps": "Filename\t\t\t\tType\t\tSize\t\tUsed\t\tPriority\n",
+  "cpu_count": 1,
+  "cpu_affinity": [
+    0
+  ],
+  "pool_environment": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1"
+  },
+  "virtualization": "QEMUq35WHPXnewS17overlay128GiB/physical4GiB/1vCPU;hostlogicalCPU2affinitymask4;oldS16/S15backingsread-only;hostload/thermal/SMTsiblinguncontrolled"
+}

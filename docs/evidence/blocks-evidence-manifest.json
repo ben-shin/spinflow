@@ -1,0 +1,47 @@
+{
+  "scope": "PublicS17factualresultsevidence;primarySHArawUTF8LFbytes;futureGitmappingseparateavoidsdependencycycle",
+  "files": [
+    {
+      "path": "C:\\Users\\Ben\\Desktop\\spinflow\\docs\\block-processing-results.md",
+      "bytes": 15081,
+      "sha256": "6699865feb74fde41cb49d21560961dcb89b40f8fa012dcdb965437cea780515"
+    },
+    {
+      "path": "C:\\Users\\Ben\\Desktop\\spinflow\\docs\\evidence\\blocks-v2.json",
+      "bytes": 2994069,
+      "sha256": "911a52791cefe9a3338193db1901581c42bf097bc4b39a94c073ab5b28c5af62"
+    },
+    {
+      "path": "C:\\Users\\Ben\\Desktop\\spinflow\\docs\\evidence\\blocks-science-v2.json",
+      "bytes": 244714,
+      "sha256": "1a0f2cc1236c1e4d435ac4fd730b2439a2157a1cb76020d2542a25471a6f2955"
+    },
+    {
+      "path": "C:\\Users\\Ben\\Desktop\\spinflow\\docs\\evidence\\blocks-runtime-v2.json",
+      "bytes": 400496,
+      "sha256": "d85965d283258b464fd5a8c80f913cf8ee84b1536bbec7b7ee066909ed80f9ad"
+    },
+    {
+      "path": "C:\\Users\\Ben\\Desktop\\spinflow\\docs\\evidence\\blocks-profiles-v2.json",
+      "bytes": 227829,
+      "sha256": "d9ee9c64b33ea5fd350ab3765dac857752128db7d7dad143b343b6cc1662c29e"
+    },
+    {
+      "path": "C:\\Users\\Ben\\Desktop\\spinflow\\docs\\evidence\\blocks-operational.json",
+      "bytes": 3579,
+      "sha256": "3cbc62b1ee549d1a12fedc38a13c7f0cc5f566d684f233103c045d6382754e15"
+    },
+    {
+      "path": "C:\\Users\\Ben\\Desktop\\spinflow\\docs\\evidence\\blocks-hardware-v2.json",
+      "bytes": 3663,
+      "sha256": "a6a1a0ea72f97f26b13a19c4199ad2ac0dd51d81736e34c98d4fafe1e5720120"
+    },
+    {
+      "path": "C:\\Users\\Ben\\Desktop\\spinflow\\docs\\evidence\\blocks-superseded.json",
+      "bytes": 1811,
+      "sha256": "4d699f19470b848807c4d47ebe2326b02c3c2c17cec65db65b2d0d1ae6e2f803"
+    }
+  ],
+  "binary_redistribution": "No vendor/acquired spectrum binaries included",
+  "source_map": "blocks-source-map.json produced separately by integration after review/staging"
+}

@@ -66,7 +66,7 @@ def _json_file(path, *, analysis=False):
 
 
 def _load_recipe(args):
-    override_memory=_memory(args.memory)
+    override_memory=_memory(args.memory if args.memory is not None else getattr(args, 'block_memory', None))
     path=Path(args.recipe).resolve()
     recipe=_json_file(path)
     if not isinstance(recipe,dict) or recipe.get("schema_version") != "1":
@@ -485,6 +485,17 @@ def _dispatch(args):
         return write_dataset(dataset,args.output,format=fmt,allow_losses=args.allow_loss),0
     if args.command in ("plan","run"):
         recipe,source,target,memory,backend,threads=config
+        if args.block_memory is not None:
+            from .blocks import plan_file_operations, process_to_file
+            block_memory = _memory(args.block_memory)
+            if args.command == 'plan':
+                return plan_file_operations(source, recipe['operations'], backend=backend, threads=threads,
+                                            memory_bytes=block_memory, input_format=recipe.get('input_format'),
+                                            output_format=_format(target, recipe.get('output_format')),
+                                            output_path=target), 0
+            return process_to_file(source, target, recipe['operations'], backend=backend, threads=threads,
+                                   memory_bytes=block_memory, input_format=recipe.get('input_format'),
+                                   output_format=_format(target, recipe.get('output_format'))), 0
         if args.command == "run" and target.exists():
             raise NMRNextError("OUTPUT_EXISTS",f"Output already exists: {target}; choose a new output path")
         header=describe_dataset(source,format=recipe.get("input_format"))
@@ -559,7 +570,10 @@ def _parser():
     inspect.add_argument("input");inspect.add_argument("--format");inspect.add_argument("--json",action="store_true");inspect.add_argument("--memory")
     for command in ("plan","run"):
         p=sub.add_parser(command,help="Validate" if command=="plan" else "Execute a JSON recipe")
-        p.add_argument("recipe");p.add_argument("--backend",choices=["native","numpy"]);p.add_argument("--threads",type=int);p.add_argument("--memory")
+        p.add_argument("recipe");p.add_argument("--backend",choices=["native","numpy"]);p.add_argument("--threads",type=int)
+        budgets = p.add_mutually_exclusive_group()
+        budgets.add_argument("--memory")
+        budgets.add_argument("--block-memory", help="Use bounded native HDF5 file processing with this working-array budget")
         if command=="plan":p.add_argument("--explain",action="store_true",help="JSON plan always includes explanations")
     conv=sub.add_parser("convert",help="Preflight or convert with explicit loss permission")
     conv.add_argument("input");conv.add_argument("output");conv.add_argument("--input-format");conv.add_argument("--format")
