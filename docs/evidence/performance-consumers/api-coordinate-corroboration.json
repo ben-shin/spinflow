@@ -1,0 +1,75 @@
+{
+  "status": "PASS",
+  "coordinate_gate_ppm": 2e-05,
+  "endpoint_errors_axis0_axis1": [
+    [
+      1.52587890625e-05,
+      1.52587890625e-05
+    ],
+    [
+      1.52587890625e-05,
+      1.52587890625e-05
+    ]
+  ],
+  "candidate_first_reopen_metadata_exact": true,
+  "data_size": [
+    2048,
+    4096
+  ],
+  "axis_order": [
+    1,
+    0
+  ],
+  "candidate_nuclei": [
+    "N15",
+    "C13"
+  ],
+  "reference_nuclei": [
+    "15N",
+    "13C"
+  ],
+  "scale_offset": [
+    0.0,
+    0.0
+  ],
+  "contours": {
+    "negative_levels": {
+      "color": "green",
+      "factor": 1.2,
+      "levels": 20,
+      "lowest": -30000.0
+    },
+    "positive_levels": {
+      "color": "red",
+      "factor": 1.2,
+      "levels": 20,
+      "lowest": 30000.0
+    }
+  },
+  "candidate_region": [
+    [
+      65.20878479937855,
+      -143.80335578996264
+    ],
+    [
+      174.8447745507687,
+      253.9004751626006
+    ]
+  ],
+  "reference_region": [
+    [
+      65.20876954058949,
+      -143.8033710487517
+    ],
+    [
+      174.84475929197964,
+      253.90045990381154
+    ]
+  ],
+  "sources": {
+    "candidate_api": "023e95bb4fec57ce8099b02bd22c9cddf9f9eced3645bba22fed069ddc0a2db1",
+    "reopened_api": "023e95bb4fec57ce8099b02bd22c9cddf9f9eced3645bba22fed069ddc0a2db1",
+    "retained_reference_api": "cad1696c75aa3d39d90d95407f83cfd8509fcc14f2e7e309e9951cf38e72bda8"
+  },
+  "scope": "Actual Sparky API endpoint corroboration, separate from pixel labels and the independently run complete-grid decoder."
+}

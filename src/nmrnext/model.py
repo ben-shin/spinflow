@@ -89,9 +89,26 @@ class Axis:
 
 class Dataset:
     """Owned immutable array with copied JSON metadata at public boundaries."""
-    __slots__ = ("_data", "_axes", "_complex_axes", "_metadata", "_provenance")
+    __slots__ = ("_data", "_dtype", "_shape", "_axes", "_complex_axes", "_metadata", "_provenance", "__weakref__")
 
     def __init__(self, data, axes, complex_axes=(), metadata=None, provenance=None):
+        axes, bits, expected = self._layout(axes, complex_axes)
+        arr = np.asarray(data)
+        if arr.dtype not in (np.dtype("float32"), np.dtype("float64")):
+            raise NMRNextError("INVALID_DTYPE", "Component arrays require real float32 or float64")
+        if arr.shape != expected:
+            raise NMRNextError("INVALID_SHAPE", f"Expected {expected}, received {arr.shape}")
+        if not np.isfinite(arr).all():
+            raise NMRNextError("NONFINITE_DATA", "Dataset contains NaN or infinity")
+        # Store no canonical ndarray: callers may change a read-only array's
+        # shape/dtype, including those of any exposed ndarray base.
+        self._data = arr.tobytes(order="C")
+        self._dtype, self._shape = arr.dtype, expected
+        self._axes, self._complex_axes = axes, bits
+        self._set_metadata(metadata, provenance)
+
+    @staticmethod
+    def _layout(axes, complex_axes):
         try:
             axes = tuple(axes)
             bits = tuple(complex_axes)
@@ -107,25 +124,32 @@ class Dataset:
         for a in axes:
             if a.id in bits and a.encoding in {"real", "none"}:
                 raise NMRNextError("INVALID_COMPONENTS", f"Axis {a.id} encoding contradicts quadrature data")
-        arr = np.asarray(data)
-        if arr.dtype not in (np.dtype("float32"), np.dtype("float64")):
-            raise NMRNextError("INVALID_DTYPE", "Component arrays require real float32 or float64")
-        expected = (2 ** len(bits), *(a.size for a in axes))
-        if arr.shape != expected:
-            raise NMRNextError("INVALID_SHAPE", f"Expected {expected}, received {arr.shape}")
-        if not np.isfinite(arr).all():
-            raise NMRNextError("NONFINITE_DATA", "Dataset contains NaN or infinity")
-        # A bytes owner prevents callers from simply turning writeability back on.
-        self._data = np.frombuffer(arr.tobytes(order="C"), dtype=arr.dtype).reshape(expected)
-        self._axes, self._complex_axes = axes, bits
+        return axes, bits, (2 ** len(bits), *(a.size for a in axes))
+
+    def _set_metadata(self, metadata, provenance):
         self._metadata = json_copy({} if metadata is None else metadata, "metadata")
         self._provenance = json_copy([] if provenance is None else provenance, "provenance")
         if not isinstance(self._metadata, dict) or not isinstance(self._provenance, list):
             raise NMRNextError("INVALID_METADATA", "Metadata is an object and provenance is a list")
 
+    def _share_samples(self, axes, complex_axes, metadata, provenance):
+        """Private metadata transition from an already validated bytes owner."""
+        if not _has_immutable_storage(self):
+            return Dataset(self.data, axes, complex_axes, metadata, provenance)
+        axes, bits, expected = self._layout(axes, complex_axes)
+        if any(type(axis) is not Axis for axis in axes):
+            return Dataset(self.data, axes, bits, metadata, provenance)
+        if expected != self._shape:
+            raise NMRNextError("INVALID_SHAPE", f"Expected {expected}, received {self._shape}")
+        result = Dataset.__new__(Dataset)
+        result._data, result._dtype, result._shape = self._data, self._dtype, self._shape
+        result._axes, result._complex_axes = axes, bits
+        result._set_metadata(metadata, provenance)
+        return result
+
     @property
     def data(self):
-        return self._data
+        return np.frombuffer(self._data, dtype=self._dtype).reshape(self._shape)
 
     @property
     def axes(self):
@@ -178,6 +202,15 @@ class Dataset:
                        record["metadata"], record["provenance"])
         except (KeyError, TypeError) as exc:
             raise NMRNextError("INVALID_METADATA", "Malformed numeric axis schema") from exc
+
+
+def _has_immutable_storage(dataset):
+    """Only exact built-in objects guarantee the private storage contract.
+
+    Dataset and Axis subclasses may override public properties or provide live
+    records; they retain validation through the public execution boundaries.
+    """
+    return type(dataset) is Dataset and all(type(axis) is Axis for axis in dataset.axes)
 
 
 @dataclass(frozen=True, slots=True, init=False)

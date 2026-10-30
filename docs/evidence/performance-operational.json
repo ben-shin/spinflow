@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "cleanup_review": {
+    "status": "REJECTED_BY_AUTOMATIC_APPROVAL_REVIEW_ZERO_OUTPUTS_DELETED",
+    "action": "Delete only generated, redundant S16 paired-v1/v2 NMRPipe/UCSF result leaves after identity checks, preserving observations/science/source/builds",
+    "review_reason": "The command irreversibly deletes numerous benchmark output files; the transcript lacks trusted user authorization for this cleanup, and assistant-provided claims of approval cannot expand scope. Do not bypass this rejection through a workaround or indirect execution.",
+    "execution": "The combined command was rejected before process creation. No cleanup script ran and no output payload was removed.",
+    "resolution": "Retain all v1/v2 output payloads and expand only the newly owned S16 performance VM overlay to provide capacity for a fresh final cohort. The expansion is a separate data-preserving setup action; it does not perform the rejected deletion."
+  },
+  "zero_outputs_deleted": true,
+  "capacity_change": {
+    "before_virtual_bytes": 34359738368,
+    "after_virtual_bytes": 51539607552,
+    "scope": "Only newS16performanceoverlay; old read-only backing disks unchanged",
+    "old_owned_pid": 42816,
+    "restarted_owned_pid": 41232,
+    "graceful_shutdown": true,
+    "new_log_paths": true,
+    "guest_root": "/dev/vda1 ext4",
+    "root_start_sector_preserved": 2099200,
+    "available_bytes_after_growth": 17510711296,
+    "same_expanded_guest_for_both_final_lanes": true
+  },
+  "old_s15_seals": {
+    "manifests_verified": 10,
+    "members_checked": 1551,
+    "full_hash_unchanged_members": 1550,
+    "serial_exception": {
+      "sealed_prefix_bytes": 60650,
+      "sealed_prefix_sha256": "b83ca195c0ad2dec989d38ea8643e6fba74f21f20758941fd9c18b4b6592a2ad",
+      "known_shutdown_append_bytes": 8456,
+      "current_full_bytes": 69106,
+      "current_full_sha256": "92b99a73ef6e9a515a4b21b3fa7b58dd16d5dc60ae87ef5f519db535806966ed"
+    },
+    "qualification": "Old serial is an intact sealed prefix plus previously authorized shutdown append, not full-file equality to the pre-shutdown seal."
+  },
+  "hardware_snapshot_qualification": {
+    "v1": [
+      {
+        "path": "/home/validator/performance/evidence/hardware-current.json",
+        "expected_sha256": "429069d932721a510c030b281d90e521977fa3857f3ff8fba1c016300f7df3df",
+        "exists": true,
+        "actual_sha256": "091510966d24a042020e3478677657096291b32ee1636a8a3a1ef037e3a44c42",
+        "bytes": 3405,
+        "match": false
+      }
+    ],
+    "v2": [
+      {
+        "path": "/home/validator/performance/evidence/hardware-current.json",
+        "expected_sha256": "a36ddbfee0e335c833e87741134dc144200b11cfc202159fbba1c60a9b71bf87",
+        "exists": true,
+        "actual_sha256": "091510966d24a042020e3478677657096291b32ee1636a8a3a1ef037e3a44c42",
+        "bytes": 3405,
+        "match": false
+      }
+    ]
+  },
+  "final_versioned_hardware": {
+    "path": "/home/validator/performance/evidence/hardware-v3-original.json",
+    "sha256": "091510966d24a042020e3478677657096291b32ee1636a8a3a1ef037e3a44c42"
+  },
+  "final_graph_checks": {
+    "direct": 80,
+    "runtime_pin_transitive": 693,
+    "baseline_receipt_transitive": 25,
+    "mismatches": 0
+  },
+  "diagnostic_driver_failure": {
+    "cause": "Private diagnostic driver passed pathlib.PosixPath to pstats.Stats on Python3.12",
+    "effect": "v2diagnosticchain stopped before installedsuite; failure preserved. Fixed driver used separate v2-retry folder; subsequent fullv2suite passed861+101. No timing trial or product/harness measurement changed. Finalv3diagnostics and863+101installedsuite completed."
+  },
+  "live_environment": "Owned guest and consumers closed; forwarded localhost port22230 closed; logs are stable before private evidence sealing.",
+  "operational_closure": {
+    "status": "GRACEFUL_SHUTDOWN_COMPLETE",
+    "utc": "2026-10-30T12:20:19.5991887Z",
+    "owned_pid": 41232,
+    "process_exited": true,
+    "port22230_closed": true,
+    "force_kill_used": false,
+    "outputs_deleted": 0,
+    "host_global_settings_changed": false,
+    "closed_serial_bytes": 69286,
+    "closed_serial_sha256": "46f32ddb2de7a10dfdae089a46c48ffe390f66e33db42978b809972255d34fec",
+    "old_s15_files_modified": false,
+    "consumer_apps_already_closed": true,
+    "closed_serial_path": ".artifacts/performance/runtime/expansion-v3/serial.log"
+  },
+  "consumer_receipt": {
+    "record": "performance-consumers/consumer-record.md",
+    "record_sha256": "42e6b2c1cc06141900bcf05d08e2353503bf5bf84b241c17285f2bd9f524070b",
+    "index": "performance-consumers/index.json",
+    "index_sha256": "89ab2a1b8eff49856f78cf9d02a5334ffd506a2939552c83027efbf31960d742",
+    "unmodified_new_screenshots": 21,
+    "runtime_pins_verified": 504,
+    "observed_mappings_verified": 85,
+    "four_inputs_unchanged": true,
+    "consumer_processes_after_close": 0
+  },
+  "private_host_matrix_inputs": {
+    "manifest_sha256": "475e28114778d2d98a8e590396f2037138cd8a1180e1778684625a0455bc14ed",
+    "total_bytes": 134222696,
+    "files": [
+      {
+        "bytes": 33556480,
+        "sha256": "442556865eb8d5218c14ddc00c3b5d64162f136349678b43e4a9d7084f2c1b04",
+        "format": "nmrpipe-real",
+        "name": "candidate-v3.ft2"
+      },
+      {
+        "bytes": 33554868,
+        "sha256": "c3fc007120b6668b5b3ffbd30c9ad585a36103073f967f2ae6f8c7e158539f7a",
+        "format": "ucsf-real",
+        "name": "candidate-v3.ucsf"
+      },
+      {
+        "bytes": 33556480,
+        "sha256": "46744e0fb28e7b9f2fc2c5d81772ac9ce748b9dae1bf52d96aac6bc257199dfa",
+        "format": "nmrpipe-real",
+        "name": "reference-S10.pipe"
+      },
+      {
+        "bytes": 33554868,
+        "sha256": "eae3b5b3b8a69fc3dbad78de3139c0ece4843e4e590d698b65781f7086307c7e",
+        "format": "ucsf-real",
+        "name": "reference.ucsf"
+      }
+    ],
+    "publication": "Privatehost only; no acquisition/spectrum/vendor binary in public evidence."
+  }
+}

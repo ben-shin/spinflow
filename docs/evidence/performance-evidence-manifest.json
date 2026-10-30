@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "status": "FINAL_PUBLIC_MEASUREMENT_SCIENCE_CONSUMER_AND_CLOSURE_EVIDENCE",
+  "files": {
+    "performance-hardware-v3.json": {
+      "bytes": 3405,
+      "sha256": "091510966d24a042020e3478677657096291b32ee1636a8a3a1ef037e3a44c42",
+      "git_blob_sha1": "52dfdb566480c043789191a4547389ff12a85514",
+      "authoring_raw_bytes": 3405,
+      "authoring_raw_sha256": "091510966d24a042020e3478677657096291b32ee1636a8a3a1ef037e3a44c42",
+      "publication_transform": "none"
+    },
+    "performance-operational.json": {
+      "bytes": 5969,
+      "sha256": "8b9495886d4dd79caf6b8732fca1c86b5f2f8e4b27be1eacecaeda5e90335c5b",
+      "git_blob_sha1": "9c401cb105e4ca589ffd9c9699a5f8e4107672d6",
+      "authoring_raw_bytes": 6100,
+      "authoring_raw_sha256": "e629019e07906653fcd35b4a96088ef12ef8cc06a434d588afff556ee604c3ee",
+      "publication_transform": "CRLF-to-LF only"
+    },
+    "performance-profiles-v3.json": {
+      "bytes": 501386,
+      "sha256": "74c4632b5056d3d954d204edd9c0afe6806c4848cb35273497a9f2fc9b3660dc",
+      "git_blob_sha1": "4aaf089b092fe51969d0313b623b931172362974",
+      "authoring_raw_bytes": 513025,
+      "authoring_raw_sha256": "e7de87525d771a7d2dc2410db24262b372febd05e1adb85c2e8c3758c80af313",
+      "publication_transform": "CRLF-to-LF only"
+    },
+    "performance-runtime-v3.json": {
+      "bytes": 305164,
+      "sha256": "629850176c67dc03fdd0012655c6d80f6100182d0f21107524edc020cfe5c54c",
+      "git_blob_sha1": "6439c9a70ab166f75e2b9183a2e270940314de05",
+      "authoring_raw_bytes": 310829,
+      "authoring_raw_sha256": "1cfd753467786c084aae62d166a008c1e3f3714aacf16a2bd73a94a10a9cfcc9",
+      "publication_transform": "CRLF-to-LF only"
+    },
+    "performance-science-v3.json": {
+      "bytes": 116728,
+      "sha256": "091ca78ae8384d5e3e7d0517f2037cf8ebd5ec50f9a32c568aa962d26b407b08",
+      "git_blob_sha1": "e6e2e1993c4cbaa20a24e7b35d48e9b543db654e",
+      "authoring_raw_bytes": 120211,
+      "authoring_raw_sha256": "d41894e2d942c954f875241804b1ed98e9cc9807fd70f85c494c4f83840a1521",
+      "publication_transform": "CRLF-to-LF only"
+    },
+    "performance-superseded.json": {
+      "bytes": 531526,
+      "sha256": "c63589e9b7f02044e691377e828e0e58c34c9d67495498e758c051285c862efe",
+      "git_blob_sha1": "caf0e462be97846435bc0f6378c8e00ce2fab990",
+      "authoring_raw_bytes": 545379,
+      "authoring_raw_sha256": "fc54837154361adbd63de3cc983fdb817baf3e076ded10afb580f2b1e42abd6c",
+      "publication_transform": "CRLF-to-LF only"
+    },
+    "performance-v3.json": {
+      "bytes": 397383,
+      "sha256": "3e9c16cf967025e7228bd6bcb7d33b2caf2788b53a888f3cb577a206bb39b543",
+      "git_blob_sha1": "22afe2428a4803d6bad1eaf174fb01eeb9d352f0",
+      "authoring_raw_bytes": 408238,
+      "authoring_raw_sha256": "a05f1ef3f74f916a2d7a4421f63b1936dc793c2b42a23d1ef05433baca546a71",
+      "publication_transform": "CRLF-to-LF only"
+    }
+  },
+  "report": {
+    "path": "../performance-results.md",
+    "bytes": 18981,
+    "sha256": "f4d76f82b8a75f10b7341f5ae048436b25a1cd5136a1a93bf0b16166b10edda2",
+    "git_blob_sha1": "8b2fd71315024b5dbd50cd9e1c0742fae066a620",
+    "authoring_raw_bytes": 19121,
+    "authoring_raw_sha256": "fd5b6de323198a3faf76acb8c975e0594a3bb6212aead0348457f09f561dac52",
+    "publication_transform": "CRLF-to-LF only"
+  },
+  "consumer_receipt": {
+    "record": "performance-consumers/consumer-record.md",
+    "record_sha256": "42e6b2c1cc06141900bcf05d08e2353503bf5bf84b241c17285f2bd9f524070b",
+    "index": "performance-consumers/index.json",
+    "index_sha256": "7cd875d3f898cdc77d8472e51235cfddbc382e061c93120403d0546075dbe242",
+    "unmodified_new_screenshots": 21,
+    "runtime_pins_verified": 504,
+    "observed_mappings_verified": 85,
+    "four_inputs_unchanged": true,
+    "consumer_processes_after_close": 0,
+    "record_authoring_raw_sha256": "42e6b2c1cc06141900bcf05d08e2353503bf5bf84b241c17285f2bd9f524070b",
+    "record_git_blob_sha1": "0a0cde224cd1eabde63212e7fc1239d2e1c6d6f6",
+    "index_authoring_raw_sha256": "89ab2a1b8eff49856f78cf9d02a5334ffd506a2939552c83027efbf31960d742",
+    "index_git_blob_sha1": "a915508175f5f15aa18d383791c1a0a115fdb3e9"
+  },
+  "scope": "Measuredproductv3/completebefore-aftercohort; historical hardware loss and oldserialprefix qualification explicit; no vendor/acquisition/spectrum binaries. Publication source-map is separately owned and intentionally not hashed here to avoid a dependency cycle.",
+  "publication_hash_policy": "Primary bytes/sha256 fields identify the actual staged Git publication blob bytes. Original authoring raw-byte hashes are retained separately; differences are CRLF-to-LF only under repository text rules. Measured archive/wheel/runtime identities inside evidence are unchanged. No product file was rewritten."
+}

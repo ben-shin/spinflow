@@ -1,0 +1,189 @@
+{
+  "scope": "Actual pinned NMRDraw and Sparky reopening of final performance candidate v3; one previously exposed public case, no general compatibility claim.",
+  "candidate_source_archive_sha256": "60d732c38870695f3710f842bb7c4b10b117f72044fb8f8ed941b0ad2304ba71",
+  "candidate_wheel_sha256": "25b9c4cac4faec7ae225ac34fea5d10a6f0c71ab829f39cf4194f14d295b2920",
+  "source_runtime_verification_sha256": "98812130036a9e1222b65b8af1a5c15d3fd0b57cc627c2f5bd3eba6fa1bdffe0",
+  "images": [
+    {
+      "file": "01-nmrdraw-candidate-full.png",
+      "sha256": "b6f832ec7a4892839018c30c8f050db30a8eb1239163a54c0f070f2285deb38f",
+      "bytes": 32085,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "10-T49.png",
+      "sha256": "1838ac536f281d5baff4f66efa6829349ff1f14346d4bd9275781103392a30ca",
+      "bytes": 51798,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "11-T11.png",
+      "sha256": "1ead2068102b9a09408db1ae6f4d2140b2981317a636432596f6cbc8b06da91f",
+      "bytes": 49526,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "12-G14.png",
+      "sha256": "8fc9917f236aa3c114353e24e347f5a0ef27f9202a13b4024d60ee845551e948",
+      "bytes": 49785,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "13-E15.png",
+      "sha256": "4f6ebfc70f92971233485b06aac010625863cff87e7ba2b1505d0cc7d533af03",
+      "bytes": 51833,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "14-W43.png",
+      "sha256": "9c9b823e1f5646bfcc088ac0f039504c646e9bc615bf50a567c5bee488ebb44a",
+      "bytes": 52353,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "16-nmrdraw-reopened.png",
+      "sha256": "b6f832ec7a4892839018c30c8f050db30a8eb1239163a54c0f070f2285deb38f",
+      "bytes": 32085,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "21-sparky-start-display.png",
+      "sha256": "4138f088656b771953286b226562ce5238ed7b95d7ab77b494ee9b3143c9ecc0",
+      "bytes": 24742,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "72-all-consumers-closed.png",
+      "sha256": "c1214dd2dcf753b76e9a423215f1fa02bc2bbcb57b357a60b5260524da98238b",
+      "bytes": 4719,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-full.png",
+      "sha256": "7766d27b16c4335fd4eaee1cbc96eb4c08fc5c3c71ff0c76adae5baf203de7b5",
+      "bytes": 13458,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-T49.png",
+      "sha256": "ff11c843c9a1b5f71f960a0c7155e4ac24c3b5e1fd96103c7618639ae0906e36",
+      "bytes": 29439,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-T11.png",
+      "sha256": "c3cad1b62db9806e121ce4983e1f9ddf8ab984da310e0ba61f04dc72e25dcfb8",
+      "bytes": 27944,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-G14.png",
+      "sha256": "0fc74f66b0ab5889b85d36a6c77d4705754b3819ad0912b4f281060468794e9c",
+      "bytes": 27080,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-E15.png",
+      "sha256": "30b88f002fefeb92a9bb6c5c984593e50b91a2ac25ef88d3c12d6134c49a268d",
+      "bytes": 29543,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-W43.png",
+      "sha256": "1cee783e34a7bf8705b229dd3e4786ad269d18bc207980b0baf0c77af07dd3b4",
+      "bytes": 29777,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-reopen-full.png",
+      "sha256": "7f3a4ff35f59e3a07d51cd43dd220bb9cdb8f2a33dca75b41619d9a61301b94a",
+      "bytes": 13448,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-reopen-T49.png",
+      "sha256": "62c513c3ff935c7e479cfc157c33eac905457aa3849f5c06b15349ffc1105993",
+      "bytes": 29438,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-reopen-T11.png",
+      "sha256": "90bd64348b3a26631d40d71849f3e32121b14279a256c4568d44953d3f30595f",
+      "bytes": 27928,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-reopen-G14.png",
+      "sha256": "11b70b5f1f98b75e5db7599295d08be207975ff4b8060032b865c0c8ceef8f4d",
+      "bytes": 27029,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-reopen-E15.png",
+      "sha256": "1fe71fd063567905a571a1f0218b876a8d451a58d3840adff7764bc11365a356",
+      "bytes": 29548,
+      "unmodified_guest_screenshot": true
+    },
+    {
+      "file": "60-sparky-candidate-reopen-W43.png",
+      "sha256": "b612b13ffe87f3cda3b5169e758ae74ee3c33031837eb852f7199768160bb7e2",
+      "bytes": 29769,
+      "unmodified_guest_screenshot": true
+    }
+  ],
+  "retained_reference_images": [
+    {
+      "file": "../laboratory-consumers/reference-28-reference-full.png",
+      "sha256": "c40255d15b3ddf3e188910da0ea6690194ad2e65bfa14ecac63817e5717a5117"
+    },
+    {
+      "file": "../laboratory-consumers/reference-31-reference-T49.png",
+      "sha256": "53fe1cef63cf9542fc1ffc092b2bf8af83c4db3367e5e5b54fefdab974b068db"
+    },
+    {
+      "file": "../laboratory-consumers/reference-32-reference-T11.png",
+      "sha256": "eb627b5721722288b59b9d755f4d82276cd548a6e61c8a48e39f2b9418c7b398"
+    },
+    {
+      "file": "../laboratory-consumers/reference-33-reference-G14.png",
+      "sha256": "09ec6ba3065f4c318c5730b96eed2fa69ddcd08601897f63fc4b7feb6ad9a50e"
+    },
+    {
+      "file": "../laboratory-consumers/reference-34-reference-E15.png",
+      "sha256": "46df94495e0d7e72605ddf98898bd29855fd533fca6b5692aca106a55b725a9a"
+    },
+    {
+      "file": "../laboratory-consumers/reference-35-reference-W43.png",
+      "sha256": "d8313bc6da030573f4dedd3734edeb19c1d1797c30f5cff02616595e824b5409"
+    },
+    {
+      "file": "../laboratory-consumers/reference-60-sparky-reference-E15.png",
+      "sha256": "3c56a19780773f1ef233bbed87e8cd29425f099d1124b61b72357301ffb63550"
+    },
+    {
+      "file": "../laboratory-consumers/reference-60-sparky-reference-full.png",
+      "sha256": "f556ee24ec2b446c0e9e1bf8b63de7865c2a6f9ea90b3d5911823a492ebc0d1c"
+    },
+    {
+      "file": "../laboratory-consumers/reference-60-sparky-reference-G14.png",
+      "sha256": "78d0fad5dd1713f869b5bc447997b17108eea5dab843a1c03c1124c01dffbb5d"
+    },
+    {
+      "file": "../laboratory-consumers/reference-60-sparky-reference-T11.png",
+      "sha256": "ffbbf6063c775acf4561743458ff60c283bd818d839d96026329d5633f321972"
+    },
+    {
+      "file": "../laboratory-consumers/reference-60-sparky-reference-T49.png",
+      "sha256": "ad62d150697b19d2b2534ae9cf743f187736334e239b3c51d7a09811e89963bc"
+    },
+    {
+      "file": "../laboratory-consumers/reference-60-sparky-reference-W43.png",
+      "sha256": "22f8bb4d1bdf07e473c81550f55889c42cb8b106230ac7e60d9f97b4e066f43d"
+    },
+    {
+      "file": "../laboratory-consumers/reference-65-nmrdraw-reference-reopened.png",
+      "sha256": "c40255d15b3ddf3e188910da0ea6690194ad2e65bfa14ecac63817e5717a5117"
+    }
+  ],
+  "consumer_record_sha256": "42e6b2c1cc06141900bcf05d08e2353503bf5bf84b241c17285f2bd9f524070b"
+}

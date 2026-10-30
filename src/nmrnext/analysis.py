@@ -78,18 +78,8 @@ def dataset_digest(dataset):
     overrides are included because they change complex-line interpretation;
     equivalent explicit and legacy-derived forms have the same identity. Hashing uses the immutable buffer without a data copy.
     """
-    if not isinstance(dataset, Dataset):
-        raise NMRNextError("INVALID_DATASET", "Digest requires a Dataset")
-    header = {"axes": [a.to_dict() for a in dataset.axes], "complex_axes": list(dataset.complex_axes),
-              "dtype": dataset.data.dtype.str, "shape": list(dataset.data.shape)}
-    orientation = quadrature_index_orientation(dataset)
-    overrides = {a.id: orientation[a.id] for a in dataset.axes if a.id in orientation
-                 and orientation[a.id] != (1 if a.step > 0 else -1)}
-    if overrides:
-        header["quadrature_index_orientation"] = overrides
-    digest = hashlib.sha256(json.dumps(header, sort_keys=True, separators=(",", ":"), allow_nan=False).encode())
-    digest.update(memoryview(dataset.data).cast("B"))
-    return digest.hexdigest()
+    from ._identity import numeric_digest
+    return numeric_digest(dataset)
 
 
 def _report(dataset, kind, parameters):

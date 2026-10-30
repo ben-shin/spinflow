@@ -17,7 +17,7 @@ import pyqtgraph as pg
 from .demo import generate_demo
 from .errors import NMRNextError
 from .io import export_preflight, read_dataset, write_dataset
-from .operations import run_operations
+from ._execution_cache import RecipeCache
 from .planning import plan_operations
 from .workflow_bundle import export_workflow_bundle
 
@@ -210,6 +210,7 @@ class Workbench(QtWidgets.QMainWindow):
         self._suspend_preview_invalidation = False
         self._axis_settings = {}
         self.analysis_reports = {}
+        self._recipe_cache = RecipeCache()
         self._build_ui()
         self._style()
         self._refresh()
@@ -899,6 +900,7 @@ class Workbench(QtWidgets.QMainWindow):
             self.view_combo.blockSignals(False)
             self._refresh()
             self._set_status(f"Loaded {name}. Original data is preserved.")
+            self._recipe_cache.clear()
         except Exception:
             (self.source, self.current, self.preview, self.source_name,
              self.last_operations, self.last_plan, self.last_backend, self.last_memory_bytes,
@@ -929,6 +931,7 @@ class Workbench(QtWidgets.QMainWindow):
     def reset(self):
         if self.source is None:
             return
+        self._recipe_cache.clear()
         self.current = self.source
         self.preview = None
         self.last_operations = []
@@ -1091,8 +1094,7 @@ class Workbench(QtWidgets.QMainWindow):
         ops = self.build_recipe()
         backend = self.backend_combo.currentData()
         memory = self.memory_spin.value() * 1024**2
-        plan = plan_operations(self.source, ops, backend=backend, memory_bytes=memory)
-        result = run_operations(self.source, ops, backend=backend, memory_bytes=memory)
+        result, plan = self._recipe_cache.run(self.source, ops, backend=backend, memory_bytes=memory)
         if preview:
             self.preview = result
             self._set_status("Complete recipe preview. Process to make it the current result.")
@@ -1119,8 +1121,7 @@ class Workbench(QtWidgets.QMainWindow):
         source = self.source
         memory = self.memory_spin.value() * 1024**2
         def work():
-            plan = plan_operations(source, ops, backend=backend, memory_bytes=memory)
-            return run_operations(source, ops, backend=backend, memory_bytes=memory), plan
+            return self._recipe_cache.run(source, ops, backend=backend, memory_bytes=memory)
         def done(value):
             result, plan = value
             if preview:

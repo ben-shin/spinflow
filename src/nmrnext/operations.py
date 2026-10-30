@@ -7,7 +7,7 @@ import sys
 import numpy as np
 
 from .errors import NMRNextError
-from .model import Dataset, finite, positive_int
+from .model import Dataset, _has_immutable_storage, finite, positive_int
 from .bruker import correction_spec, corrected_metadata, correct_samples
 
 
@@ -70,8 +70,10 @@ def _quadrature_orientation(axis_records, complex_axes, metadata, history):
 
 def _transition_metadata(axes, complex_axes, metadata, provenance, op):
     """Pure state transition shared by header plans and numeric execution."""
-    from copy import deepcopy
-    result = deepcopy(metadata)
+    # Ordinary transitions replace only top-level orientation state. Nested
+    # validated vendor records are read-only internally and copied at public
+    # Dataset boundaries. Filter correction explicitly copies its nested edits.
+    result = dict(metadata)
     orientation = _quadrature_orientation(axes, complex_axes, metadata, provenance)
     if op["op"] == "fft":
         if op["inverse"]:
@@ -272,10 +274,42 @@ def _pairs(dataset, axis_id):
             yield real, real | mask
 
 
-def _execute(dataset, op, new_axes, new_bits, new_metadata, backend, threads, backend_info):
+class _ExecutionState:
+    """Private recipe state; writable samples never cross a public boundary."""
+    __slots__ = ("data", "axes", "complex_axes", "metadata", "provenance")
+
+    def __init__(self, data, axes, complex_axes, metadata, provenance):
+        self.data, self.axes, self.complex_axes = data, axes, complex_axes
+        self.metadata, self.provenance = metadata, provenance
+
+    axis_index = Dataset.axis_index
+    axis = Dataset.axis
+
+
+class _ExecutionBuffers:
+    """One complex packing buffer, reused within a single synchronous run."""
+    def __init__(self):
+        self.complex = None
+
+    def complex_array(self, shape, dtype):
+        dtype = np.dtype(np.complex64 if dtype == np.float32 else np.complex128)
+        if self.complex is None or self.complex.shape != shape or self.complex.dtype != dtype:
+            self.complex = np.empty(shape, dtype=dtype)
+        return self.complex
+
+
+def _execution_records(dataset):
+    if _has_immutable_storage(dataset):
+        return dataset._metadata, dataset._provenance
+    return dataset.metadata, dataset.provenance
+
+
+def _execute(dataset, op, new_axes, new_bits, new_metadata, backend, threads, backend_info,
+             *, public=True, buffers=None):
     name = op["op"]
     data = dataset.data
-    metadata = dataset.metadata
+    metadata, provenance = _execution_records(dataset)
+    reusable = isinstance(dataset, _ExecutionState) and data.flags.writeable
     spec = None
     if name == "reference":
         result = data
@@ -331,11 +365,18 @@ def _execute(dataset, op, new_axes, new_bits, new_metadata, backend, threads, ba
                     window = np.where(rounded_negative, 0., sine)**op["power"]
             window[0] *= op["first_point_scale"]
             shape = [1]*data.ndim; shape[i+1] = a.size
-            result = data*window.astype(data.dtype).reshape(shape)
+            weights = window.astype(data.dtype).reshape(shape)
+            result = np.multiply(data, weights, out=data if reusable else None)
         else:
-            result = np.empty_like(data)
+            result = data if reusable else np.empty_like(data)
+            buffers = _ExecutionBuffers() if buffers is None else buffers
+            packed = buffers.complex_array(data.shape[1:], data.dtype)
+            if name == "phase":
+                phase = np.deg2rad(op["p0"]+op["p1"]*(np.arange(a.size)-op["pivot"])/a.size)
+                shape = [1]*packed.ndim; shape[i] = a.size
+                phase_factor = np.exp(1j*phase).reshape(shape)
             for real, imag in _pairs(dataset, a.id):
-                z = np.empty(data.shape[1:], dtype=np.complex64 if data.dtype == np.float32 else np.complex128)
+                z = packed
                 z.real, z.imag = data[real], data[imag]
                 if name == "fft":
                     inv = op["inverse"]
@@ -348,11 +389,12 @@ def _execute(dataset, op, new_axes, new_bits, new_metadata, backend, threads, ba
                     if not inv:
                         transformed = np.fft.fftshift(transformed, axes=i)
                 else:
-                    phase = np.deg2rad(op["p0"]+op["p1"]*(np.arange(a.size)-op["pivot"])/a.size)
-                    shape = [1]*z.ndim; shape[i] = a.size
-                    transformed = z*np.exp(1j*phase).reshape(shape)
+                    transformed = z*phase_factor
                 result[real], result[imag] = transformed.real, transformed.imag
-    if not np.isfinite(result).all():
+    # Public construction checks once while freezing. Private arithmetic needs
+    # its own check before another operation can hide a nonfinite result.
+    legacy_boundary = isinstance(dataset, Dataset) and not _has_immutable_storage(dataset)
+    if (legacy_boundary or (not public and name in {"window", "phase", "fft", "digital_filter"})) and not np.isfinite(result).all():
         raise NMRNextError("NUMERICAL_OVERFLOW", f"Operation {name} produced nonfinite values")
     metadata = new_metadata
     entry = {"operation": op, "backend": backend_info, "input_shape": list(data.shape),
@@ -375,7 +417,17 @@ def _execute(dataset, op, new_axes, new_bits, new_metadata, backend, threads, ba
         entry["discard_imaginary"] = {"axis":op["axis"], "input_complex_axes":list(dataset.complex_axes),
                                       "output_complex_axes":list(new_bits), "retained_input_components":selected,
                                       "input_axis_encoding":dataset.axis(op["axis"]).encoding}
-    return Dataset(result, new_axes, new_bits, metadata, dataset.provenance+[entry])
+    history = provenance+[entry]
+    if name == "reference" and _has_immutable_storage(dataset):
+        return dataset._share_samples(new_axes, new_bits, metadata, history)
+    if public:
+        try:
+            return Dataset(result, new_axes, new_bits, metadata, history)
+        except NMRNextError as exc:
+            if exc.code == "NONFINITE_DATA":
+                raise NMRNextError("NUMERICAL_OVERFLOW", f"Operation {name} produced nonfinite values") from exc
+            raise
+    return _ExecutionState(result, new_axes, new_bits, metadata, history)
 
 
 def run_operations(dataset, operations, *, backend="numpy", threads=1, memory_bytes=None):
@@ -384,16 +436,37 @@ def run_operations(dataset, operations, *, backend="numpy", threads=1, memory_by
         raise NMRNextError("INVALID_DATASET", "Execution requires numeric sample data; a DatasetHeader is planning-only")
     quadrature_index_orientation(dataset)
     plan = plan_operations(dataset, operations, backend=backend, threads=threads, memory_bytes=memory_bytes)
+    return _run_plan(dataset, plan)
+
+
+def _run_plan(dataset, plan, *, start=0, on_step=None, snapshot_steps=None):
+    """Execute a preflighted plan; selected callbacks receive immutable snapshots.
+
+    Private callers must preflight the complete recipe against its original
+    source, even when resuming from a previously frozen matching prefix.
+    """
     current = dataset
-    for step in plan["steps"]:
-        new_axes, new_bits, new_metadata, op = _transition(current.axes, current.complex_axes, current.metadata, current.provenance, step["operation"])
+    legacy_boundaries = not _has_immutable_storage(dataset)
+    buffers = _ExecutionBuffers()
+    steps = plan["steps"]
+    last_numeric = max((i for i in range(start, len(steps))
+                        if steps[i]["operation"]["op"] != "reference"), default=-1)
+    for index in range(start, len(steps)):
+        step = steps[index]
+        metadata, provenance = _execution_records(current)
+        new_axes, new_bits, new_metadata, op = _transition(current.axes, current.complex_axes, metadata, provenance, step["operation"])
+        snapshot = on_step is not None and (snapshot_steps is None or index in snapshot_steps)
         try:
             with np.errstate(over="raise", invalid="raise", divide="raise"):
-                current = _execute(current, op, new_axes, new_bits, new_metadata, backend, threads, plan["backend"])
+                current = _execute(current, op, new_axes, new_bits, new_metadata,
+                                   plan["backend"]["name"], plan["backend"]["threads"], plan["backend"],
+                                   public=legacy_boundaries or snapshot or index >= last_numeric, buffers=buffers)
         except (FloatingPointError, OverflowError) as exc:
             raise NMRNextError("NUMERICAL_OVERFLOW", f"Operation {op['op']} overflowed; use float64 or revise parameters") from exc
         except MemoryError as exc:
             raise NMRNextError("MEMORY_ALLOCATION_FAILED", "Working arrays could not be allocated; use a smaller dataset") from exc
+        if snapshot:
+            on_step(index, current)
     return current
 
 

@@ -4,7 +4,7 @@ SpinFlow is an experimental, open source NMR processing workbench. It provides a
 
 **Scientific status:** this is an early processing slice, not a validated replacement for NMRPipe or a laboratory processing system. One public Bruker 1D acquisition has an archived peak-position check; two public 2D acquisitions add bounded both-axis automatic phase and fixed peak/relative-volume checks. One previously studied public Varian protein case has a bounded comparison with NMRPipe 13 and actual NMRDraw/Sparky reopening; broader real workflows, general parity, concentration accuracy and other independent reopening remain unverified. See [scope](docs/scope.md), [validation](docs/public-validation.md), and the [roadmap](ROADMAP.md).
 
-Linux checks under software emulation passed the installed-package suite, public-data and automated virtual-desktop workflows, and a CPython 3.12 release-installer preflight. The [validation record](docs/public-validation.md) gives the exact tested candidates and limitations. Version 0.2.0 is a published experimental prerelease; the later laboratory candidate described below is not included in that release.
+Earlier Linux checks under software emulation passed the installed-package suite, public-data and automated virtual-desktop workflows, and a CPython 3.12 release-installer preflight. The [validation record](docs/public-validation.md) gives the exact tested candidates and limitations. Version 0.2.0 is a published experimental prerelease; the later laboratory and performance source changes described below are not included in that release.
 
 ## Install the experimental release on Linux
 
@@ -28,7 +28,7 @@ The folder must not already exist. If a run fails after creating it, choose a ne
 
 ## Install from source on Linux
 
-The header-only planning, GUI budget control, `discard_imaginary`, and explicit spectral-width calibration described below are **unreleased source changes** and are not in the immutable v0.2.0 installer or tagged archive. Use the checkout containing these changes; after they are merged to public `main`, a fresh checkout can be obtained with `git clone https://github.com/ben-shin/spinflow.git` and `cd spinflow`. Do not use the v0.2.0 release installer for these candidate features.
+The header-only planning, GUI budget control, `discard_imaginary`, explicit spectral-width calibration and execution/cache improvements described below are **unreleased source changes** and are not in the immutable v0.2.0 installer or tagged archive. Use the checkout containing these changes; after they are merged to public `main`, a fresh checkout can be obtained with `git clone https://github.com/ben-shin/spinflow.git` and `cd spinflow`. Do not use the v0.2.0 release installer for these candidate features.
 
 Ubuntu 24.04 and Python 3.12 or 3.13 are the initial Linux build targets. From a checkout:
 
@@ -59,6 +59,12 @@ Operations currently include explicit Bruker digital-filter correction and frequ
 ## Public Bruker 1D/2D and analysis
 
 The [bounded real-data walkthrough](docs/real-bruker-and-analysis.md) fetches nine hash-pinned BMRB files to an ignored local folder, runs an explicit correction/FFT/reference recipe, and shows headless `autophase`, signed 1D/2D `peaks` and `integrate` reports, and optional `figure` export. The [public 2D guide](docs/real-bruker-2d.md) adds hash-pinned HSQC/TOCSY ser imports, fixed recipes and both-axis full-hypercomplex automatic phase with identifiability and gauge flags. The 25 acquired files stay outside Git. The predeclared raw/reference volume-ratio gate is 30%; observed errors are 2.45–13.32%, without an absolute amplitude or concentration claim. Peak-derived region volumes are signed relative intensity·Hz or intensity·Hz² with inspectable bounds and flags; they are not concentrations or deconvolved assignments. The GUI exposes bounded phase, peak finding, entered-region integration and optional figures without changing the headless core.
+
+## Measured source performance
+
+The [Stage 16 results](docs/performance-results.md) compare frozen baseline and improved source builds on one previously studied public Varian 2D protein case. They report separate fresh-command, warm processing, import/export and interactive phase-prefix distributions, CPU time and qualified process memory measurements. The [protocol](docs/performance-protocol.md) preserves precision, quadratures, padding, provenance, scientific tolerances and thread policy; all 63 measured pairs agree, and the final outputs were reopened in pinned NMRDraw and Sparky applications.
+
+These source improvements are not in the immutable v0.2.0 release. The results identify the exact measured archive and wheel separately from later documentation commits. They do not establish general 3D/4D support, bare-metal performance or NMRPipe speed parity.
 
 ## File interchange
 
