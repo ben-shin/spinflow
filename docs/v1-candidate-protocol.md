@@ -14,6 +14,8 @@
 | V1-06 | Distinct versioned candidate installs outside source and reproduces supported workflow; notices and promised old artifacts load. | Python/native/installer identity, wheel/sdist contents, installed tests, full acquired GUI/CLI replay, old v0.2 recipe/native checks. | v3 diagnostic CPython 3.12 installed suite, acquired desktop replay, notices and selected old artifact passed; publication-source rebuild and CPython 3.13 asset pending. |
 | V1-07 | Public status pages and runtime capability output agree about 0.3.0b1 beta, previous v0.2.0 and precise experimental bounds. | Registry ID validator, docs link check, source inspection, installed capability check. | Publication wording prepared; exact publication artifact check pending. |
 
+The table's current-state cells record the pre-build source-cut checkpoint. The later [post-build evidence record](v1-candidate-results.md#post-build-validation-of-source-commit-a-october-30-2026) reports the actual downloaded-artifact checks and remaining publication gates without changing these requirements or tolerances.
+
 An automated candidate pass can support an experimental beta. The future 1.0 release remains **unverified** until V1-04 and V1-05 evidence, actual desktop/researcher acceptance, and exact candidate distribution gates are closed. Do not label the beta stable, human accepted, a full assignment/NEF successor, or NMRPipe speed parity. A successful selected external reopening remains selected-case evidence.
 
 ## Reproducibility and preservation
