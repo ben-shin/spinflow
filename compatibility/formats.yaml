@@ -12,6 +12,7 @@ profiles:
     known_losses: []
     readback: "h5py 3.16.0 with explicit schema checks"
     external_consumer: unverified
+    separate_bounded_file_mode: "experimental source-only 1-4 physical axes, fully sampled uncompressed/unfiltered native schema-1 HDF5, native one thread; not an eager Dataset or GUI capability"
   - id: nmrpipe-real
     dialect: "nmrglue 0.12 writer/header dialect"
     object: "processed real spectrum"

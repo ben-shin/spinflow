@@ -514,7 +514,7 @@ class WorkbenchTests(unittest.TestCase):
         w.load_dataset_now(Dataset(source.data[:2], source.axes, ['c']))
         self.assertFalse(w.autophase_button.isEnabled())
 
-    def test_automatic_phase_preserves_applied_crop_recipe_and_invalidates_on_process(self):
+    def test_automatic_phase_becomes_editable_pending_step_and_survives_process(self):
         from nmrnext.model import Axis
         w = self.window
         x = np.arange(1024)
@@ -534,7 +534,8 @@ class WorkbenchTests(unittest.TestCase):
         np.testing.assert_array_equal(result.data, expected.data)
         self.assertEqual(result.to_metadata(), expected.to_metadata())
         self.assertIsNot(w.current, applied)
-        self.assertIn('Next Process', w.analysis_summary.text())
+        self.assertIn('explicit editable step', w.analysis_summary.text())
+        self.assertEqual(w.build_recipe(), w.last_operations)
         self.assertIn('autophase', w._current_analysis())
         w.threshold_check.setChecked(True)
         w.threshold_spin.setValue(.1)
@@ -564,6 +565,9 @@ class WorkbenchTests(unittest.TestCase):
             self.assertEqual(json.loads(destination.read_text()), reports)
         w.process_now()
         self.assertEqual(w.analysis_reports, {})
+        self.assertEqual(w.last_operations, operations + [report['operation']])
+        np.testing.assert_array_equal(w.current.data, expected.data)
+        self.assertEqual(w.current.to_metadata(), expected.to_metadata())
 
     def test_analysis_preview_refuses_but_component_changes_preserve_reports(self):
         w = self.window

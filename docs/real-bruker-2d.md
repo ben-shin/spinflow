@@ -1,6 +1,6 @@
 # Public Bruker 2D and bounded automatic phase
 
-The GUI budget control and explicit phase-budget behavior below describe the unreleased source candidate. The published v0.2.0 prerelease has different budget behavior; use the [source-build instructions](../README.md#install-from-source-on-linux) for this candidate.
+The GUI budget control and explicit phase-budget behavior below describe the 0.3.0b1 experimental beta. The previous v0.2.0 prerelease has different budget behavior; use the [beta installation instructions](../README.md#install-the-030b1-experimental-beta-on-linux) for this workflow.
 
 This experimental workflow imports fully sampled `ser`/`acqus`/`acqu2s` acquisitions with `FnMODE=5` States-TPPI or `FnMODE=6` Echo-AntiEcho, `AQ_mod=3`, `AQSEQ=0`, `PARMODE=1`, `FnTYPE=0` and positive recorded `GRPDLY`. It preserves all four quadratures, acquisition texts, checksums and explicit axis/bit mapping. Optional DIGMOD must be integer 1 when present; omission is allowed, but explicit analog/invalid declarations are refused. Optional direct SW must agree with SW_h/SFO1 within relative 2e-5. Other quadrature modes, NUS, higher dimensions, ambiguous directories, malformed headers and inconsistent trace lengths are refused. No new runtime dependencies are added.
 

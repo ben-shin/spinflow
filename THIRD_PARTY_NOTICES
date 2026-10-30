@@ -6,9 +6,20 @@ Files: cpp/vendor/pocketfft/pocketfft_hdronly.h and LICENSE.md
 License: BSD-3-Clause
 Copyright notices and the complete license text are retained in both files.
 
-Python runtime, development, and optional GUI dependencies are not vendored
-in this repository. Their version constraints are in pyproject.toml; Windows
-development wheel hashes are retained in the requirements lock files.
+pybind11 3.1.0 (compiled build headers)
+======================================
+Source: https://github.com/pybind/pybind11/tree/v3.1.0
+License: BSD-3-Clause
+Complete pinned license: third_party/pybind11/LICENSE
+
+The native SpinFlow extension is compiled using the pinned pybind11 headers.
+The pybind11 Python package is a build dependency, not a runtime dependency;
+its license text is included with SpinFlow's source and binary distributions
+because its headers contribute to the compiled native module.
+
+Other Python runtime, development, and optional GUI dependencies are not
+vendored in this repository. Their version constraints are in pyproject.toml;
+Windows development wheel hashes are retained in the requirements lock files.
 Those packages carry their own licenses and notices in their distributions.
 
 The optional figure extra installs Matplotlib 3.11.2; it is not vendored.

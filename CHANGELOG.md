@@ -1,5 +1,13 @@
 # Changes
 
+## 0.3.0b1 — experimental beta
+
+- Adds an ordered Qt recipe editor with separate pending and applied state, explicit automatic-phase steps, and a saved session that reopens and verifies the applied result. The documented CLI recipe remains replayable.
+- Adds bounded point/ppm region selection on the applied current spectrum, retaining parent coordinates and signed peak/integral reports. Whole-spectrum analysis retains its 2,000,000-point guard.
+- Includes experimental native schema-1 HDF5 slab processing for one through four axes under a declared block budget. Acquired 3D/4D evidence uses relative Hz coordinates; this does not add raw high-dimensional vendor import, global analysis or high-dimensional NMRPipe/UCSF export.
+- A frozen v3 code diagnostic passed 979 installed Linux CPython 3.12 tests and 101 subtests, one acquired 14-operation 8,388,608-point automated X11 desktop/session/CLI workflow, selected current-export reopening in NMRDraw 13 and Sparky 3.115, and one selected v0.2.0 saved-artifact replay. The [candidate results](docs/v1-candidate-results.md) identify its hashes and limits. Publication-source assets and CI require their own checks.
+- Profiles remain experimental. Independent researcher sessions, broader scientific validation, quantitative accuracy, general NMRPipe parity and a stable 1.0 contract remain unverified. The previous v0.2.0 release assets are unchanged.
+
 ## 0.2.0 — experimental release candidate, 2026-10-29
 
 - Adds controlled Varian/Agilent 1D and selected States 2D acquisition imports, plus an experimental real 1D JCAMP-DX reader with synthetic evidence only. See the [format profiles](docs/formats.md) for exact scope.

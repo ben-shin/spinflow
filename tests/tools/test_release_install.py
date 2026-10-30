@@ -37,6 +37,8 @@ def assets(root, name="spinflow-0.2.0-cp313-cp313-linux_x86_64.whl"):
 
 def test_version_validation_rejects_paths_and_accepts_explicit_tag(installer):
     assert installer.release_version("v0.2.0") == "0.2.0"
+    assert installer.release_version("v0.3.0b1") == "0.3.0b1"
+    assert installer.DEFAULT_VERSION == "0.3.0b1"
     for value in ("latest", "../../other", "0.2.0/thing", "0.2.0;touch x", "0.2"):
         with pytest.raises(installer.InstallError):
             installer.release_version(value)
@@ -268,15 +270,16 @@ def test_release_assembler_requires_both_abis_and_records_hashes(tmp_path):
     spec = importlib.util.spec_from_file_location("spinflow_release_assets", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    current_version = module.version()
     source = tmp_path / "incoming"
     source.mkdir()
-    for name in ("spinflow-0.2.0-cp312-cp312-linux_x86_64.whl", "spinflow-0.2.0.tar.gz"):
+    for name in (f"spinflow-{current_version}-cp312-cp312-linux_x86_64.whl", f"spinflow-{current_version}.tar.gz"):
         (source / name).write_bytes(b"release bytes")
     with pytest.raises(ValueError, match="cp313"):
         module.assemble(source, tmp_path / "missing", "a" * 40)
-    (source / "spinflow-0.2.0-cp313-cp313-linux_x86_64.whl").write_bytes(b"release bytes")
+    (source / f"spinflow-{current_version}-cp313-cp313-linux_x86_64.whl").write_bytes(b"release bytes")
     for tag in ("cp312", "cp313"):
-        (source / f"build-{tag}.json").write_text(json.dumps({"commit": "a" * 40, "python_tag": tag, "version": "0.2.0"}))
+        (source / f"build-{tag}.json").write_text(json.dumps({"commit": "a" * 40, "python_tag": tag, "version": current_version}))
     output = tmp_path / "release"
     module.assemble(source, output, "a" * 40)
     assert (output / "install-spinflow.py").is_file()

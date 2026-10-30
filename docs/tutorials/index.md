@@ -2,14 +2,16 @@
 
 SpinFlow is experimental. Start with the offline synthetic example, then try the optional desktop or public-data examples. Synthetic outputs demonstrate the workflow; they do not validate real NMR measurements.
 
+The [processing-session walkthrough](processing-session.md) describes ordered recipe editing, bounded region analysis, save/reopen and CLI replay in the 0.3.0b1 experimental beta. Those session controls are not part of the previous v0.2.0 prerelease.
+
 ## 1. Your first spectrum, offline
 
-On Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and `python3-venv`, install the published v0.2.0 prerelease using the commands below. Installation needs network access for the wheel and dependencies. The core installation needs neither Qt nor Matplotlib. For a desktop and figures, rerun the installer with `--gui --plot`; existing extras are retained. A different Python version or SpinFlow version requires a different `--prefix`. See the [installation instructions](../../README.md) for details.
+On Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and `python3-venv`, install the 0.3.0b1 experimental beta using the commands below once its release assets are available. Installation needs network access for the wheel and dependencies. The core installation needs neither Qt nor Matplotlib. For a desktop and figures, rerun the installer with `--gui --plot`; existing extras are retained. A different Python version or SpinFlow version requires a different `--prefix`. See the [installation instructions](../../README.md) for details.
 
 ```sh
-curl -fLO https://github.com/ben-shin/spinflow/releases/download/v0.2.0/install-spinflow.py
-python3 install-spinflow.py --version 0.2.0
-. "$HOME/.local/share/spinflow/0.2.0/bin/activate"
+curl -fLO https://github.com/ben-shin/spinflow/releases/download/v0.3.0b1/install-spinflow.py
+python3 install-spinflow.py --version 0.3.0b1
+. "$HOME/.local/share/spinflow/0.3.0b1/bin/activate"
 spinflow doctor
 ```
 
@@ -54,4 +56,4 @@ The [public-data walkthrough](public-data.md) uses separately downloaded, hash-c
 
 Automatic phase fits a restricted positive, separable line model and can refuse unsuitable data. Inspect its diagnostics and the resulting spectrum; manual phase is available in recipes and the GUI. Peak picking finds signed local extrema, not assignments. Integrals are signed relative intensity times Hz (or Hz² in 2D), not concentrations. Thresholds, bounds, baselines and referencing require scientific judgment.
 
-Analysis is capped at 2,000,000 points per component, including mask creation. Crop a frequency-domain spectrum first, then create masks for the cropped dataset; masks and reports are tied to the dataset digest. See [analysis regions](../analysis-regions.md). For unsupported formats or acquisition modes, consult [format profiles](../formats.md). If `spinflow` is not found, activate the installation environment; if `doctor` reports the native backend unavailable, revisit installation. GUI and figure errors can indicate missing optional extras or a desktop display. `spinflow --help` lists commands; structured JSON errors identify refused operations.
+Whole-spectrum analysis is capped at 2,000,000 points per component, including mask creation. In the previous v0.2.0 flow, crop a frequency-domain spectrum first and then create masks for that grid. The 0.3.0b1 beta can instead analyze a bounded region of the applied large result, retaining parent coordinates; see the [processing-session walkthrough](processing-session.md). Masks and reports remain tied to their dataset digest. See [analysis regions](../analysis-regions.md). For unsupported formats or acquisition modes, consult [format profiles](../formats.md). If `spinflow` is not found, activate the installation environment; if `doctor` reports the native backend unavailable, revisit installation. GUI and figure errors can indicate missing optional extras or a desktop display. `spinflow --help` lists commands; structured JSON errors identify refused operations.

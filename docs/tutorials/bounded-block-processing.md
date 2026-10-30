@@ -2,7 +2,7 @@
 
 The source API and CLI provide a separate file-to-file mode for native schema-1 HDF5 files with one through four physical axes. It keeps the complete transformed axis and every quadrature component in each FFT slab, and tiles the other axes. The existing `Dataset`, `read_dataset` and `run_operations` APIs keep their eager behavior.
 
-This feature uses the existing core dependencies and bundled native FFT. It needs no GUI or external NMR processing application. Availability in a source checkout does not add it to the immutable v0.2.0 release assets.
+This 0.3.0b1 experimental beta feature uses the existing core dependencies and bundled native FFT. It needs no GUI or external NMR processing application. It remains absent from the immutable v0.2.0 release assets.
 
 ## Check the input and prepare a recipe
 

@@ -1,0 +1,42 @@
+{
+  "schema_version": "1",
+  "status_date": "2026-10-30",
+  "distribution": {
+    "version": "0.3.0b1",
+    "release_status": "experimental beta",
+    "previous_release": "v0.2.0",
+    "qualification": "scientific and independent researcher acceptance unverified"
+  },
+  "platform_target": {
+    "os": "Ubuntu 24.04 x86-64",
+    "python": ["CPython 3.12", "CPython 3.13"],
+    "qualification": "Ubuntu 24.04 CPython 3.12 installed wheel and automated X11 desktop workflow checked on one virtualized acquired case; this check does not establish other environments or independent researcher acceptance"
+  },
+  "profiles": [
+    {"id": "nmrnext-hdf5", "source_status": "implemented_experimental", "processing_v1_target": "1d_2d", "boundary": "Native schema 1 numeric data; eager Dataset and separate bounded native-file mode"},
+    {"id": "nmrpipe-real", "source_status": "implemented_experimental", "processing_v1_target": "processed_real_1d_2d", "boundary": "Narrow nmrglue 0.12 header dialect; explicit real float32 projection and losses"},
+    {"id": "ucsf-real", "source_status": "implemented_experimental", "processing_v1_target": "processed_real_2d", "boundary": "UCSF NMR version 2; explicit real float32 projection and losses"},
+    {"id": "bruker-raw-1d", "source_status": "implemented_experimental", "processing_v1_target": "controlled_raw_1d", "boundary": "Controlled acqus/fid with positive recorded GRPDLY; no DSP lookup"},
+    {"id": "bruker-raw-2d", "source_status": "implemented_experimental", "processing_v1_target": "controlled_raw_2d", "boundary": "Fully sampled ser/acqus/acqu2s FnMODE 5/6, AQSEQ 0, positive recorded GRPDLY"},
+    {"id": "varian-raw-1d", "source_status": "implemented_experimental", "processing_v1_target": "controlled_raw_1d", "boundary": "Unarrayed big-endian float32 procpar/fid; explicit post-FFT reference"},
+    {"id": "varian-raw-2d", "source_status": "implemented_experimental", "processing_v1_target": "controlled_raw_2d", "boundary": "Selected fully sampled cpjdcptan2d C13/N15 States phase=[1,2] case; explicit post-FFT reference"},
+    {"id": "jcamp-real-1d", "source_status": "implemented_experimental", "processing_v1_target": null, "boundary": "Single real Hz/AFFN block; constructed-fixture evidence only"},
+    {"id": "nmrpipe-complex-or-stream", "source_status": "unsupported", "processing_v1_target": null, "boundary": "No declared read/write profile"}
+  ],
+  "workflows": [
+    {"id": "synthetic-1d-processing", "source_status": "experimental"},
+    {"id": "synthetic-2d-hypercomplex-processing", "source_status": "experimental"},
+    {"id": "processed-spectrum-conversion", "source_status": "experimental"},
+    {"id": "bruker-raw-1d-inspection", "source_status": "experimental"},
+    {"id": "public-bruker-1d-to-native", "source_status": "experimental"},
+    {"id": "public-bruker-2d-to-native", "source_status": "experimental"},
+    {"id": "bounded-frequency-analysis", "source_status": "experimental"},
+    {"id": "researcher-workbench", "source_status": "experimental"},
+    {"id": "public-varian-protein-nmrpipe13-case", "source_status": "experimental"},
+    {"id": "bounded-native-file-processing", "source_status": "experimental", "processing_v1_target": null, "boundary": "Native schema-1 HDF5, 1-4 physical axes, fully sampled uncompressed/unfiltered input, native backend, one thread; relative Hz only for acquired 3D/4D evidence; no raw 3D/4D vendor import, global analysis, lazy GUI or high-dimensional NMRPipe/UCSF export"},
+    {"id": "first-real-laboratory-raw-to-export", "source_status": "unsupported"},
+    {"id": "legacy-script-migration", "source_status": "unsupported"},
+    {"id": "complete-native-nmrpipe-suite", "source_status": "unsupported"}
+  ],
+  "release_gates": ["V1-01", "V1-02", "V1-03", "V1-04", "V1-05", "V1-06", "V1-07"]
+}

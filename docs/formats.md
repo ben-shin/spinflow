@@ -1,6 +1,6 @@
 # Implemented file profiles
 
-The profile name is part of the contract. `nmrpipe-real` and `ucsf-real` are processed **real** spectrum profiles, not general support for either format. Input is signature-probed; an unknown signature raises `AMBIGUOUS_FORMAT`. Output inference uses `.nmrh5`/`.h5`, `.ft1`/`.ft2`, and `.ucsf`, or the caller supplies an explicit format. The aliases `native`, `hdf5`, `nmrpipe`, and `ucsf` are accepted.
+The profile name is part of the contract. The [support registry](../compatibility/support.json) gives release/source status for each exact profile ID; the proposed [processing support contract](support-contract.md) defines the finite promotion target. `nmrpipe-real` and `ucsf-real` are processed **real** spectrum profiles, not general support for either format. Input is signature-probed; an unknown signature raises `AMBIGUOUS_FORMAT`. Output inference uses `.nmrh5`/`.h5`, `.ft1`/`.ft2`, and `.ucsf`, or the caller supplies an explicit format. The aliases `native`, `hdf5`, `nmrpipe`, and `ucsf` are accepted.
 
 | Profile | Read | Write | Dimensions | Numeric layout | Read-back |
 | --- | --- | --- | --- | --- | --- |
@@ -14,6 +14,8 @@ The profile name is part of the contract. `nmrpipe-real` and `ucsf-real` are pro
 | `jcamp-real-1d` (experimental) | yes | no | 1D | real frequency spectrum, Hz/AFFN | constructed fixtures only |
 
 NMRPipe raw, complex, hypercomplex, 3D/4D streams or series, and unknown header dialects are not declared. UCSF 1D, time domain, and complex files are not declared. Bruker 3D/4D, processed data, writes and 2D modes beyond the declared profile are not supported. One prior-exposed public Varian protein case was compared with NMRPipe 13 and its exports were reopened in NMRDraw and Sparky under the [fixed protocol and results](laboratory-workflow-results.md). This does not establish general external compatibility or legacy parity.
+
+The separate [bounded native-file mode](tutorials/bounded-block-processing.md) accepts native schema-1 HDF5 with one through four physical axes, fully sampled uncompressed/unfiltered input, and native one-thread execution. It is an experimental source capability, not raw vendor 3D/4D import or high-dimensional NMRPipe/UCSF interchange. Selected acquired 3D/4D evidence has relative Hz coordinates, without an original processed reference.
 
 Header-only `plan` and the preflight for `run` support the bounded binary profiles above; they validate declared metadata and sizes, not numeric sample contents. `jcamp-real-1d` returns `HEADER_PLANNING_UNSUPPORTED` for these commands because its text data requires parsing; use `spinflow convert INPUT.jdx OUTPUT.nmrh5` first, then plan the native file. The selected [laboratory-workflow protocol](laboratory-workflow-protocol.md) and [results](laboratory-workflow-results.md) track the separate independent-consumer checks.
 

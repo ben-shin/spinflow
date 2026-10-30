@@ -66,6 +66,15 @@ workflows:
     evidence: docs/laboratory-workflow-results.md
     reference_and_consumers: "NMRPipe 13, NMRDraw 13 and Sparky 3.115 for the fixed case and files only"
     broader_nmrpipe_parity_and_lab_reliability: unverified
+  - id: bounded-native-file-processing
+    status: experimental
+    input_profile: "native schema-1 HDF5; fully sampled, uncompressed/unfiltered, bounded chunks or contiguous"
+    output_profile: nmrnext-hdf5
+    dimensions: [1, 2, 3, 4]
+    backend: "native, one thread"
+    coordinate_scope: "acquired 3D/4D examples have relative Hz; no ppm anchor or original processed reference"
+    excluded: [raw-vendor-3d-4d-import, digital-filter-correction, global-analysis, gui-lazy-view, high-dimensional-nmrpipe-ucsf-export]
+    evidence: [tests/io/test_block_lifecycle.py, docs/block-processing-results.md]
   - id: first-real-laboratory-raw-to-export
     status: unsupported
     blockers: [broader-permitted-real-fixtures, quantitative-phase-and-integral-reference, independent-export-consumer, nmrpipe-parity]

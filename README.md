@@ -1,34 +1,36 @@
 # SpinFlow
 
-SpinFlow is an experimental, open source NMR processing workbench. It provides a headless command line and an optional Qt spectrum viewer for synthetic 1D/2D workflows and bounded public Bruker and Varian/Agilent raw acquisition paths. The Python import package and command `nmrnext` retain their existing names; `spinflow` is also a command entry point. The original project code is [MIT licensed](LICENSE), with separate [third-party notices](THIRD_PARTY_NOTICES).
+SpinFlow is an experimental, open source NMR processing workbench. It provides a headless command line and an optional Qt spectrum viewer for synthetic 1D/2D workflows and bounded public Bruker and Varian/Agilent raw acquisition paths. The Python import package and command `nmrnext` retain their existing names; `spinflow` is also a command entry point. The [support registry](compatibility/support.json) identifies implemented source profiles and the proposed [finite processing support contract](docs/support-contract.md). The original project code is [MIT licensed](LICENSE), with separate [third-party notices](THIRD_PARTY_NOTICES).
 
 **Scientific status:** this is an early processing slice, not a validated replacement for NMRPipe or a laboratory processing system. One public Bruker 1D acquisition has an archived peak-position check; two public 2D acquisitions add bounded both-axis automatic phase and fixed peak/relative-volume checks. One previously studied public Varian protein case has a bounded comparison with NMRPipe 13 and actual NMRDraw/Sparky reopening; broader real workflows, general parity, concentration accuracy and other independent reopening remain unverified. See [scope](docs/scope.md), [validation](docs/public-validation.md), and the [roadmap](ROADMAP.md).
 
-Earlier Linux checks under software emulation passed the installed-package suite, public-data and automated virtual-desktop workflows, and a CPython 3.12 release-installer preflight. The [validation record](docs/public-validation.md) gives the exact tested candidates and limitations. Version 0.2.0 is a published experimental prerelease; the later laboratory, performance and bounded-file source changes described below are not included in that release.
+Earlier Linux checks under software emulation passed the installed-package suite, public-data and automated virtual-desktop workflows, and a CPython 3.12 release-installer preflight. The [validation record](docs/public-validation.md) gives the exact tested candidates and limitations. The separate [0.3.0b1 candidate results](docs/v1-candidate-results.md) identify its installed Linux checks and remaining publication gates. Version 0.2.0 remains an immutable historical experimental prerelease.
 
-## Install the experimental release on Linux
+## Install the 0.3.0b1 experimental beta on Linux
 
-For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, download the release installer and run it with your chosen Python:
+For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, use the versioned installer once the 0.3.0b1 release assets are available:
 
 ```bash
-curl -fL -o install-spinflow.py https://github.com/ben-shin/spinflow/releases/download/v0.2.0/install-spinflow.py
-python3 install-spinflow.py --version 0.2.0
-"$HOME/.local/share/spinflow/0.2.0/bin/spinflow" doctor
+curl -fL -o install-spinflow.py https://github.com/ben-shin/spinflow/releases/download/v0.3.0b1/install-spinflow.py
+python3 install-spinflow.py --version 0.3.0b1
+"$HOME/.local/share/spinflow/0.3.0b1/bin/spinflow" doctor
 ```
 
-Installation needs internet access to obtain the checked release assets and pinned Python dependencies. The matching prebuilt native wheel does not need a compiler. The provided wheels target Ubuntu 24.04 x86-64 for these Python versions; they are not general manylinux wheels. To include the optional desktop and figure support, rerun the installer with `--gui --plot`, then run `"$HOME/.local/share/spinflow/0.2.0/bin/spinflow" gui` on a desktop. Optional extras already installed are retained on later runs. Use `--prefix PATH` for another installation location; an existing installation must match the selected version and Python. See the [beginner tutorials](docs/tutorials/index.md) for the first spectrum and public-data workflows.
+Installation needs internet access to obtain the checked release assets and pinned Python dependencies. The matching prebuilt native wheel does not need a compiler. The versioned wheels target Ubuntu 24.04 x86-64 for these Python versions; they are not general manylinux wheels. To include the optional desktop and figure support, rerun the installer with `--gui --plot`, then run `"$HOME/.local/share/spinflow/0.3.0b1/bin/spinflow" gui` on a desktop. Optional extras already installed are retained on later runs. Use `--prefix PATH` for another installation location; an existing installation must match the selected version and Python. See the [beginner tutorials](docs/tutorials/index.md) for the first spectrum and public-data workflows.
 
 After installation, this command works offline and creates a new folder containing a synthetic spectrum, processing recipe and analysis reports:
 
 ```bash
-"$HOME/.local/share/spinflow/0.2.0/bin/spinflow" first-spectrum first-spectrum
+"$HOME/.local/share/spinflow/0.3.0b1/bin/spinflow" first-spectrum first-spectrum
 ```
 
 The folder must not already exist. If a run fails after creating it, choose a new folder name before retrying. The synthetic example illustrates the workflow and is not evidence of experimental accuracy.
 
+The previous [v0.2.0 release](https://github.com/ben-shin/spinflow/releases/tag/v0.2.0) remains available for its documented feature set. Use a different prefix for a second version.
+
 ## Install from source on Linux
 
-The header-only planning, GUI budget control, `discard_imaginary`, explicit spectral-width calibration, execution/cache improvements and bounded native-file processing described below are **unreleased source changes** and are not in the immutable v0.2.0 installer or tagged archive. Use the checkout containing these changes; after they are merged to public `main`, a fresh checkout can be obtained with `git clone https://github.com/ben-shin/spinflow.git` and `cd spinflow`. Do not use the v0.2.0 release installer for these candidate features.
+The header-only planning, GUI budget control, `discard_imaginary`, explicit spectral-width calibration, execution/cache improvements and bounded native-file processing described below are changes since the immutable v0.2.0 archive. Use a 0.3.0b1 source checkout for these features. The v0.2.0 release installer cannot supply them.
 
 Ubuntu 24.04 and Python 3.12 or 3.13 are the initial Linux build targets. From a checkout:
 
@@ -39,6 +41,8 @@ bash tools/bootstrap.sh
 ```
 
 `bootstrap.sh` creates a local environment, installs the project, and builds the native C++/PocketFFT extension. Setup downloads dependencies; processing itself runs offline. For the optional GUI, use `bash tools/bootstrap.sh --gui` and then `.venv/bin/spinflow gui` on a desktop with a display. Add `--plot` for optional Matplotlib SVG/PDF/PNG export without making it a core dependency. Follow the [Linux user-testing guide](docs/linux-user-testing.md) for a synthetic walkthrough. See the [Linux build guide](docs/linux-build.md) for system packages, manual installation, wheel builds, and troubleshooting. The native backend must be reported available by `doctor` before choosing it in a recipe.
+
+The [processing-session walkthrough](docs/tutorials/processing-session.md) covers ordered recipe editing, full-size bounded region analysis, applied-session save/reopen and CLI replay in the 0.3.0b1 beta. These controls are separate from the immutable v0.2.0 installer.
 
 ## Run a synthetic 2D workflow
 
@@ -54,7 +58,7 @@ The included recipe uses paths relative to `examples/` and refuses to overwrite 
 
 The self-comparison checks a storage and CLI round trip; it does not establish scientific accuracy. `examples/process-1d.json` provides a 1D path after generating `examples/demo-1d-raw.h5 --dimensions 1 --points 256`.
 
-Operations currently include explicit Bruker digital-filter correction and frequency referencing, window, zero fill, FFT, phase, explicit `discard_imaginary` on a frequency axis, crop, reverse, and transpose. The discard removes the selected imaginary quadratures with recorded loss; it is not magnitude conversion. An optional `reference.spectral_width_hz` explicitly calibrates the current grid width while retaining samples and acquisition dwell. For supported binary profiles, `plan` validates the recipe using bounded header metadata before numeric payload reads; `run` repeats that preflight before loading and validating samples. Header planning does not validate sample content. JCAMP-DX cannot be planned from a header alone; convert it to native format first. The GUI and CLI default to a 256 MiB processing working-array budget, which can be explicitly raised. This estimate is not a process RSS limit or out-of-core execution. The optional `numpy` backend is an explicitly selected experimental bootstrap; an unavailable requested native backend fails rather than silently falling back. See the [first laboratory-workflow protocol](docs/laboratory-workflow-protocol.md) and its [pending results](docs/laboratory-workflow-results.md) for the selected comparison and its gates.
+Operations currently include explicit Bruker digital-filter correction and frequency referencing, window, zero fill, FFT, phase, explicit `discard_imaginary` on a frequency axis, crop, reverse, and transpose. The discard removes the selected imaginary quadratures with recorded loss; it is not magnitude conversion. An optional `reference.spectral_width_hz` explicitly calibrates the current grid width while retaining samples and acquisition dwell. For supported binary profiles, `plan` validates the recipe using bounded header metadata before numeric payload reads; `run` repeats that preflight before loading and validating samples. Header planning does not validate sample content. JCAMP-DX cannot be planned from a header alone; convert it to native format first. The eager GUI and CLI paths default to a 256 MiB processing working-array budget, which can be explicitly raised; the separate `--block-memory` mode below processes native files in bounded slabs. Neither budget is a process RSS cap. The optional `numpy` backend is an explicitly selected experimental bootstrap; an unavailable requested native backend fails rather than silently falling back. See the [first laboratory-workflow protocol](docs/laboratory-workflow-protocol.md) and its [selected results](docs/laboratory-workflow-results.md) for the selected comparison and its gates.
 
 ## Public Bruker 1D/2D and analysis
 
@@ -64,13 +68,13 @@ The [bounded real-data walkthrough](docs/real-bruker-and-analysis.md) fetches ni
 
 The [Stage 16 results](docs/performance-results.md) compare frozen baseline and improved source builds on one previously studied public Varian 2D protein case. They report separate fresh-command, warm processing, import/export and interactive phase-prefix distributions, CPU time and qualified process memory measurements. The [protocol](docs/performance-protocol.md) preserves precision, quadratures, padding, provenance, scientific tolerances and thread policy; all 63 measured pairs agree, and the final outputs were reopened in pinned NMRDraw and Sparky applications.
 
-These source improvements are not in the immutable v0.2.0 release. The results identify the exact measured archive and wheel separately from later documentation commits. They do not establish general 3D/4D support, bare-metal performance or NMRPipe speed parity.
+These improvements are not in the immutable v0.2.0 release. The results identify the exact measured archive and wheel separately from later documentation commits. They do not establish general 3D/4D support, bare-metal performance or NMRPipe speed parity.
 
 ## Bounded native 3D/4D file processing
 
 The [bounded-processing tutorial](docs/tutorials/bounded-block-processing.md) shows the separate Python file-to-file API and `plan/run --block-memory 64MiB` mode. It processes uncompressed, unfiltered native schema-1 HDF5 files with one through four physical axes, keeping each transformed axis complete while tiling the others. The [protocol](docs/block-processing-protocol.md) defines working-memory accounting, finite validation, source identity, temporary-disk refusals and atomic output. Existing Dataset, eager CLI and GUI behavior is unchanged.
 
-This source feature uses the existing core dependencies and native FFT. It does not add raw vendor 3D/4D import, global analysis, GUI lazy viewing or high-dimensional NMRPipe/UCSF export. The [Stage 17 results](docs/block-processing-results.md) retain all 49 measured pairs and the matching acquired outputs. On the selected full 4D case, bounded execution reduced recorded child-lifetime peak memory and was 2.377 times slower at a 64 MiB working-array policy. Those RSS measurements include the inherited pre-exec launcher floor; they do not establish incremental memory use or small-case scaling. Final source publication acceptance is pending. The immutable v0.2.0 release does not include this mode.
+This feature uses the existing core dependencies and native FFT. It does not add raw vendor 3D/4D import, global analysis, GUI lazy viewing or high-dimensional NMRPipe/UCSF export. The [Stage 17 results](docs/block-processing-results.md) retain all 49 measured pairs and the matching acquired outputs. On the selected full 4D case, bounded execution reduced recorded child-lifetime peak memory and was 2.377 times slower at a 64 MiB working-array policy. Those RSS measurements include the inherited pre-exec launcher floor; they do not establish incremental memory use or small-case scaling. The immutable v0.2.0 release does not include this mode.
 
 ## File interchange
 

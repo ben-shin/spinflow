@@ -4,11 +4,13 @@ Run with ``python -m nmrnext.gui``. Qt is deliberately optional for headless use
 """
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import os
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 
 import numpy as np
 from PySide6 import QtCore, QtGui, QtWidgets
@@ -186,6 +188,74 @@ class ExportLossDialog(QtWidgets.QDialog):
         return tuple(c.property("loss_code") for c in self.checks if c.isChecked())
 
 
+class StepDialog(QtWidgets.QDialog):
+    """Edit common fields directly while retaining the complete operation JSON."""
+
+    def __init__(self, operation, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Edit {operation['op']} step")
+        self.setMinimumWidth(520)
+        layout = QtWidgets.QVBoxLayout(self)
+        layout.addWidget(QtWidgets.QLabel(f"{operation['op']} · edit its values, or expand the complete operation JSON."))
+        form = QtWidgets.QFormLayout()
+        self.fields = {}
+        for key, value in operation.items():
+            if key in ('op', 'version'):
+                continue
+            shown = (', '.join(value) if key == 'order' and isinstance(value, list) else
+                     json.dumps(value, ensure_ascii=False)
+                     if isinstance(value, (list, dict, bool)) or value is None else str(value))
+            field = QtWidgets.QLineEdit(shown)
+            if key == 'order':
+                field.setToolTip('Enter axis IDs separated by commas, such as a0, a1. Zero-based positions such as 0, 1 also work.')
+            field.setAccessibleName(key)
+            form.addRow(key.replace('_', ' ').capitalize(), field)
+            self.fields[key] = field
+        layout.addLayout(form)
+        self.advanced_check = QtWidgets.QCheckBox('Edit complete operation JSON')
+        layout.addWidget(self.advanced_check)
+        self.advanced = QtWidgets.QPlainTextEdit(json.dumps(operation, indent=2, ensure_ascii=False))
+        self.advanced.setAccessibleName('Complete operation JSON')
+        self.advanced.setVisible(False)
+        self.advanced_check.toggled.connect(self.advanced.setVisible)
+        layout.addWidget(self.advanced)
+        buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok |
+                                             QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+        self._original = operation
+
+    def operation(self):
+        if self.advanced_check.isChecked():
+            value = json.loads(self.advanced.toPlainText())
+        else:
+            value = deepcopy(self._original)
+            for key, field in self.fields.items():
+                text = field.text().strip()
+                original = self._original[key]
+                if key == 'order':
+                    parts = [part.strip() for part in text.split(',')]
+                    if not parts or any(not part for part in parts):
+                        raise NMRNextError('INVALID_AXIS_ORDER', 'Enter every axis once, separated by commas')
+                    axes = [axis.id for axis in self.parent().source.axes] if getattr(self.parent(), 'source', None) is not None else []
+                    if axes and all(part.isdecimal() and part not in axes for part in parts):
+                        indices = [int(part) for part in parts]
+                        if any(index >= len(axes) for index in indices):
+                            raise NMRNextError('INVALID_AXIS_ORDER', 'Axis position is outside the source axes')
+                        parts = [axes[index] for index in indices]
+                    value[key] = parts
+                elif isinstance(original, str):
+                    value[key] = text
+                elif isinstance(original, bool):
+                    value[key] = json.loads(text.lower())
+                else:
+                    value[key] = json.loads(text)
+        if not isinstance(value, dict):
+            raise NMRNextError('INVALID_OPERATION', 'A step must be a JSON object')
+        return value
+
+
 class Workbench(QtWidgets.QMainWindow):
     """Thin GUI: recipes and data flow through the same APIs as the CLI."""
 
@@ -210,6 +280,13 @@ class Workbench(QtWidgets.QMainWindow):
         self._suspend_preview_invalidation = False
         self._axis_settings = {}
         self.analysis_reports = {}
+        self.selected_regions = []
+        self._recipe_mode = 'quick'
+        self._ordered_operations = []
+        self._pending_memory_bytes = None
+        self._rendered_dataset = None
+        self._rendered_axis_units = {}
+        self._state_generation = 0
         self._recipe_cache = RecipeCache()
         self._build_ui()
         self._style()
@@ -271,6 +348,9 @@ class Workbench(QtWidgets.QMainWindow):
         self.bruker_button.clicked.connect(self._open_bruker)
         self.bruker_button.setToolTip("Open a supported acquisition folder; the format is detected from its contents.")
         layout.addWidget(self.bruker_button)
+        self.open_session_button = QtWidgets.QPushButton("Open saved session…")
+        self.open_session_button.clicked.connect(self._open_session_dialog)
+        layout.addWidget(self.open_session_button)
         demo_row = QtWidgets.QHBoxLayout()
         self.demo1_button = QtWidgets.QPushButton("1D demo")
         self.demo2_button = QtWidgets.QPushButton("2D demo")
@@ -342,6 +422,40 @@ class Workbench(QtWidgets.QMainWindow):
         tip.setObjectName("caption")
         tip.setWordWrap(True)
         layout.addWidget(tip)
+
+        self.load_recipe_button = QtWidgets.QPushButton('Load ordered recipe…')
+        self.load_recipe_button.setToolTip('Load a strict schema-1 CLI recipe and its source. Every supported operation and parameter is retained.')
+        self.load_recipe_button.clicked.connect(self._load_recipe_dialog)
+        layout.addWidget(self.load_recipe_button)
+        self.ordered_label = QtWidgets.QLabel('Quick controls build a new recipe from the original data.')
+        self.ordered_label.setObjectName('caption')
+        self.ordered_label.setWordWrap(True)
+        layout.addWidget(self.ordered_label)
+        self.ordered_steps = QtWidgets.QListWidget()
+        self.ordered_steps.setAccessibleName('Ordered processing steps')
+        self.ordered_steps.setMinimumHeight(165)
+        self.ordered_steps.itemDoubleClicked.connect(lambda _: self._edit_step_dialog())
+        layout.addWidget(self.ordered_steps)
+        recipe_row = QtWidgets.QHBoxLayout()
+        self.add_step_button = QtWidgets.QPushButton('Add')
+        self.edit_step_button = QtWidgets.QPushButton('Edit')
+        self.remove_step_button = QtWidgets.QPushButton('Remove')
+        self.up_step_button = QtWidgets.QPushButton('↑')
+        self.down_step_button = QtWidgets.QPushButton('↓')
+        self.add_step_button.clicked.connect(self._add_step_dialog)
+        self.edit_step_button.clicked.connect(self._edit_step_dialog)
+        self.remove_step_button.clicked.connect(lambda: self._change_step('remove'))
+        self.up_step_button.clicked.connect(lambda: self._change_step('up'))
+        self.down_step_button.clicked.connect(lambda: self._change_step('down'))
+        for button in (self.add_step_button, self.edit_step_button, self.remove_step_button,
+                       self.up_step_button, self.down_step_button):
+            recipe_row.addWidget(button)
+        layout.addLayout(recipe_row)
+        self.quick_recipe_button = QtWidgets.QPushButton('Start a new quick recipe')
+        self.quick_recipe_button.setToolTip('Explicitly replace the pending ordered recipe with the quick controls. The applied result remains until Process.')
+        self.quick_recipe_button.clicked.connect(self._start_quick_recipe)
+        layout.addWidget(self.quick_recipe_button)
+        layout.addWidget(self._heading('Quick controls'))
 
         self.filter_check = QtWidgets.QCheckBox('Correct Bruker digital filter')
         self.filter_check.setToolTip('Explicit first operation. Only the supported GRPDLY acquisition profile is accepted; unknown profiles are refused.')
@@ -443,14 +557,14 @@ class Workbench(QtWidgets.QMainWindow):
         self.backend_combo = QtWidgets.QComboBox()
         self.backend_combo.addItem("Native C++ / PocketFFT", "native")
         self.backend_combo.addItem("NumPy (experimental)", "numpy")
-        self.backend_combo.currentIndexChanged.connect(self._update_recipe)
+        self.backend_combo.currentIndexChanged.connect(self._backend_changed)
         layout.addWidget(self.backend_combo)
         layout.addWidget(QtWidgets.QLabel("Processing working-array budget (MiB)"))
         self.memory_spin = QtWidgets.QSpinBox()
         self.memory_spin.setRange(1, 1048576)
         self.memory_spin.setValue(256)
         self.memory_spin.setToolTip("Budget for estimated working arrays, not a hard process-memory limit. Preview computes the complete recipe. Opening has a separate 1 GiB payload cap.")
-        self.memory_spin.valueChanged.connect(self._update_recipe)
+        self.memory_spin.valueChanged.connect(self._memory_changed)
         layout.addWidget(self.memory_spin)
         self.recipe_label = QtWidgets.QLabel("No recipe")
         self.recipe_label.setObjectName("recipe")
@@ -489,6 +603,10 @@ class Workbench(QtWidgets.QMainWindow):
         self.workflow_button.setToolTip("Save a new folder with the original source snapshot and CLI recipe for the applied current result. Unapplied controls are excluded.")
         self.workflow_button.clicked.connect(self._save_workflow_dialog)
         layout.addWidget(self.workflow_button)
+        self.session_button = QtWidgets.QPushButton('Save applied session…')
+        self.session_button.setToolTip('Save source, exact applied recipe, selected analysis region and reports in a new folder for reopening here.')
+        self.session_button.clicked.connect(self._save_session_dialog)
+        layout.addWidget(self.session_button)
         self.recipe_button = QtWidgets.QPushButton("Save audit report…")
         self.recipe_button.setToolTip("Applied operations, plan and provenance for inspection. This report is not a CLI recipe.")
         self.recipe_button.clicked.connect(self._save_recipe_dialog)
@@ -545,6 +663,12 @@ class Workbench(QtWidgets.QMainWindow):
         self.peaks_button = QtWidgets.QPushButton('Pick peaks')
         self.peaks_button.clicked.connect(lambda: self._analysis_job('peaks'))
         layout.addWidget(self.peaks_button)
+        self.analysis_region_check = QtWidgets.QCheckBox('Analyze selected region of applied spectrum')
+        self.analysis_region_check.setToolTip('Select a bounded region after processing, using complete-spectrum coordinates. Required for spectra above the global analysis limit.')
+        layout.addWidget(self.analysis_region_check)
+        self.use_plot_region_button = QtWidgets.QPushButton('Use visible plot area as region')
+        self.use_plot_region_button.clicked.connect(self._use_plot_region)
+        layout.addWidget(self.use_plot_region_button)
         tip = QtWidgets.QLabel('Integration bounds include both endpoints (unlike crop). Enter one region below; no concentration inference or deconvolution.')
         tip.setWordWrap(True)
         layout.addWidget(tip)
@@ -555,6 +679,9 @@ class Workbench(QtWidgets.QMainWindow):
         self.region_form = QtWidgets.QFormLayout()
         self.region_bounds = {}
         layout.addLayout(self.region_form)
+        self.select_region_button = QtWidgets.QPushButton('Select entered analysis region')
+        self.select_region_button.clicked.connect(self._select_entered_region)
+        layout.addWidget(self.select_region_button)
         self.baseline_combo = QtWidgets.QComboBox()
         self.baseline_combo.addItems(['none', 'constant', 'edge_linear', 'reference_linear'])
         self.baseline_combo.setToolTip('Baseline policy; inspect the report for method and flags. Edge-linear is limited to supported profiles.')
@@ -635,14 +762,78 @@ class Workbench(QtWidgets.QMainWindow):
 
     def _clear_analysis(self):
         self.analysis_reports = {}
+        self.selected_regions = []
+        self.analysis_region_check.setChecked(False)
         self._display_analysis()
         self._refresh_analysis_bounds()
+
+    def _entered_region(self):
+        return {'bounds': {axis: [field.value() for field in fields]
+                           for axis, fields in self.region_bounds.items()},
+                'unit': self.region_unit.currentText()}
+
+    def _select_entered_region(self):
+        if self.current is None or self.preview is not None:
+            self._show_error(NMRNextError('ANALYSIS_STATE', 'Apply processing before selecting an analysis region'))
+            return
+        try:
+            from .regions import select_analysis_region
+            selection = self._entered_region()
+            _, mapping = select_analysis_region(self.current, selection['bounds'],
+                                                unit=selection['unit'])
+            self.selected_regions = [selection]
+            self.analysis_region_check.setChecked(True)
+            self._state_generation += 1
+            self._set_status('Selected calibrated region on the applied spectrum; full-spectrum coordinates are retained.')
+        except Exception as exc:
+            self._show_error(exc)
+
+    def _restore_region_controls(self):
+        if not self.selected_regions:
+            self.analysis_region_check.setChecked(False)
+            return
+        selection = self.selected_regions[0]
+        self.region_unit.setCurrentText(selection['unit'])
+        for axis, pair in selection['bounds'].items():
+            if axis in self.region_bounds:
+                for field, value in zip(self.region_bounds[axis], pair):
+                    field.setValue(value)
+        self.analysis_region_check.setChecked(True)
+
+    def _use_plot_region(self):
+        if (self.current is None or self.preview is not None or self.view_combo.currentIndex() != 0
+                or self._display_dataset() is not self.current or self._rendered_dataset is not self.current):
+            self._show_error(NMRNextError('ANALYSIS_STATE',
+                                          'Show the applied Current spectrum before selecting its visible region'))
+            return
+        dataset = self.current
+        ranges = self.plot.getPlotItem().getViewBox().viewRange()
+        axes = dataset.axes
+        visible = {axes[-1].id: ranges[0]}
+        if len(axes) == 2:
+            visible[axes[0].id] = ranges[1]
+        self.region_unit.setCurrentText('points')
+        self._refresh_analysis_bounds()
+        for axis in axes:
+            if axis.id not in visible:
+                continue
+            values, _ = self._axis_values(dataset, axis)
+            low, high = sorted(visible[axis.id])
+            inside = np.flatnonzero((values >= low) & (values <= high))
+            if len(inside):
+                first, last = int(inside[0]), int(inside[-1])
+            else:
+                center = (low + high) / 2
+                first = last = int(np.argmin(np.abs(values - center)))
+            self.region_bounds[axis.id][0].setValue(first)
+            self.region_bounds[axis.id][1].setValue(last)
+        self._select_entered_region()
 
     def _display_analysis(self):
         self.analysis_table.setRowCount(0)
         summaries = []
         if 'autophase' in self.analysis_reports:
-            summaries.append('Automatic phase is applied to the current result. Next Process rebuilds the manual recipe and discards this automatic correction.')
+            summaries.append('Automatic phase is an explicit editable step in the applied and pending recipe.')
         for kind, report in self.analysis_reports.items():
             summaries.append(f"{kind}: " + ', '.join(report.get('flags', [])))
             if kind == 'autophase':
@@ -684,6 +875,30 @@ class Workbench(QtWidgets.QMainWindow):
                 return _attach_mask_selection(autophase(dataset, **options), 'phase', selection)
             work.phase_memory_bytes = memory
             return work
+        if self.analysis_region_check.isChecked():
+            from .regions import select_analysis_region, pick_peaks_in_region, integrate_regions_in_region
+            selection = self._entered_region()
+            bounds, unit = selection['bounds'], selection['unit']
+            region_dataset, mapping = select_analysis_region(dataset, bounds, unit=unit)
+            if kind == 'peaks':
+                if self.noise_mask_path.text().strip():
+                    raise NMRNextError('REGION_MASK_UNSUPPORTED', 'Clear the full-spectrum noise mask before analyzing a selected region')
+                options = {'channel': 0, 'sign': self.sign_combo.currentText(), 'snr': self.snr_spin.value(),
+                           'threshold': self.threshold_spin.value() if self.threshold_check.isChecked() else None}
+                work = lambda: pick_peaks_in_region(dataset, bounds, unit=unit, **options)
+            else:
+                if self.baseline_mask_path.text().strip():
+                    raise NMRNextError('REGION_MASK_UNSUPPORTED', 'Clear the full-spectrum baseline mask before analyzing a selected region')
+                baseline = self.baseline_combo.currentText()
+                value = self.baseline_value_spin.value() if baseline == 'constant' else None
+                local = {'id': 'region-1', 'unit': 'points',
+                         'bounds': {axis.id: [0, region_dataset.axis(axis.id).size - 1]
+                                    for axis in region_dataset.axes}}
+                work = lambda: integrate_regions_in_region(
+                    dataset, bounds, [local], unit=unit, channel=0, baseline=baseline,
+                    baseline_value=value)
+            work.region_selection = selection
+            return work
         if kind == 'peaks':
             mask, selection = _point_mask_selection(dataset, self.noise_mask_path.text().strip() or None)
             options = {'channel': 0, 'sign': self.sign_combo.currentText(), 'snr': self.snr_spin.value(),
@@ -697,7 +912,7 @@ class Workbench(QtWidgets.QMainWindow):
         mask, selection = _point_mask_selection(dataset, self.baseline_mask_path.text().strip() or None)
         return lambda: _attach_mask_selection(integrate_regions(dataset, [region], channel=0, baseline=baseline, baseline_value=value, baseline_mask=mask), 'baseline', selection)
 
-    def _accept_analysis(self, kind, result, *, phase_memory_bytes=None):
+    def _accept_analysis(self, kind, result, *, phase_memory_bytes=None, region_selection=None):
         if kind == 'autophase':
             dataset, report = result
             corrections = report.get('operations') or [report['operation']]
@@ -709,18 +924,23 @@ class Workbench(QtWidgets.QMainWindow):
             self.last_memory_bytes = phase_memory_bytes
             self._clear_analysis()
             self.analysis_reports['autophase'] = report
+            self._install_ordered(operations, backend=backend, memory_bytes=phase_memory_bytes)
             self._render()
             self._update_recipe()
         else:
             self.analysis_reports[kind] = result
+            if region_selection is not None:
+                self.selected_regions = [deepcopy(region_selection)]
         self._display_analysis()
         self._refresh_buttons()
         self._set_status('Analysis completed on the applied current result. Inspect methods and flags before use.')
+        self._state_generation += 1
 
     def analyze_now(self, kind):
         work = self._analysis_request(kind)
         result = work()
-        self._accept_analysis(kind, result, phase_memory_bytes=getattr(work, 'phase_memory_bytes', None))
+        self._accept_analysis(kind, result, phase_memory_bytes=getattr(work, 'phase_memory_bytes', None),
+                              region_selection=getattr(work, 'region_selection', None))
         return result
 
     def _analysis_job(self, kind):
@@ -730,13 +950,17 @@ class Workbench(QtWidgets.QMainWindow):
             self._show_error(exc)
             return
         phase_memory = getattr(work, 'phase_memory_bytes', None)
-        self._start_job(work, lambda result: self._accept_analysis(kind, result, phase_memory_bytes=phase_memory), 'Analyzing applied spectrum…')
+        selection = getattr(work, 'region_selection', None)
+        self._start_job(work, lambda result: self._accept_analysis(kind, result, phase_memory_bytes=phase_memory,
+                                                                  region_selection=selection), 'Analyzing applied spectrum…')
 
     def _current_analysis(self):
         from .analysis import dataset_digest
         digest = dataset_digest(self.current)
         reports = self.analysis_reports.copy()
-        if any(r.get('result_dataset_digest' if k == 'autophase' else 'dataset_digest') != digest for k, r in reports.items()):
+        if any((r.get('result_dataset_digest') if k == 'autophase' else
+                r.get('parent_region', {}).get('parent_dataset_digest', r.get('dataset_digest'))) != digest
+               for k, r in reports.items()):
             raise NMRNextError('STALE_ANALYSIS', 'Analysis belongs to a different current dataset')
         return reports
 
@@ -847,28 +1071,204 @@ class Workbench(QtWidgets.QMainWindow):
             return
         super().closeEvent(event)
 
-    def _read_with_budget(self, path, memory_bytes):
+    def _read_with_budget(self, path, memory_bytes, *, format=None):
         from .io import describe_dataset
-        header = describe_dataset(path)
+        header = describe_dataset(path, format=format)
         limit = min(memory_bytes, 1024**3)
         if header.nbytes > limit:
             raise NMRNextError('MEMORY_BUDGET', f'Input requires {header.nbytes} bytes; selected read limit is {limit} bytes. Increase the processing budget or use a smaller input (opening is capped at 1 GiB).', details={'required_bytes': header.nbytes, 'max_bytes': limit})
-        return read_dataset(path, max_bytes=limit, expected_header=header)
+        return read_dataset(path, format=format, max_bytes=limit, expected_header=header)
 
     def _open_file(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self, "Open NMR spectrum", "", "NMR spectra (*.nmrh5 *.h5 *.ft1 *.ft2 *.ucsf);;All files (*)")
         if path:
             memory = self.memory_spin.value() * 1024**2
+            ticket = self._job_ticket()
             self._start_job(lambda: self._read_with_budget(path, memory),
-                            lambda ds: self.load_dataset_now(ds, Path(path).name), "Opening spectrum…")
+                            lambda ds: self._accept_if_fresh(ticket, lambda: self.load_dataset_now(ds, Path(path).name)),
+                            "Opening spectrum…")
 
     def _open_bruker(self):
         path = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose acquisition folder")
         if path:
             memory = self.memory_spin.value() * 1024**2
+            ticket = self._job_ticket()
             self._start_job(lambda: self._read_with_budget(path, memory),
-                            lambda ds: self.load_dataset_now(ds, Path(path).name), "Opening acquisition…")
+                            lambda ds: self._accept_if_fresh(ticket, lambda: self.load_dataset_now(ds, Path(path).name)),
+                            "Opening acquisition…")
+
+    def _job_ticket(self):
+        return (self._state_generation, self.source, self.current, self.preview)
+
+    def _accept_if_fresh(self, ticket, action):
+        generation, source, current, preview = ticket
+        if (generation != self._state_generation or source is not self.source
+                or current is not self.current or preview is not self.preview):
+            raise NMRNextError('STALE_JOB', 'The workbench changed while this job was running; its result was discarded')
+        return action()
+
+    def _load_recipe_record(self, path):
+        from .cli import _load_recipe
+        args = SimpleNamespace(recipe=str(path), memory=None, block_memory=None,
+                               backend=None, threads=None)
+        recipe, source_path, _, memory, backend, threads = _load_recipe(args)
+        if threads != 1:
+            raise NMRNextError('UNSUPPORTED_THREADS', 'The workbench runs recipes with one processing thread')
+        source = self._read_with_budget(source_path, memory, format=recipe.get('input_format'))
+        plan_operations(source, recipe['operations'], backend=backend, threads=threads,
+                        memory_bytes=memory)
+        return source, recipe, source_path, memory, backend
+
+    def load_recipe_now(self, path):
+        """Validate source and the whole CLI recipe before changing the workbench."""
+        source, recipe, source_path, memory, backend = self._load_recipe_record(path)
+        self.load_dataset_now(source, source_path.name)
+        self._install_ordered(recipe['operations'], backend=backend, memory_bytes=memory)
+        self._set_status(f"Loaded {len(recipe['operations'])} ordered steps from {path}. Process to apply them.")
+        return recipe
+
+    def _load_recipe_dialog(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(self, 'Open runnable workflow', '', 'JSON (*.json)')
+        if not path:
+            return
+        ticket = self._job_ticket()
+        self._start_job(lambda: self._load_recipe_record(path),
+                        lambda value: self._accept_if_fresh(ticket, lambda: self._accept_loaded_recipe(value, path)),
+                        'Opening recipe and source…')
+
+    def _accept_loaded_recipe(self, value, path):
+        source, recipe, source_path, memory, backend = value
+        self.load_dataset_now(source, source_path.name)
+        self._install_ordered(recipe['operations'], backend=backend, memory_bytes=memory)
+        self._set_status(f"Loaded {len(recipe['operations'])} ordered steps from {path}. Process to apply them.")
+
+    def _install_ordered(self, operations, *, backend=None, memory_bytes=None):
+        self._recipe_mode = 'ordered'
+        self._ordered_operations = deepcopy(operations)
+        self._pending_memory_bytes = memory_bytes
+        if backend is not None:
+            index = self.backend_combo.findData(backend)
+            if index < 0:
+                raise NMRNextError('UNSUPPORTED_BACKEND', f'No GUI backend for {backend}')
+            self.backend_combo.blockSignals(True)
+            self.backend_combo.setCurrentIndex(index)
+            self.backend_combo.blockSignals(False)
+        if memory_bytes is not None:
+            self.memory_spin.blockSignals(True)
+            self.memory_spin.setValue(max(1, (memory_bytes + 1024**2 - 1) // 1024**2))
+            self.memory_spin.blockSignals(False)
+        self._refresh_ordered_steps()
+        self._update_recipe()
+        self._state_generation += 1
+
+    def set_ordered_recipe_now(self, operations):
+        """Replace only the pending recipe after complete metadata and budget validation."""
+        if self.source is None:
+            raise NMRNextError('NO_DATASET', 'Open a dataset first')
+        memory = self._pending_memory_bytes or self.memory_spin.value() * 1024**2
+        plan_operations(self.source, operations, backend=self.backend_combo.currentData(),
+                        memory_bytes=memory)
+        self._install_ordered(operations, memory_bytes=memory)
+
+    def _refresh_ordered_steps(self):
+        self.ordered_steps.clear()
+        operations = self.build_recipe()
+        for index, op in enumerate(operations):
+            axis = op.get('axis', ', '.join(op.get('order', [])))
+            extras = ', '.join(f'{key}={value}' for key, value in op.items()
+                               if key not in ('op', 'axis', 'order'))
+            self.ordered_steps.addItem(f"{index + 1}. {op['op']} · {axis}" +
+                                       (f' · {extras}' if extras else ''))
+        self.ordered_label.setText(
+            'Ordered recipe: every step and parameter is retained. Quick controls are paused.'
+            if self._recipe_mode == 'ordered' else
+            'Quick controls build a new recipe from the original data. Select a step to edit the complete sequence.')
+
+    def _start_quick_recipe(self):
+        if self._recipe_mode == 'ordered' and self._ordered_operations:
+            choice = QtWidgets.QMessageBox.question(
+                self, 'Replace pending recipe?',
+                'Start a new quick recipe from the original source? The applied result stays until Process.')
+            if choice != QtWidgets.QMessageBox.StandardButton.Yes:
+                return
+        self._recipe_mode = 'quick'
+        self._ordered_operations = []
+        self._pending_memory_bytes = None
+        self._refresh_ordered_steps()
+        self._update_recipe()
+        self._state_generation += 1
+
+    def _edit_step_dialog(self):
+        if self.source is None:
+            return
+        index = self.ordered_steps.currentRow()
+        ops = self.build_recipe()
+        if not 0 <= index < len(ops):
+            self._set_status('Select a processing step to edit.')
+            return
+        dialog = StepDialog(ops[index], self)
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return
+        try:
+            ops[index] = dialog.operation()
+            self.set_ordered_recipe_now(ops)
+            self.ordered_steps.setCurrentRow(index)
+            self._set_status(f'Updated step {index + 1}; the applied result is unchanged until Process.')
+        except Exception as exc:
+            self._show_error(exc)
+
+    def _add_step_dialog(self):
+        if self.source is None:
+            return
+        from .operations import _FIELDS
+        names = sorted(_FIELDS)
+        name, accepted = QtWidgets.QInputDialog.getItem(self, 'Add processing step', 'Operation', names, 0, False)
+        if not accepted:
+            return
+        axis = self.source.axes[0].id
+        initial = {'op': name, 'order': [a.id for a in self.source.axes]} if name == 'transpose' else {'op': name, 'axis': axis}
+        if name == 'zero_fill':
+            initial['size'] = self.source.axis(axis).size
+        elif name == 'crop':
+            initial.update(start=0, stop=self.source.axis(axis).size)
+        elif name == 'reference':
+            initial.update(reference_ppm=0.0, reference_hz=0.0,
+                           observation_mhz=self.source.axis(axis).observation_mhz or 1.0)
+        dialog = StepDialog(initial, self)
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return
+        ops = self.build_recipe()
+        row = self.ordered_steps.currentRow()
+        insert_at = row + 1 if row >= 0 else len(ops)
+        try:
+            ops.insert(insert_at, dialog.operation())
+            self.set_ordered_recipe_now(ops)
+            self.ordered_steps.setCurrentRow(insert_at)
+            self._set_status(f'Added step {insert_at + 1}; the applied result is unchanged until Process.')
+        except Exception as exc:
+            self._show_error(exc)
+
+    def _change_step(self, action):
+        row = self.ordered_steps.currentRow()
+        ops = self.build_recipe()
+        if not 0 <= row < len(ops):
+            self._set_status('Select a processing step first.')
+            return
+        if action == 'remove':
+            ops.pop(row)
+            new_row = min(row, len(ops) - 1)
+        else:
+            new_row = row + (-1 if action == 'up' else 1)
+            if not 0 <= new_row < len(ops):
+                return
+            ops[row], ops[new_row] = ops[new_row], ops[row]
+        try:
+            self.set_ordered_recipe_now(ops)
+            self.ordered_steps.setCurrentRow(new_row)
+            self._set_status('Ordered steps updated; the applied result is unchanged until Process.')
+        except Exception as exc:
+            self._show_error(exc)
 
     def load_dataset_now(self, dataset, name="Dataset"):
         """Install a validated source. Used by dialogs, demos and offscreen tests."""
@@ -881,7 +1281,9 @@ class Workbench(QtWidgets.QMainWindow):
                     self.dataset_title.text(), self.view_combo.currentIndex(),
                     self.axis_combo.currentIndex(), self.component_combo.currentIndex(),
                     self.status.text(), self.status.styleSheet(), self._axis_settings,
-                    self.analysis_reports, self.filter_check.isChecked())
+                    self.analysis_reports, self.filter_check.isChecked(),
+                    self._recipe_mode, self._ordered_operations, self._pending_memory_bytes,
+                    self.selected_regions, self._state_generation)
         self._suspend_preview_invalidation = True
         try:
             self.source = dataset
@@ -892,6 +1294,10 @@ class Workbench(QtWidgets.QMainWindow):
             self.last_plan = None
             self.last_backend = None
             self.last_memory_bytes = None
+            self._recipe_mode = 'quick'
+            self._ordered_operations = []
+            self._pending_memory_bytes = None
+            self.selected_regions = []
             self._reset_axis_settings()
             self._clear_analysis()
             self.dataset_title.setText(name)
@@ -901,12 +1307,15 @@ class Workbench(QtWidgets.QMainWindow):
             self._refresh()
             self._set_status(f"Loaded {name}. Original data is preserved.")
             self._recipe_cache.clear()
+            self._state_generation += 1
         except Exception:
             (self.source, self.current, self.preview, self.source_name,
              self.last_operations, self.last_plan, self.last_backend, self.last_memory_bytes,
              title, view_index, axis_index, component_index,
              status, status_style, self._axis_settings,
-             self.analysis_reports, filter_checked) = previous
+             self.analysis_reports, filter_checked,
+             self._recipe_mode, self._ordered_operations, self._pending_memory_bytes,
+             self.selected_regions, self._state_generation) = previous
             self.filter_check.blockSignals(True)
             self.filter_check.setChecked(filter_checked)
             self.filter_check.blockSignals(False)
@@ -938,10 +1347,15 @@ class Workbench(QtWidgets.QMainWindow):
         self.last_plan = None
         self.last_backend = None
         self.last_memory_bytes = None
+        self._recipe_mode = 'quick'
+        self._ordered_operations = []
+        self._pending_memory_bytes = None
+        self.selected_regions = []
         self._reset_axis_settings()
         self._clear_analysis()
         self._refresh()
         self._set_status("Reset to original data. The source has not changed.")
+        self._state_generation += 1
 
     def _selected_axes(self):
         if self.source is None:
@@ -954,6 +1368,8 @@ class Workbench(QtWidgets.QMainWindow):
     def build_recipe(self):
         if self.source is None:
             return []
+        if self._recipe_mode == 'ordered':
+            return deepcopy(self._ordered_operations)
         ops = []
         if self.filter_check.isChecked():
             ops.append({'op': 'digital_filter', 'axis': self.source.axes[-1].id})
@@ -1014,6 +1430,8 @@ class Workbench(QtWidgets.QMainWindow):
         return [a for a in axes if a.id in self.source.complex_axes]
 
     def _setting_changed(self, key):
+        if self._recipe_mode == 'ordered':
+            return
         self._discard_extra_operations()
         widget = self._setting_controls()[key]
         value = (widget.currentIndex() if key == 'zf' else widget.isChecked()
@@ -1021,14 +1439,27 @@ class Workbench(QtWidgets.QMainWindow):
         for axis in self._eligible_setting_axes(key, self._selected_axes()):
             self._axis_settings[axis.id][key] = value
         self._update_recipe()
+        self._state_generation += 1
 
     def _discard_extra_operations(self):
         if 'autophase' in self.analysis_reports:
             self._set_status('Processing edits discard automatic phase from the next recipe. The applied current result remains unchanged until Process.')
 
     def _processing_changed(self):
+        if self._recipe_mode == 'ordered':
+            return
         self._discard_extra_operations()
         self._update_recipe()
+        self._state_generation += 1
+
+    def _memory_changed(self):
+        self._pending_memory_bytes = None
+        self._update_recipe()
+        self._state_generation += 1
+
+    def _backend_changed(self):
+        self._update_recipe()
+        self._state_generation += 1
 
     def _axis_changed(self):
         selected = self._selected_axes()
@@ -1072,10 +1503,13 @@ class Workbench(QtWidgets.QMainWindow):
         else:
             names = []
             for op in ops:
-                name = {"window": "Window", "zero_fill": "Zero fill", "fft": "Fourier transform", "phase": "Phase", "crop": "Crop", 'digital_filter': 'Digital-filter correction', 'reference': 'Reference'}[op["op"]]
-                names.append(f"{name} ({op['axis']})")
+                name = {"window": "Window", "zero_fill": "Zero fill", "fft": "Fourier transform", "phase": "Phase", "crop": "Crop", 'digital_filter': 'Digital-filter correction', 'reference': 'Reference',
+                        'transpose': 'Transpose', 'discard_imaginary': 'Discard imaginary', 'reverse': 'Reverse'} .get(op['op'], op['op'])
+                names.append(f"{name} ({op.get('axis', ', '.join(op.get('order', [])))})")
             self.recipe_label.setText(" → ".join(names))
-        if any(a.domain == "time" and a.id not in self.source.complex_axes for a in self._selected_axes()) and self.fft_check.isChecked():
+        if self._recipe_mode == 'ordered':
+            self.plan_label.setText('The complete ordered recipe runs from the original source. Every step is validated before execution.')
+        elif any(a.domain == "time" and a.id not in self.source.complex_axes for a in self._selected_axes()) and self.fft_check.isChecked():
             self.plan_label.setText("Fourier transform requires complex components on each selected time axis.")
         elif any(a.domain == "frequency" and a.id not in self.source.complex_axes for a in self._selected_axes()):
             self.plan_label.setText("Processed real data has no imaginary channel. Phase is unavailable; crop, view and export remain available.")
@@ -1085,6 +1519,7 @@ class Workbench(QtWidgets.QMainWindow):
             self.plan_label.setText("Import details are opaque. Check acquisition metadata before transforming; unsupported filter records may be refused.")
         else:
             self.plan_label.setText("All processing uses the original source and the selected backend.")
+        self._refresh_ordered_steps()
         self._refresh_buttons()
 
     def process_now(self, *, preview=False):
@@ -1093,7 +1528,7 @@ class Workbench(QtWidgets.QMainWindow):
             raise NMRNextError("NO_DATASET", "Open a dataset first")
         ops = self.build_recipe()
         backend = self.backend_combo.currentData()
-        memory = self.memory_spin.value() * 1024**2
+        memory = self._pending_memory_bytes or self.memory_spin.value() * 1024**2
         result, plan = self._recipe_cache.run(self.source, ops, backend=backend, memory_bytes=memory)
         if preview:
             self.preview = result
@@ -1111,6 +1546,7 @@ class Workbench(QtWidgets.QMainWindow):
         self.view_combo.setCurrentIndex(0)
         self._render()
         self._refresh_buttons()
+        self._state_generation += 1
         return result
 
     def _process_async(self, *, preview):
@@ -1119,7 +1555,7 @@ class Workbench(QtWidgets.QMainWindow):
         ops = self.build_recipe()
         backend = self.backend_combo.currentData()
         source = self.source
-        memory = self.memory_spin.value() * 1024**2
+        memory = self._pending_memory_bytes or self.memory_spin.value() * 1024**2
         def work():
             return self._recipe_cache.run(source, ops, backend=backend, memory_bytes=memory)
         def done(value):
@@ -1140,6 +1576,7 @@ class Workbench(QtWidgets.QMainWindow):
             self.view_combo.setCurrentIndex(0)
             self._render()
             self._refresh_buttons()
+            self._state_generation += 1
         self._start_job(work, done, "Computing spectrum…")
 
     def _display_dataset(self):
@@ -1170,31 +1607,41 @@ class Workbench(QtWidgets.QMainWindow):
     def _refresh_buttons(self):
         has = self.source is not None
         for button in (self.open_button, self.bruker_button, self.demo1_button, self.demo2_button,
+                       self.open_session_button, self.load_recipe_button,
                        self.process_button, self.preview_button, self.reset_button,
-                       self.export_button, self.recipe_button, self.workflow_button):
+                       self.export_button, self.recipe_button, self.workflow_button,
+                       self.session_button):
             button.setEnabled(not self._busy and (has or button in (
-                self.open_button, self.bruker_button, self.demo1_button, self.demo2_button)))
+                self.open_button, self.bruker_button, self.open_session_button,
+                self.load_recipe_button, self.demo1_button, self.demo2_button)))
         selected = self._selected_axes() if has else []
         has_time = any(a.domain == "time" for a in selected)
         has_complex = any(a.id in self.source.complex_axes for a in selected) if has else False
+        quick = self._recipe_mode == 'quick'
+        ordered = self._recipe_mode == 'ordered'
+        for button in (self.add_step_button, self.edit_step_button, self.remove_step_button,
+                       self.up_step_button, self.down_step_button):
+            button.setEnabled(has and not self._busy)
+        self.quick_recipe_button.setEnabled(has and ordered and not self._busy)
         for control in (self.axis_combo, self.backend_combo, self.export_combo):
             control.setEnabled(has and not self._busy)
         for control in (self.lb_spin, self.first_point_spin, self.zf_combo, self.fft_check):
-            control.setEnabled(has_time and not self._busy)
+            control.setEnabled(quick and has_time and not self._busy)
         for control in (self.p0_spin, self.p1_spin, self.pivot_spin):
-            control.setEnabled(has_complex and not self._busy)
+            control.setEnabled(quick and has_complex and not self._busy)
         has_frequency = any(a.domain == 'frequency' for a in selected)
         for control in (self.crop_check, self.crop_start_spin, self.crop_stop_spin):
-            control.setEnabled(has_frequency and not self._busy)
+            control.setEnabled(quick and has_frequency and not self._busy)
         for control in (self.reference_check, self.reference_reverse_check, self.reference_ppm_spin, self.reference_hz_spin, self.reference_mhz_spin):
-            control.setEnabled(bool(selected) and not self._busy)
+            control.setEnabled(quick and bool(selected) and not self._busy)
         self.process_button.setEnabled(has and bool(self.build_recipe()) and not self._busy)
         self.preview_button.setEnabled(has and bool(self.build_recipe()) and not self._busy)
         self.export_button.setEnabled(has and self.preview is None and not self._busy)
         self.recipe_button.setEnabled(has and self.preview is None and not self._busy)
         self.workflow_button.setEnabled(has and self.preview is None and not self._busy)
+        self.session_button.setEnabled(has and self.preview is None and not self._busy)
         imported = self.source.metadata.get('import') if has else None
-        self.filter_check.setEnabled(not self._busy and isinstance(imported, dict)
+        self.filter_check.setEnabled(quick and not self._busy and isinstance(imported, dict)
                                      and imported.get('format') in ('bruker-raw-1d', 'bruker-raw-2d'))
         can_analyze = (has and self.preview is None and not self._busy
                        and len(self.current.axes) in (1, 2)
@@ -1204,6 +1651,17 @@ class Workbench(QtWidgets.QMainWindow):
                        and set(self.current.complex_axes) == {a.id for a in self.current.axes})
         self.autophase_button.setEnabled(phase_ready)
         self.analysis_export_button.setEnabled(can_analyze and bool(self.analysis_reports))
+        self._refresh_visible_region_button()
+
+    def _refresh_visible_region_button(self):
+        can_use = (self.current is not None and self.preview is None
+                   and self.view_combo.currentIndex() == 0
+                   and self._display_dataset() is self.current
+                   and self._rendered_dataset is self.current
+                   and len(self.current.axes) in (1, 2)
+                   and all(axis.domain == 'frequency' for axis in self.current.axes)
+                   and not self._busy)
+        self.use_plot_region_button.setEnabled(can_use)
 
     def _update_details(self):
         if self.source is None:
@@ -1232,10 +1690,13 @@ class Workbench(QtWidgets.QMainWindow):
 
     def _render(self):
         dataset = self._display_dataset()
+        self._rendered_dataset = None
+        self._rendered_axis_units = {}
         self.plot.clear()
         if dataset is None:
             self.plot_caption.setText("No spectrum loaded")
             self.plot_note.setText("Open a spectrum or create a synthetic example.")
+            self._refresh_visible_region_button()
             return
         old = self.component_combo.currentIndex()
         self.component_combo.blockSignals(True)
@@ -1253,6 +1714,7 @@ class Workbench(QtWidgets.QMainWindow):
         if data.ndim == 1:
             axis = dataset.axes[0]
             x, unit = self._axis_values(dataset, axis)
+            self._rendered_axis_units[axis.id] = unit
             stride = max(1, int(np.ceil(len(x) / 20000)))
             self.plot.plot(x[::stride], data[::stride], pen=pg.mkPen(ACCENT, width=1.6))
             self.plot.addLine(y=0, pen=pg.mkPen("#8ca0b0", width=1))
@@ -1264,6 +1726,7 @@ class Workbench(QtWidgets.QMainWindow):
             ya, xa = dataset.axes
             x, xu = self._axis_values(dataset, xa)
             y, yu = self._axis_values(dataset, ya)
+            self._rendered_axis_units = {xa.id: xu, ya.id: yu}
             sy = max(1, int(np.ceil(len(y) / 1024)))
             sx = max(1, int(np.ceil(len(x) / 1024)))
             image = data[::sy, ::sx]
@@ -1301,6 +1764,8 @@ class Workbench(QtWidgets.QMainWindow):
                           'Confirm the orientation and enter a known anchor for ppm.' if unreferenced else '')
         self.plot_note.setText(f"{sampled} Wheel to zoom; drag to pan. Intensities retain their sign.{reference_note}")
         self.plot.autoRange()
+        self._rendered_dataset = dataset
+        self._refresh_visible_region_button()
 
     def preflight_export(self, fmt):
         if self.current is None:
@@ -1386,6 +1851,211 @@ class Workbench(QtWidgets.QMainWindow):
                         lambda recipe: self._set_status(
                             f'Saved applied workflow: {recipe}. Run spinflow run "{recipe}" to reproduce it.'),
                         'Saving applied workflow and source snapshot…')
+
+    def save_session_now(self, directory):
+        """Save only the applied result and its digest-linked analysis state."""
+        if self.source is None or self.preview is not None:
+            raise NMRNextError('SESSION_STATE', 'Open and apply a dataset before saving a session')
+        from .session import save_session
+        reports = self._current_analysis()
+        return save_session(self.source, self.last_operations, directory,
+                            backend=self.last_backend or 'native',
+                            memory_bytes=self.last_memory_bytes or self.memory_spin.value() * 1024**2,
+                            regions=deepcopy(self.selected_regions), reports=reports,
+                            result=self.current, source_name=self.source_name)
+
+    def _save_session_dialog(self):
+        if self.source is None:
+            return
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, 'Save applied session to a NEW folder', 'spinflow-session',
+            options=QtWidgets.QFileDialog.Option.DontConfirmOverwrite)
+        if path:
+            self._start_job(lambda: self.save_session_now(path),
+                            lambda saved: self._set_status(f'Saved applied session: {saved}.'),
+                            'Saving source, recipe and analysis…')
+
+    def open_session_now(self, directory):
+        """Replay and verify the complete saved session before changing the view."""
+        from .session import load_session
+        record = load_session(directory, max_bytes=min(self.memory_spin.value() * 1024**2, 1024**3))
+        self._accept_loaded_session(record)
+        return record
+
+    def _open_session_dialog(self):
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, 'Open saved session folder')
+        if not path:
+            return
+        memory = min(self.memory_spin.value() * 1024**2, 1024**3)
+        ticket = self._job_ticket()
+        from .session import load_session
+        self._start_job(lambda: load_session(path, max_bytes=memory),
+                        lambda record: self._accept_if_fresh(ticket, lambda: self._accept_loaded_session(record)),
+                        'Checking and replaying saved session…')
+
+    def _accept_loaded_session(self, record):
+        source, result = record['source'], record['current']
+        operations = record['operations']
+        backend, memory = record['backend'], record['memory_bytes']
+        # These checks precede the first GUI mutation even if an alternate
+        # session loader returned an incomplete record.
+        if result is None:
+            raise NMRNextError('INVALID_SESSION', 'Saved session has no replayed applied result')
+        plan = plan_operations(source, operations, backend=backend, memory_bytes=memory)
+        checkpoint = self._capture_view_checkpoint()
+        try:
+            # Loading a source normally clears its cache. Keep the previous
+            # cache object untouched until the entire new view succeeds.
+            self._recipe_cache = RecipeCache()
+            self.load_dataset_now(source, record.get('source_name') or 'Saved source')
+            self._install_ordered(operations, backend=backend, memory_bytes=memory)
+            self.current = result
+            self.last_operations = deepcopy(operations)
+            self.last_plan = plan
+            self.last_backend = backend
+            self.last_memory_bytes = memory
+            self.selected_regions = deepcopy(record.get('regions', []))
+            self.analysis_reports = deepcopy(record.get('reports', {}))
+            self._display_analysis()
+            self._refresh_analysis_bounds()
+            self._restore_region_controls()
+            self._render()
+            self._refresh_buttons()
+            self._set_status(f"Reopened {len(operations)} applied steps and {len(self.analysis_reports)} analysis report(s).")
+        except BaseException as exc:
+            try:
+                self._restore_view_checkpoint(checkpoint)
+            except BaseException as rollback_exc:
+                exc.add_note(f'GUI rollback failed: {rollback_exc}')
+            raise
+
+    def _capture_view_checkpoint(self):
+        """Capture logical and visible state without copying large sample arrays."""
+        logical_names = ('source', 'current', 'preview', 'source_name', 'last_operations',
+                         'last_plan', 'last_backend', 'last_memory_bytes', '_axis_settings',
+                         'analysis_reports', 'selected_regions', '_recipe_mode',
+                         '_ordered_operations', '_pending_memory_bytes', '_recipe_cache',
+                         '_rendered_dataset', '_rendered_axis_units', '_suspend_preview_invalidation',
+                         '_state_generation')
+        reference_names = {'source', 'current', 'preview', '_recipe_cache', '_rendered_dataset'}
+        logical = {name: (getattr(self, name) if name in reference_names else deepcopy(getattr(self, name)))
+                   for name in logical_names}
+        combo_names = ('axis_combo', 'component_combo', 'view_combo', 'backend_combo',
+                       'export_combo', 'region_unit', 'sign_combo', 'baseline_combo', 'zf_combo')
+        combos = {}
+        for name in combo_names:
+            widget = getattr(self, name)
+            combos[name] = ([(widget.itemText(i), widget.itemData(i)) for i in range(widget.count())],
+                            widget.currentIndex())
+        value_names = ('lb_spin', 'first_point_spin', 'p0_spin', 'p1_spin', 'pivot_spin',
+                       'crop_start_spin', 'crop_stop_spin', 'reference_ppm_spin',
+                       'reference_hz_spin', 'reference_mhz_spin', 'memory_spin',
+                       'snr_spin', 'threshold_spin', 'baseline_value_spin')
+        values = {name: getattr(self, name).value() for name in value_names}
+        check_names = ('filter_check', 'fft_check', 'crop_check', 'reference_check',
+                       'reference_reverse_check', 'first_order_check', 'threshold_check',
+                       'analysis_region_check')
+        checks = {name: getattr(self, name).isChecked() for name in check_names}
+        line_names = ('phase_mask_path', 'noise_mask_path', 'baseline_mask_path')
+        lines = {name: getattr(self, name).text() for name in line_names}
+        labels = {name: getattr(self, name).text() for name in
+                  ('dataset_title', 'status', 'recipe_label', 'plan_label', 'axis_settings_label',
+                   'ordered_label', 'analysis_summary', 'plot_caption', 'plot_note')}
+        table = [[(self.analysis_table.item(row, col).text(),
+                   self.analysis_table.item(row, col).toolTip())
+                  if self.analysis_table.item(row, col) is not None else None
+                  for col in range(self.analysis_table.columnCount())]
+                 for row in range(self.analysis_table.rowCount())]
+        plot = self.plot.getPlotItem()
+        view = plot.getViewBox()
+        plot_state = {
+            'items': list(plot.items), 'range': deepcopy(view.viewRange()),
+            'x_inverted': bool(view.state.get('xInverted')),
+            'y_inverted': bool(view.state.get('yInverted')),
+            'bottom': (plot.getAxis('bottom').labelText, plot.getAxis('bottom').labelUnits),
+            'left': (plot.getAxis('left').labelText, plot.getAxis('left').labelUnits),
+        }
+        enabled = {widget: widget.isEnabled() for widget in self.findChildren(QtWidgets.QWidget)}
+        return {'logical': logical, 'combos': combos, 'values': values, 'checks': checks,
+                'lines': lines, 'labels': labels, 'region_bounds': self._entered_region(),
+                'steps': ([self.ordered_steps.item(i).text() for i in range(self.ordered_steps.count())],
+                          self.ordered_steps.currentRow()),
+                'table': table, 'details': self.details.toHtml(), 'status_style': self.status.styleSheet(),
+                'plot': plot_state, 'enabled': enabled}
+
+    def _restore_view_checkpoint(self, checkpoint):
+        """Restore after any failed installation without invoking failing render hooks."""
+        for name, value in checkpoint['logical'].items():
+            setattr(self, name, value)
+        for name, (items, index) in checkpoint['combos'].items():
+            widget = getattr(self, name)
+            blocked = widget.blockSignals(True)
+            try:
+                widget.clear()
+                for label, data in items:
+                    widget.addItem(label, data)
+                widget.setCurrentIndex(index)
+            finally:
+                widget.blockSignals(blocked)
+        for name, value in checkpoint['values'].items():
+            widget = getattr(self, name)
+            blocked = widget.blockSignals(True)
+            try:
+                widget.setValue(value)
+            finally:
+                widget.blockSignals(blocked)
+        for name, value in checkpoint['checks'].items():
+            widget = getattr(self, name)
+            blocked = widget.blockSignals(True)
+            try:
+                widget.setChecked(value)
+            finally:
+                widget.blockSignals(blocked)
+        for name, value in checkpoint['lines'].items():
+            widget = getattr(self, name)
+            blocked = widget.blockSignals(True)
+            try:
+                widget.setText(value)
+            finally:
+                widget.blockSignals(blocked)
+        # Recreate the prior dynamic region rows from the restored current
+        # dataset, then restore their exact user-entered bounds.
+        Workbench._refresh_analysis_bounds(self)
+        for axis, pair in checkpoint['region_bounds']['bounds'].items():
+            if axis in self.region_bounds:
+                for field, value in zip(self.region_bounds[axis], pair):
+                    field.setValue(value)
+        self.ordered_steps.clear()
+        for label in checkpoint['steps'][0]:
+            self.ordered_steps.addItem(label)
+        self.ordered_steps.setCurrentRow(checkpoint['steps'][1])
+        self.analysis_table.setRowCount(len(checkpoint['table']))
+        self.analysis_table.clearContents()
+        for row, cells in enumerate(checkpoint['table']):
+            for col, content in enumerate(cells):
+                if content is not None:
+                    item = QtWidgets.QTableWidgetItem(content[0])
+                    item.setToolTip(content[1])
+                    self.analysis_table.setItem(row, col, item)
+        self.details.setHtml(checkpoint['details'])
+        for name, value in checkpoint['labels'].items():
+            getattr(self, name).setText(value)
+        self.status.setStyleSheet(checkpoint['status_style'])
+        plot = self.plot.getPlotItem()
+        self.plot.clear()
+        for item in checkpoint['plot']['items']:
+            plot.addItem(item)
+        plot.invertX(checkpoint['plot']['x_inverted'])
+        plot.invertY(checkpoint['plot']['y_inverted'])
+        self.plot.setLabel('bottom', *checkpoint['plot']['bottom'])
+        self.plot.setLabel('left', *checkpoint['plot']['left'])
+        x_range, y_range = checkpoint['plot']['range']
+        plot.getViewBox().setRange(xRange=x_range, yRange=y_range, padding=0)
+        for widget, state in checkpoint['enabled'].items():
+            try:
+                widget.setEnabled(state)
+            except RuntimeError:
+                pass  # A dynamic region row may have been replaced.
 
 
 def main(argv=None):

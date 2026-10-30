@@ -2,7 +2,7 @@
 
 SpinFlow's processing contract is described in [numerical conventions](numerical-conventions.md), [data model](data-model.md), and [format profiles](formats.md). The test suite includes independent direct-DFT and analytical fixtures, native versus NumPy comparisons, codec failures and read-back checks, CLI workflows, and optional GUI integration.
 
-The historical stage sections below describe evidence available at their own checkpoints. A later unreleased candidate has completed a bounded [single-case NMRPipe and end-user application comparison](laboratory-workflow-results.md); it does not establish broad parity or alter those historical checkpoints.
+The historical stage sections below describe evidence available at their own checkpoints. The later 0.3.0b1 experimental beta has a bounded [single-case NMRPipe and end-user application comparison](laboratory-workflow-results.md) and separate [installed candidate evidence](v1-candidate-results.md); neither establishes broad parity or alters those historical checkpoints.
 
 ## Stage 14 release-candidate Linux preflight
 

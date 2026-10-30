@@ -23,7 +23,7 @@ import tempfile
 import urllib.error
 import urllib.request
 
-DEFAULT_VERSION = "0.2.0"
+DEFAULT_VERSION = "0.3.0b1"
 REPOSITORY = "ben-shin/spinflow"
 MARKER = ".spinflow-install.json"
 
@@ -34,8 +34,8 @@ class InstallError(RuntimeError):
 
 def release_version(value):
     value = value.removeprefix("v")
-    if not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)", value):
-        raise InstallError("Choose an explicit release version such as 0.2.0; latest and source refs are unsupported.")
+    if not re.fullmatch(r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:(?:a|b|rc)[0-9]+)?", value):
+        raise InstallError("Choose an explicit version such as 0.3.0b1; latest and source refs are unsupported.")
     return value
 
 

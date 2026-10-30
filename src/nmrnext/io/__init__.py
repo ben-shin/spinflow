@@ -22,6 +22,7 @@ import numpy as np
 
 from nmrnext.errors import NMRNextError
 from nmrnext.model import Axis, Dataset, DatasetHeader
+from nmrnext.support import support_capabilities
 
 
 MAX_BYTES = 1 << 30
@@ -49,7 +50,7 @@ _EXTENSIONS = {".nmrh5": "nmrnext-hdf5", ".h5": "nmrnext-hdf5",
 
 def capabilities():
     """Exact implemented profiles; a profile is not generic format support."""
-    return [
+    profiles = [
         {"format": "nmrnext-hdf5", "version": "1", "object": "native numeric dataset",
          "dimensions": "1+", "components": "all quadrature channels", "read": True, "write": True,
          "preserved": ["data", "dtype", "axis schema", "metadata", "provenance"], "known_losses": []},
@@ -58,13 +59,13 @@ def capabilities():
          "read": True, "write": True, "preserved": ["float32 intensities", "axis ppm calibration", "axis labels"],
          "known_losses": ["quadrature_projection", "float32_quantization", "metadata", "provenance",
                           "reference_fields", "axis_annotations"], "readback": "nmrglue 0.12 (shared codec family)",
-         "external_consumer": "unverified"},
+         "external_consumer": "NMRDraw 13 reopened one selected public Varian 2D protein case in docs/laboratory-workflow-results.md; other cases unverified"},
         {"format": "ucsf-real", "version": "UCSF NMR version 2",
          "object": "processed real spectrum", "dimensions": [2], "components": "component 0 (all-real channel)",
          "read": True, "write": True, "preserved": ["float32 intensities", "axis ppm calibration", "axis labels"],
          "known_losses": ["quadrature_projection", "float32_quantization", "metadata", "provenance",
                           "reference_fields", "axis_annotations"], "readback": "nmrglue 0.12 (shared codec family)",
-         "external_consumer": "unverified"},
+         "external_consumer": "Sparky 3.115 reopened one selected public Varian 2D protein case in docs/laboratory-workflow-results.md; other cases unverified"},
         {"format": "bruker-raw-1d", "version": "controlled acqus/fid profile",
          "object": "raw 1D complex FID", "dimensions": [1], "components": "real and imaginary",
          "read": True, "write": False, "preserved": ["raw acquired points", "raw acqus text", "digital-filter parameters"],
@@ -94,6 +95,17 @@ def capabilities():
          "known_losses":[], "constraints":["single spectrum block", "Hz units", "AFFN numeric encoding"],
          "external_consumer":"unverified; constructed fixtures only"},
     ]
+    registry = support_capabilities()
+    status = {item["id"]: item for item in registry["profiles"]}
+    for profile in profiles:
+        declared = status[profile["format"]]
+        profile["source_status"] = declared["source_status"]
+        profile["processing_v1_target"] = declared["processing_v1_target"]
+        distribution = registry["distribution"]
+        profile["candidate_status"] = (
+            f'{distribution["release_status"]}; {distribution["qualification"]}'
+        )
+    return profiles
 
 
 def _format(name, path, *, reading=False, header_only=False):
