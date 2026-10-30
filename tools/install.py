@@ -23,7 +23,7 @@ import tempfile
 import urllib.error
 import urllib.request
 
-DEFAULT_VERSION = "0.3.0b1"
+DEFAULT_VERSION = "0.3.0b2"
 REPOSITORY = "ben-shin/spinflow"
 MARKER = ".spinflow-install.json"
 

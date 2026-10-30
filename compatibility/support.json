@@ -2,9 +2,9 @@
   "schema_version": "1",
   "status_date": "2026-10-30",
   "distribution": {
-    "version": "0.3.0b1",
+    "version": "0.3.0b2",
     "release_status": "experimental beta",
-    "previous_release": "v0.2.0",
+    "previous_release": "v0.3.0b1",
     "qualification": "scientific and independent researcher acceptance unverified"
   },
   "platform_target": {

@@ -4,33 +4,33 @@ SpinFlow is an experimental, open source NMR processing workbench. It provides a
 
 **Scientific status:** this is an early processing slice, not a validated replacement for NMRPipe or a laboratory processing system. One public Bruker 1D acquisition has an archived peak-position check; two public 2D acquisitions add bounded both-axis automatic phase and fixed peak/relative-volume checks. One previously studied public Varian protein case has a bounded comparison with NMRPipe 13 and actual NMRDraw/Sparky reopening; broader real workflows, general parity, concentration accuracy and other independent reopening remain unverified. See [scope](docs/scope.md), [validation](docs/public-validation.md), and the [roadmap](ROADMAP.md).
 
-Earlier Linux checks under software emulation passed the installed-package suite, public-data and automated virtual-desktop workflows, and a CPython 3.12 release-installer preflight. The [validation record](docs/public-validation.md) gives the exact tested candidates and limitations. The separate [0.3.0b1 candidate results](docs/v1-candidate-results.md) identify its installed Linux checks and remaining publication gates. Version 0.2.0 remains an immutable historical experimental prerelease.
+Earlier Linux checks under software emulation passed the installed-package suite, public-data and automated virtual-desktop workflows, and a CPython 3.12 release-installer preflight. The [validation record](docs/public-validation.md) gives the exact tested candidates and limitations. The immutable published v0.3.0b1 beta and its [dated evidence](docs/v1-candidate-results.md) remain distinct from the focused [0.3.0b2 qualification](docs/v1-qualification-results.md). Version 0.2.0 remains an older experimental prerelease.
 
-## Install the 0.3.0b1 experimental beta on Linux
+## Install on Linux
 
-For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, use the versioned installer once the 0.3.0b1 release assets are available:
+For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, use the versioned installer **after the v0.3.0b2 assets are published and verified**:
 
 ```bash
-curl -fL -o install-spinflow.py https://github.com/ben-shin/spinflow/releases/download/v0.3.0b1/install-spinflow.py
-python3 install-spinflow.py --version 0.3.0b1
-"$HOME/.local/share/spinflow/0.3.0b1/bin/spinflow" doctor
+curl -fL -o install-spinflow.py https://github.com/ben-shin/spinflow/releases/download/v0.3.0b2/install-spinflow.py
+python3 install-spinflow.py --version 0.3.0b2
+"$HOME/.local/share/spinflow/0.3.0b2/bin/spinflow" doctor
 ```
 
-Installation needs internet access to obtain the checked release assets and pinned Python dependencies. The matching prebuilt native wheel does not need a compiler. The versioned wheels target Ubuntu 24.04 x86-64 for these Python versions; they are not general manylinux wheels. To include the optional desktop and figure support, rerun the installer with `--gui --plot`, then run `"$HOME/.local/share/spinflow/0.3.0b1/bin/spinflow" gui` on a desktop. Optional extras already installed are retained on later runs. Use `--prefix PATH` for another installation location; an existing installation must match the selected version and Python. See the [beginner tutorials](docs/tutorials/index.md) for the first spectrum and public-data workflows.
+Installation needs internet access to obtain the checked release assets and pinned Python dependencies. The matching prebuilt native wheel does not need a compiler. The versioned wheels target Ubuntu 24.04 x86-64 for these Python versions; they are not general manylinux wheels. To include the optional desktop and figure support, rerun the installer with `--gui --plot`, then run `"$HOME/.local/share/spinflow/0.3.0b2/bin/spinflow" gui` on a desktop. Optional extras already installed are retained on later runs. Use `--prefix PATH` for another installation location; an existing installation must match the selected version and Python. See the [beginner tutorials](docs/tutorials/index.md) for the first spectrum and public-data workflows.
 
 After installation, this command works offline and creates a new folder containing a synthetic spectrum, processing recipe and analysis reports:
 
 ```bash
-"$HOME/.local/share/spinflow/0.3.0b1/bin/spinflow" first-spectrum first-spectrum
+"$HOME/.local/share/spinflow/0.3.0b2/bin/spinflow" first-spectrum first-spectrum
 ```
 
 The folder must not already exist. If a run fails after creating it, choose a new folder name before retrying. The synthetic example illustrates the workflow and is not evidence of experimental accuracy.
 
-The previous [v0.2.0 release](https://github.com/ben-shin/spinflow/releases/tag/v0.2.0) remains available for its documented feature set. Use a different prefix for a second version.
+The published [v0.3.0b1 release](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b1) remains available while b2 is under review; [v0.2.0](https://github.com/ben-shin/spinflow/releases/tag/v0.2.0) is older. Use a different prefix for each installed version.
 
 ## Install from source on Linux
 
-The header-only planning, GUI budget control, `discard_imaginary`, explicit spectral-width calibration, execution/cache improvements and bounded native-file processing described below are changes since the immutable v0.2.0 archive. Use a 0.3.0b1 source checkout for these features. The v0.2.0 release installer cannot supply them.
+The header-only planning, GUI budget control, `discard_imaginary`, explicit spectral-width calibration, execution/cache improvements and bounded native-file processing described below are changes since the immutable v0.2.0 archive. Use a matching 0.3 beta source checkout for these features. The v0.2.0 release installer cannot supply them.
 
 Ubuntu 24.04 and Python 3.12 or 3.13 are the initial Linux build targets. From a checkout:
 
@@ -42,7 +42,7 @@ bash tools/bootstrap.sh
 
 `bootstrap.sh` creates a local environment, installs the project, and builds the native C++/PocketFFT extension. Setup downloads dependencies; processing itself runs offline. For the optional GUI, use `bash tools/bootstrap.sh --gui` and then `.venv/bin/spinflow gui` on a desktop with a display. Add `--plot` for optional Matplotlib SVG/PDF/PNG export without making it a core dependency. Follow the [Linux user-testing guide](docs/linux-user-testing.md) for a synthetic walkthrough. See the [Linux build guide](docs/linux-build.md) for system packages, manual installation, wheel builds, and troubleshooting. The native backend must be reported available by `doctor` before choosing it in a recipe.
 
-The [processing-session walkthrough](docs/tutorials/processing-session.md) covers ordered recipe editing, full-size bounded region analysis, applied-session save/reopen and CLI replay in the 0.3.0b1 beta. These controls are separate from the immutable v0.2.0 installer.
+The [processing-session walkthrough](docs/tutorials/processing-session.md) covers ordered recipe editing, full-size bounded region analysis, applied-session save/reopen and CLI replay in the 0.3 beta line. The [Linux acceptance runner](docs/tutorials/linux-acceptance.md) prepares a repeatable installed-package check and a blank human record; it is not a completed researcher session.
 
 ## Run a synthetic 2D workflow
 
@@ -63,6 +63,10 @@ Operations currently include explicit Bruker digital-filter correction and frequ
 ## Public Bruker 1D/2D and analysis
 
 The [bounded real-data walkthrough](docs/real-bruker-and-analysis.md) fetches nine hash-pinned BMRB files to an ignored local folder, runs an explicit correction/FFT/reference recipe, and shows headless `autophase`, signed 1D/2D `peaks` and `integrate` reports, and optional `figure` export. The [public 2D guide](docs/real-bruker-2d.md) adds hash-pinned HSQC/TOCSY ser imports, fixed recipes and both-axis full-hypercomplex automatic phase with identifiability and gauge flags. The 25 acquired files stay outside Git. The predeclared raw/reference volume-ratio gate is 30%; observed errors are 2.45–13.32%, without an absolute amplitude or concentration claim. Peak-derived region volumes are signed relative intensity·Hz or intensity·Hz² with inspectable bounds and flags; they are not concentrations or deconvolved assignments. The GUI exposes bounded phase, peak finding, entered-region integration and optional figures without changing the headless core.
+
+The b2 source candidate also supports **Save scientific figure** from an applied, selected Current region. The saved figure uses the bounded local dataset with compatible local peak/integral annotations; the large parent remains unchanged. A source-host check produced SVG, PNG and PDF from a 201×201 region of an 8,388,608-point result, with 286 local report peaks and a signed integral. That check used Python 0.3.0b2 with an existing host native 0.3.0b1 binary; installed b2 validation is separate. The viewer still samples large displays, and adaptive viewport zoom remains future work. See [qualification results](docs/v1-qualification-results.md) and the [workbench guide](docs/gui.md).
+
+The [new Bruker qualification protocol](docs/bruker-qualification-protocol.md) freezes a distinct public acquisition, 18 deposited 1D targets and four independent 2D reference regions before candidate numerical execution. Its [results record](docs/bruker-qualification-results.md) distinguishes header/preparation checks from a future installed b2 run; no new scientific PASS or general weak/strong sensitivity claim follows from preparation alone.
 
 ## Measured source performance
 

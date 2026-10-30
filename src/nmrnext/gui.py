@@ -975,18 +975,51 @@ class Workbench(QtWidgets.QMainWindow):
         except Exception as exc:
             self._show_error(exc)
 
+    def _figure_request(self):
+        """Bind a figure to the applied parent or its committed analysis region."""
+        if self.current is None:
+            raise NMRNextError('NO_DATASET', 'Open a dataset before saving a figure')
+        if self.preview is not None:
+            raise NMRNextError('ANALYSIS_STATE', 'Apply processing before saving a figure')
+        reports = self._current_analysis()
+        if not self.analysis_region_check.isChecked():
+            return self.current, reports, self.source_name, False
+        if (len(self.selected_regions) != 1 or self._entered_region() != self.selected_regions[0]
+                or self.view_combo.currentIndex() != 0 or self._display_dataset() is not self.current
+                or self._rendered_dataset is not self.current):
+            raise NMRNextError('ANALYSIS_STATE',
+                               'Show the applied Current spectrum and select the entered region before saving its figure')
+        from .regions import select_analysis_region
+        selection = self.selected_regions[0]
+        region, mapping = select_analysis_region(self.current, selection['bounds'], unit=selection['unit'])
+        annotations = {}
+        for kind, report in reports.items():
+            if kind == 'autophase':
+                continue  # Parent-scale phase evidence belongs in saved analysis JSON.
+            if (kind not in ('peaks', 'integrate')
+                    or report.get('kind') != {'peaks': 'peak_picking', 'integrate': 'integration'}[kind]
+                    or report.get('parent_region') != mapping
+                    or report.get('dataset_digest') != mapping['region_dataset_digest']):
+                raise NMRNextError('STALE_ANALYSIS',
+                                   'Figure analysis belongs to a different selected region; select and analyze this region again')
+            annotations[kind] = report
+        return region, annotations, f'{self.source_name} · selected applied region', 'autophase' in reports
+
     def _save_figure_dialog(self):
         path, _ = QtWidgets.QFileDialog.getSaveFileName(self, 'Save scientific figure', 'spinflow-spectrum.svg', 'Figures (*.svg *.pdf *.png)')
         if not path:
             return
         try:
             from .figures import export_figure
-            dataset, reports = self.current, self._current_analysis()
+            dataset, reports, title, phase_omitted = self._figure_request()
         except Exception as exc:
             self._show_error(exc)
             return
-        self._start_job(lambda: export_figure(dataset, path, analysis=reports, title=self.source_name),
-                        lambda report: self._set_status(f"Saved {report['format']} figure to {report['path']}. Save analysis JSON for methods and flags."),
+        self._start_job(lambda: export_figure(dataset, path, analysis=reports, title=title),
+                        lambda report: self._set_status(
+                            f"Saved {report['format']} figure to {report['path']}. "
+                            + ("Parent-scale automatic-phase diagnostics remain in Save analysis JSON. " if phase_omitted else "")
+                            + "Save analysis JSON for complete methods, parent coordinates and flags."),
                         'Rendering scientific figure…')
 
     @staticmethod

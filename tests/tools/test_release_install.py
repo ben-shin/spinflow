@@ -38,7 +38,8 @@ def assets(root, name="spinflow-0.2.0-cp313-cp313-linux_x86_64.whl"):
 def test_version_validation_rejects_paths_and_accepts_explicit_tag(installer):
     assert installer.release_version("v0.2.0") == "0.2.0"
     assert installer.release_version("v0.3.0b1") == "0.3.0b1"
-    assert installer.DEFAULT_VERSION == "0.3.0b1"
+    assert installer.release_version("v0.3.0b2") == "0.3.0b2"
+    assert installer.DEFAULT_VERSION == "0.3.0b2"
     for value in ("latest", "../../other", "0.2.0/thing", "0.2.0;touch x", "0.2"):
         with pytest.raises(installer.InstallError):
             installer.release_version(value)

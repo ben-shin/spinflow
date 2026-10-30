@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "id": "bmse000002-stage-a",
+  "retrieved": "2026-10-30",
+  "doi": "10.13018/BMSE000002",
+  "access_policy": "https://bmrb.io/metabolomics/data_policy.shtml",
+  "redistribution_license": "No explicit redistribution license assumed; files remain private",
+  "files": [
+    {
+      "path": "1H/acqus",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H/acqus",
+      "bytes": 9210,
+      "sha256": "faec7238158d92aa13a9adbb0a7f488b2c436a0d12747ef77943e1ab698bf1bf"
+    },
+    {
+      "path": "1H/fid",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H/fid",
+      "bytes": 78848,
+      "sha256": "fe976e74fc3b04b3a59e85eae73bd85a782869a8b0cae79c2e86306c4aa06ff7"
+    },
+    {
+      "path": "1H/pulseprogram",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H/pulseprogram",
+      "bytes": 2115,
+      "sha256": "85e2fe3de23359e0a7929ff8b918e16179e685a6194e92daf04324de12946fc6"
+    },
+    {
+      "path": "1H/pdata/1/1i",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H/pdata/1/1i",
+      "bytes": 131072,
+      "sha256": "3d10645bcc20d2edcb47cdb9073d34d6be833372c5388a848ab0810dcaa4970a"
+    },
+    {
+      "path": "1H/pdata/1/1r",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H/pdata/1/1r",
+      "bytes": 131072,
+      "sha256": "f4df81ddbfa7a980a0b0ec6eb7af40f261b8bc7a185f90e446f05afdee5af54b"
+    },
+    {
+      "path": "1H/pdata/1/auditp.txt",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H/pdata/1/auditp.txt",
+      "bytes": 1985,
+      "sha256": "ea21e9f6d92888bfb72a22a837ad26f243446fd5c23e3d413e9bdda3180e61b4"
+    },
+    {
+      "path": "1H/pdata/1/peaklist.xml",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H/pdata/1/peaklist.xml",
+      "bytes": 1614,
+      "sha256": "7b127c7d0470bec932a4e8501f7946e3f47a3d92b8a7d749dcf8d3600262826e"
+    },
+    {
+      "path": "1H/pdata/1/procs",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H/pdata/1/procs",
+      "bytes": 1785,
+      "sha256": "a4e32fae77b63b6fd5fe2e28db77526c15333d21708ab972912a3f9b0193a1aa"
+    },
+    {
+      "path": "1H_13C_HSQC/acqu2s",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/acqu2s",
+      "bytes": 489,
+      "sha256": "f6846539e6ab503ca83f1dceee19e1673da9a375ea0095691f607c3c90ca7647"
+    },
+    {
+      "path": "1H_13C_HSQC/acqus",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/acqus",
+      "bytes": 9315,
+      "sha256": "ead815c83533c2bd1dd0984e83d5f38cebeac8ded1f3773b84c5f8f319cbe06e"
+    },
+    {
+      "path": "1H_13C_HSQC/pulseprogram",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/pulseprogram",
+      "bytes": 7079,
+      "sha256": "bad08953fe9d66cbc43b1e212dc243aae6e39c93e2fec6f7c7403e9cc6c044a6"
+    },
+    {
+      "path": "1H_13C_HSQC/ser",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/ser",
+      "bytes": 1048576,
+      "sha256": "ae3d03fa97efe8cd6242a69c76bd4201a2acea9c531e6dbea8b18afbee03c890"
+    },
+    {
+      "path": "1H_13C_HSQC/pdata/1/2ii",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/pdata/1/2ii",
+      "bytes": 4194304,
+      "sha256": "79aa847b44c8c658a123dcf709e94ca38732b1aec9bae3b5351c3bc83cdd4c96"
+    },
+    {
+      "path": "1H_13C_HSQC/pdata/1/2ir",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/pdata/1/2ir",
+      "bytes": 4194304,
+      "sha256": "fdc0c72f4e71c520a28d6138e7380ff2f55c816ea33754ba99a9a7ebc4bec874"
+    },
+    {
+      "path": "1H_13C_HSQC/pdata/1/2ri",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/pdata/1/2ri",
+      "bytes": 4194304,
+      "sha256": "d1172037dd6244b304796aba4e264e1adf87bd166a380ac5267f94f4eace2ea5"
+    },
+    {
+      "path": "1H_13C_HSQC/pdata/1/2rr",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/pdata/1/2rr",
+      "bytes": 4194304,
+      "sha256": "56dbacf944d31d3432a972838f2a72140b6435a12b104a5a83fff47bfee8631d"
+    },
+    {
+      "path": "1H_13C_HSQC/pdata/1/auditp.txt",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/pdata/1/auditp.txt",
+      "bytes": 2188,
+      "sha256": "c574d21913889a356c95f0879eb5640757b9401e2abcb48a144a74ea5213fe4f"
+    },
+    {
+      "path": "1H_13C_HSQC/pdata/1/proc2s",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/pdata/1/proc2s",
+      "bytes": 1728,
+      "sha256": "1c7eb3aa5a41c743301e70464a438eb707c36b2d84f25cd4425c7ab48da93557"
+    },
+    {
+      "path": "1H_13C_HSQC/pdata/1/procs",
+      "url": "https://bmrb.io/ftp/pub/bmrb/metabolomics/entry_directories/bmse000002/nmr/set01/1H_13C_HSQC/pdata/1/procs",
+      "bytes": 1789,
+      "sha256": "be9a7e3bc9bbb5cd2f3a81224ab0a6ba2ecb59e96aa6fe97f385456750216502"
+    }
+  ]
+}
