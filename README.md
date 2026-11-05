@@ -4,11 +4,11 @@ SpinFlow is an experimental, open source NMR processing workbench. It provides a
 
 **Scientific status:** this is an early processing slice, not a validated replacement for NMRPipe or a laboratory processing system. One public Bruker 1D acquisition has an archived peak-position check; two public 2D acquisitions add bounded both-axis automatic phase and fixed peak/relative-volume checks. One previously studied public Varian protein case has a bounded comparison with NMRPipe 13 and actual NMRDraw/Sparky reopening; broader real workflows, general parity, concentration accuracy and other independent reopening remain unverified. See [scope](docs/scope.md), [validation](docs/public-validation.md), and the [roadmap](ROADMAP.md).
 
-Earlier Linux checks under software emulation passed the installed-package suite, public-data and automated virtual-desktop workflows, and a CPython 3.12 release-installer preflight. The [validation record](docs/public-validation.md) gives the exact tested candidates and limitations. The immutable published v0.3.0b1 beta and its [dated evidence](docs/v1-candidate-results.md) remain distinct from the focused [0.3.0b2 qualification](docs/v1-qualification-results.md). Version 0.2.0 remains an older experimental prerelease.
+The published [v0.3.0b2 experimental beta](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b2) passed its selected installed Linux GUI, session and distribution checks. Its [scientific qualification](docs/bruker-qualification-results.md) **failed six of 18 fixed peak-target comparisons**; physical-user acceptance remains pending. The [qualification record](docs/v1-qualification-results.md) binds the actual tested artifacts and limits. Earlier v0.3.0b1 and v0.2.0 releases remain immutable. The [unreleased Stage 20 changes](docs/stage20-results.md) described below are source changes after b2, with no new release or stable profile.
 
 ## Install on Linux
 
-For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, use the versioned installer **after the v0.3.0b2 assets are published and verified**:
+For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, use the published v0.3.0b2 versioned installer:
 
 ```bash
 curl -fL -o install-spinflow.py https://github.com/ben-shin/spinflow/releases/download/v0.3.0b2/install-spinflow.py
@@ -26,7 +26,7 @@ After installation, this command works offline and creates a new folder containi
 
 The folder must not already exist. If a run fails after creating it, choose a new folder name before retrying. The synthetic example illustrates the workflow and is not evidence of experimental accuracy.
 
-The published [v0.3.0b1 release](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b1) remains available while b2 is under review; [v0.2.0](https://github.com/ben-shin/spinflow/releases/tag/v0.2.0) is older. Use a different prefix for each installed version.
+The published [v0.3.0b1 release](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b1) and older [v0.2.0](https://github.com/ben-shin/spinflow/releases/tag/v0.2.0) remain available. Use a different prefix for each installed version. The b2 installer supplies the b2 assets; it does not supply unreleased main changes.
 
 ## Install from source on Linux
 
@@ -64,9 +64,9 @@ Operations currently include explicit Bruker digital-filter correction and frequ
 
 The [bounded real-data walkthrough](docs/real-bruker-and-analysis.md) fetches nine hash-pinned BMRB files to an ignored local folder, runs an explicit correction/FFT/reference recipe, and shows headless `autophase`, signed 1D/2D `peaks` and `integrate` reports, and optional `figure` export. The [public 2D guide](docs/real-bruker-2d.md) adds hash-pinned HSQC/TOCSY ser imports, fixed recipes and both-axis full-hypercomplex automatic phase with identifiability and gauge flags. The 25 acquired files stay outside Git. The predeclared raw/reference volume-ratio gate is 30%; observed errors are 2.45–13.32%, without an absolute amplitude or concentration claim. Peak-derived region volumes are signed relative intensity·Hz or intensity·Hz² with inspectable bounds and flags; they are not concentrations or deconvolved assignments. The GUI exposes bounded phase, peak finding, entered-region integration and optional figures without changing the headless core.
 
-The b2 source candidate also supports **Save scientific figure** from an applied, selected Current region. The saved figure uses the bounded local dataset with compatible local peak/integral annotations; the large parent remains unchanged. A source-host check produced SVG, PNG and PDF from a 201×201 region of an 8,388,608-point result, with 286 local report peaks and a signed integral. That check used Python 0.3.0b2 with an existing host native 0.3.0b1 binary; installed b2 validation is separate. The viewer still samples large displays, and adaptive viewport zoom remains future work. See [qualification results](docs/v1-qualification-results.md) and the [workbench guide](docs/gui.md).
+The published b2 supports **Save scientific figure** from an applied, selected Current region, using the bounded local dataset with compatible peak/integral annotations. Its selected installed 8,388,608-point workflow and 201×201 PNG/SVG/PDF export are recorded in the [qualification results](docs/v1-qualification-results.md). **Unreleased main after v0.3.0b2** adds adaptive zoom/pan: the [workbench](docs/gui.md) refreshes bounded visible samples and says when every visible sample fits. Sampled overviews can still omit narrow peaks; fixed signed color limits and complete processing/export data are retained. The source-host [Stage 20 observations](docs/stage20-results.md) are separate from the published b2 artifact checks.
 
-The [new Bruker qualification protocol](docs/bruker-qualification-protocol.md) freezes a distinct public acquisition, 18 deposited 1D targets and four independent 2D reference regions before candidate numerical execution. Its [results record](docs/bruker-qualification-results.md) distinguishes header/preparation checks from a future installed b2 run; no new scientific PASS or general weak/strong sensitivity claim follows from preparation alone.
+The [Bruker qualification protocol](docs/bruker-qualification-protocol.md) froze a distinct public acquisition, 18 deposited 1D targets and four 2D reference regions before execution. Its [results record](docs/bruker-qualification-results.md) retains the failed scientific gate. A separate [post-failure stored-spectrum check](docs/stored-analysis-results.md) verifies the actual signed picker and all 16 signed mathematical rectangle volumes against independent software/arithmetic oracles on previously exposed TopSpin matrices. It does not replace the failed raw-data qualification, validate phase/biological assignments or establish sensitivity on new acquisitions.
 
 ## Measured source performance
 

@@ -20,6 +20,7 @@ from .demo import generate_demo
 from .errors import NMRNextError
 from .io import export_preflight, read_dataset, write_dataset
 from ._execution_cache import RecipeCache
+from ._viewport import display_frame, full_extent
 from .planning import plan_operations
 from .workflow_bundle import export_workflow_bundle
 
@@ -286,6 +287,16 @@ class Workbench(QtWidgets.QMainWindow):
         self._pending_memory_bytes = None
         self._rendered_dataset = None
         self._rendered_axis_units = {}
+        self._viewport_generation = 0
+        self._viewport_pending = None
+        self._viewport_item = None
+        self._viewport_frame = None
+        self._viewport_levels = None
+        self._viewport_drawing = False
+        self._viewport_timer = QtCore.QTimer(self)
+        self._viewport_timer.setSingleShot(True)
+        self._viewport_timer.setInterval(20)
+        self._viewport_timer.timeout.connect(self._refresh_viewport)
         self._state_generation = 0
         self._recipe_cache = RecipeCache()
         self._build_ui()
@@ -399,9 +410,11 @@ class Workbench(QtWidgets.QMainWindow):
         self.plot.setObjectName("plot")
         self.plot.showGrid(x=True, y=True, alpha=0.16)
         self.plot.getPlotItem().getViewBox().setMouseEnabled(x=True, y=True)
+        self.plot.getPlotItem().getViewBox().sigRangeChanged.connect(self._queue_viewport)
         layout.addWidget(self.plot, 1)
         self.plot_note = QtWidgets.QLabel("Wheel to zoom; drag to pan. Intensities retain their sign.")
         self.plot_note.setObjectName("caption")
+        self.plot_note.setWordWrap(True)
         layout.addWidget(self.plot_note)
         return panel
 
@@ -1102,6 +1115,8 @@ class Workbench(QtWidgets.QMainWindow):
             self._set_status("A file or processing job is still running. Wait for it to finish before closing.")
             event.ignore()
             return
+        self._viewport_timer.stop()
+        self._viewport_pending = None
         super().closeEvent(event)
 
     def _read_with_budget(self, path, memory_bytes, *, format=None):
@@ -1489,6 +1504,7 @@ class Workbench(QtWidgets.QMainWindow):
         self._pending_memory_bytes = None
         self._update_recipe()
         self._state_generation += 1
+        self._queue_viewport()
 
     def _backend_changed(self):
         self._update_recipe()
@@ -1722,6 +1738,12 @@ class Workbench(QtWidgets.QMainWindow):
         return dataset.coordinates(axis.id), axis.unit
 
     def _render(self):
+        self._viewport_timer.stop()
+        self._viewport_pending = None
+        self._viewport_generation += 1
+        self._viewport_item = None
+        self._viewport_frame = None
+        self._viewport_levels = None
         dataset = self._display_dataset()
         self._rendered_dataset = None
         self._rendered_axis_units = {}
@@ -1746,59 +1768,112 @@ class Workbench(QtWidgets.QMainWindow):
         self.plot.getPlotItem().invertY(False)
         if data.ndim == 1:
             axis = dataset.axes[0]
-            x, unit = self._axis_values(dataset, axis)
+            frame = display_frame(dataset, index, memory_bytes=self.memory_spin.value() * 1024**2)
+            unit = frame.units[0]
             self._rendered_axis_units[axis.id] = unit
-            stride = max(1, int(np.ceil(len(x) / 20000)))
-            self.plot.plot(x[::stride], data[::stride], pen=pg.mkPen(ACCENT, width=1.6))
+            self._viewport_item = self.plot.plot([], [], pen=pg.mkPen(ACCENT, width=1.6))
             self.plot.addLine(y=0, pen=pg.mkPen("#8ca0b0", width=1))
             self.plot.setLabel("bottom", f"{axis.nucleus or axis.label or axis.id} ({unit})")
             self.plot.setLabel("left", "Signed intensity")
             self.plot.getPlotItem().invertX(axis.domain == "frequency")
-            sampled = "Display sampled; full data retained." if stride > 1 else "Complete data shown."
         elif data.ndim == 2:
             ya, xa = dataset.axes
-            x, xu = self._axis_values(dataset, xa)
-            y, yu = self._axis_values(dataset, ya)
+            frame = display_frame(dataset, index, memory_bytes=self.memory_spin.value() * 1024**2)
+            yu, xu = frame.units
             self._rendered_axis_units = {xa.id: xu, ya.id: yu}
-            sy = max(1, int(np.ceil(len(y) / 1024)))
-            sx = max(1, int(np.ceil(len(x) / 1024)))
-            image = data[::sy, ::sx]
-            xv, yv = x[::sx], y[::sy]
-            if xv[0] > xv[-1]:
-                image = np.flip(image, axis=1)
-            if yv[0] > yv[-1]:
-                image = np.flip(image, axis=0)
-            vmax = float(np.percentile(np.abs(image), 99.5))
+            vmax = float(np.percentile(np.abs(frame.values), 99.5))
             vmax = vmax if vmax > 0 else 1.0
+            self._viewport_levels = (-vmax, vmax)
             colors = np.array([[34, 76, 144, 255], [136, 177, 220, 255],
                                [255, 255, 255, 255], [241, 159, 135, 255],
                                [159, 46, 55, 255]], dtype=np.uint8)
             lut = pg.ColorMap(np.linspace(0, 1, 5), colors).getLookupTable(nPts=256)
-            item = pg.ImageItem(image, axisOrder="row-major")
+            item = pg.ImageItem(axisOrder="row-major")
             item.setLookupTable(lut)
-            item.setLevels((-vmax, vmax))
-            xstep = abs(float(x[1]-x[0])) if len(x)>1 else 1.0
-            ystep = abs(float(y[1]-y[0])) if len(y)>1 else 1.0
-            item.setRect(QtCore.QRectF(min(xv[0],xv[-1])-xstep/2,
-                                       min(yv[0],yv[-1])-ystep/2,
-                                       abs(float(xv[-1]-xv[0]))+xstep,
-                                       abs(float(yv[-1]-yv[0]))+ystep))
+            item.setLevels(self._viewport_levels)
             self.plot.addItem(item)
+            self._viewport_item = item
             self.plot.setLabel("bottom", f"{xa.nucleus or xa.label or xa.id} ({xu})")
             self.plot.setLabel("left", f"{ya.nucleus or ya.label or ya.id} ({yu})")
             self.plot.getPlotItem().invertX(xa.domain == "frequency")
             self.plot.getPlotItem().invertY(ya.domain == "frequency")
-            sampled = "Display sampled; full data retained." if sx > 1 or sy > 1 else "Complete data shown."
         else:
             self.plot_caption.setText("Plot supports 1D and 2D data; metadata and export remain available.")
-            sampled = ""
-        unreferenced = any(a.domain == 'frequency' and a.reference_ppm is None for a in dataset.axes)
+            self.plot_note.setText('Plot supports one or two axes.')
+        self._viewport_drawing = True
+        try:
+            if data.ndim in (1, 2):
+                self._draw_viewport(frame)
+            self.plot.autoRange()
+            # Retain the complete parent extent, including tail points absent
+            # from a strided overview. Later viewport updates never reset it.
+            if data.ndim in (1, 2):
+                ranges = {'xRange': full_extent(dataset.axes[-1])}
+                if data.ndim == 2:
+                    ranges['yRange'] = full_extent(dataset.axes[0])
+                self.plot.getPlotItem().getViewBox().setRange(**ranges, padding=.02)
+            self._rendered_dataset = dataset
+        finally:
+            self._viewport_drawing = False
+        self._refresh_visible_region_button()
+
+    def _viewport_key(self):
+        return (self._viewport_generation, self._rendered_dataset, self.component_combo.currentData())
+
+    def _queue_viewport(self, *_args):
+        if (self._viewport_drawing or self._viewport_item is None
+                or self._rendered_dataset is None
+                or self._display_dataset() is not self._rendered_dataset):
+            return
+        self._viewport_pending = self._viewport_key()
+        self._viewport_timer.start()
+
+    def _refresh_viewport(self):
+        pending, self._viewport_pending = self._viewport_pending, None
+        if (pending is None or pending != self._viewport_key()
+                or self._display_dataset() is not self._rendered_dataset):
+            return
+        dataset = self._rendered_dataset
+        visible = self.plot.getPlotItem().getViewBox().viewRange()
+        ranges = (visible[0],) if len(dataset.axes) == 1 else (visible[1], visible[0])
+        try:
+            frame = display_frame(dataset, self.component_combo.currentData(), ranges,
+                                  memory_bytes=self.memory_spin.value() * 1024**2)
+            self._viewport_drawing = True
+            self._draw_viewport(frame)
+        except Exception as exc:
+            # Keep the last good drawing, but explicitly retract a completeness
+            # claim for a range that could not be prepared.
+            self.plot_note.setText(f'Visible display update failed: {exc}. Previous drawing retained.')
+        finally:
+            self._viewport_drawing = False
+
+    def _draw_viewport(self, frame):
+        if len(frame.coordinates) == 1:
+            self._viewport_item.setData(frame.coordinates[0], frame.values)
+        elif not frame.values.size:
+            self._viewport_item.clear()
+        else:
+            image = frame.values
+            if len(frame.coordinates[1]) > 1 and frame.coordinates[1][0] > frame.coordinates[1][-1]:
+                image = np.flip(image, axis=1)
+            if len(frame.coordinates[0]) > 1 and frame.coordinates[0][0] > frame.coordinates[0][-1]:
+                image = np.flip(image, axis=0)
+            self._viewport_item.setImage(image, autoLevels=False, levels=self._viewport_levels,
+                                         autoDownsample=False)
+            self._viewport_item.setRect(QtCore.QRectF(*frame.rect))
+        self._viewport_frame = frame
+        if not frame.values.size:
+            note = 'No sample centers in the visible area.'
+        elif frame.sampled:
+            note = 'Display sampled within visible area; zoom for complete samples. Narrow peaks may be omitted.'
+        else:
+            note = 'Complete visible samples shown.'
+        dataset = self._display_dataset()
+        unreferenced = dataset and any(a.domain == 'frequency' and a.reference_ppm is None for a in dataset.axes)
         reference_note = (' Chemical-shift reference is unknown: axes show mathematical frequency offsets in Hz. '
                           'Confirm the orientation and enter a known anchor for ppm.' if unreferenced else '')
-        self.plot_note.setText(f"{sampled} Wheel to zoom; drag to pan. Intensities retain their sign.{reference_note}")
-        self.plot.autoRange()
-        self._rendered_dataset = dataset
-        self._refresh_visible_region_button()
+        self.plot_note.setText(f'{note} Wheel to zoom; drag to pan. Intensities retain their sign.{reference_note}')
 
     def preflight_export(self, fmt):
         if self.current is None:
@@ -1969,8 +2044,9 @@ class Workbench(QtWidgets.QMainWindow):
                          'analysis_reports', 'selected_regions', '_recipe_mode',
                          '_ordered_operations', '_pending_memory_bytes', '_recipe_cache',
                          '_rendered_dataset', '_rendered_axis_units', '_suspend_preview_invalidation',
-                         '_state_generation')
-        reference_names = {'source', 'current', 'preview', '_recipe_cache', '_rendered_dataset'}
+                         '_state_generation', '_viewport_item', '_viewport_frame', '_viewport_levels')
+        reference_names = {'source', 'current', 'preview', '_recipe_cache', '_rendered_dataset',
+                           '_viewport_item', '_viewport_frame'}
         logical = {name: (getattr(self, name) if name in reference_names else deepcopy(getattr(self, name)))
                    for name in logical_names}
         combo_names = ('axis_combo', 'component_combo', 'view_combo', 'backend_combo',
@@ -2018,6 +2094,10 @@ class Workbench(QtWidgets.QMainWindow):
 
     def _restore_view_checkpoint(self, checkpoint):
         """Restore after any failed installation without invoking failing render hooks."""
+        self._viewport_timer.stop()
+        self._viewport_pending = None
+        self._viewport_generation += 1
+        self._viewport_drawing = True
         for name, value in checkpoint['logical'].items():
             setattr(self, name, value)
         for name, (items, index) in checkpoint['combos'].items():
@@ -2089,6 +2169,7 @@ class Workbench(QtWidgets.QMainWindow):
                 widget.setEnabled(state)
             except RuntimeError:
                 pass  # A dynamic region row may have been replaced.
+        self._viewport_drawing = False
 
 
 def main(argv=None):
