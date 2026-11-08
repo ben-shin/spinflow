@@ -1,0 +1,525 @@
+{
+  "evidence_format": "stage21-engineering-summary-v1",
+  "status": "PASS_SCOPED_ENGINEERING_REGRESSION_AND_DESCRIPTIVE_FRESH_CLI",
+  "date_utc": "2026-11-08",
+  "scope": "One previously studied raw acquisition and selected private installed CP312 builds in a task-private Ubuntu VM. No general speedup, RSS cap, scientific acceptance or physical-display claim.",
+  "original_report_sha256": {
+    "interactive": "e9131f0a353490abbfa35e67979f0b6a76d90cfd84c3bcb7d41cfc0e9e1a3431",
+    "fresh_cli_A": "b985f4cfecf154978610db21f4b05d14b789d4098b2e421b470247d22939785f",
+    "fresh_cli_B": "e1469ccc6a6319878b7105eefee60aef70365801a11c11a3c8ccb0ca4074dfe3"
+  },
+  "source_identities": {
+    "A": "commit=a91b9e39f71d2fe4d1bdf1fc9b7254218a4dd494;git_archive_sha256=f4ee1893b83c696ee617ae1ab627fc91faa99b0c28df060a0f63622c9d3af0e6;wheel_sha256=0d57b5d912a3a9f0b6f25109e3f827bb64c0824277bbb7d08280fd75cab48700",
+    "B": "working_product_snapshot_sha256=5203878b3846debae46a5b027c34de430acb3f7b73c93d76005c196f3ad09d03;frozen_harness_snapshot_sha256=b07f1a49d3e21f5f06fddb0bcb10a992af5243b7d6c31e5f036c30eca2e8471d;wheel_sha256=91ad1862975ab3cf206c0265cdecff30c6f7ce17527d4914a0ed10d4ce301f04"
+  },
+  "input_files": [
+    {
+      "name": "fid",
+      "bytes": 3993328,
+      "sha256": "4a35f4b98f9116ba67760d1c0c83cc48a17b4e53897b5dbe1e25f85f28b1eac8"
+    },
+    {
+      "name": "procpar",
+      "bytes": 22523,
+      "sha256": "54cf12841987ec3a05f5ca76f2b09dff09b7648d84b2936627f2c9757472c817"
+    }
+  ],
+  "recipe_sha256": "69e6c1e26c80c1fdc3ac0401c2477355a2d55dc05b97471b68dacdeea9787cb5",
+  "Qt_harness_sha256": "993ca43093a70b691c7fef21edc8b47b66b3cbb4ab7b7c1390fdfcf242bc74ae",
+  "Qt_protocol_sha256": "2183d3c2344fe348b1a09802cab65d3485d09da35d355202875920437638abac",
+  "fresh_runner_sha256": "575a421970e17570fda3bdc1309de3e51eaa2bb6bd6c0f85101b9c810c0e4432",
+  "runtime": {
+    "A": {
+      "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+      "version": "0.3.0b2",
+      "native": {
+        "bytes": 499888,
+        "sha256": "edba4c56038216af718b850174332182394cc588204c5f741c201ea9635014de"
+      },
+      "qt_distribution_versions": {
+        "PySide6": {
+          "installed_name": "PySide6",
+          "version": "6.12.0"
+        },
+        "PySide6_Essentials": {
+          "installed_name": "PySide6_Essentials",
+          "version": "6.12.0"
+        },
+        "PySide6_Addons": {
+          "installed_name": "PySide6_Addons",
+          "version": "6.12.0"
+        },
+        "PySide6_WebEngine": {
+          "installed_name": "PySide6_WebEngine",
+          "version": "6.12.0.140"
+        },
+        "PySide6_Pdf": {
+          "installed_name": "PySide6_Pdf",
+          "version": "6.12.0.140"
+        },
+        "shiboken6": {
+          "installed_name": "shiboken6",
+          "version": "6.12.0"
+        },
+        "pyqtgraph": {
+          "installed_name": "pyqtgraph",
+          "version": "0.14.0"
+        }
+      },
+      "cpu_affinity": [
+        0
+      ],
+      "thread_environment": {
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "VECLIB_MAXIMUM_THREADS": "1"
+      },
+      "normal_window_size": [
+        1320,
+        840
+      ],
+      "screen_size": [
+        1600,
+        1000
+      ],
+      "device_pixel_ratio": 1,
+      "qt_platform": "xcb"
+    },
+    "B": {
+      "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+      "version": "0.3.0b3",
+      "native": {
+        "bytes": 499888,
+        "sha256": "811fcb73e59727b13096c453a6a8f57c3e08e52957f9c0425f04363024f97d34"
+      },
+      "qt_distribution_versions": {
+        "PySide6": null,
+        "PySide6_Essentials": {
+          "installed_name": "PySide6_Essentials",
+          "version": "6.12.0"
+        },
+        "PySide6_Addons": null,
+        "PySide6_WebEngine": null,
+        "PySide6_Pdf": null,
+        "shiboken6": {
+          "installed_name": "shiboken6",
+          "version": "6.12.0"
+        },
+        "pyqtgraph": {
+          "installed_name": "pyqtgraph",
+          "version": "0.14.0"
+        }
+      },
+      "cpu_affinity": [
+        0
+      ],
+      "thread_environment": {
+        "OMP_NUM_THREADS": "1",
+        "OPENBLAS_NUM_THREADS": "1",
+        "MKL_NUM_THREADS": "1",
+        "NUMEXPR_NUM_THREADS": "1",
+        "VECLIB_MAXIMUM_THREADS": "1"
+      },
+      "normal_window_size": [
+        1320,
+        840
+      ],
+      "screen_size": [
+        1600,
+        1000
+      ],
+      "device_pixel_ratio": 1,
+      "qt_platform": "xcb"
+    }
+  },
+  "interactive": {
+    "pairs_order": [
+      [
+        "A",
+        "B"
+      ],
+      [
+        "B",
+        "A"
+      ],
+      [
+        "A",
+        "B"
+      ],
+      [
+        "B",
+        "A"
+      ],
+      [
+        "A",
+        "B"
+      ]
+    ],
+    "same_process_warmup_per_measured_worker": true,
+    "elapsed_seconds": {
+      "warm_full_processing": {
+        "A": {
+          "raw": [
+            0.17097201599972323,
+            0.17318174600040948,
+            0.1623665990000518,
+            0.16062307500033057,
+            0.16795617500065418
+          ],
+          "count": 5,
+          "min": 0.16062307500033057,
+          "max": 0.17318174600040948,
+          "median": 0.16795617500065418,
+          "q1": 0.1623665990000518,
+          "q3": 0.17097201599972323,
+          "iqr": 0.008605416999671434
+        },
+        "B": {
+          "raw": [
+            0.18345738500011066,
+            0.16819347799992101,
+            0.16433642500032875,
+            0.16475663199980772,
+            0.16802567600007023
+          ],
+          "count": 5,
+          "min": 0.16433642500032875,
+          "max": 0.18345738500011066,
+          "median": 0.16802567600007023,
+          "q1": 0.16475663199980772,
+          "q3": 0.16819347799992101,
+          "iqr": 0.0034368460001132917
+        }
+      },
+      "process_to_painted_current": {
+        "A": {
+          "raw": [
+            0.24120756700085622,
+            0.24649163899994164,
+            0.2248638460005168,
+            0.24363479899966478,
+            0.22834499300006428
+          ],
+          "count": 5,
+          "min": 0.2248638460005168,
+          "max": 0.24649163899994164,
+          "median": 0.24120756700085622,
+          "q1": 0.22834499300006428,
+          "q3": 0.24363479899966478,
+          "iqr": 0.015289805999600503
+        },
+        "B": {
+          "raw": [
+            0.23943544199937605,
+            0.23545578900029795,
+            0.23713361200043437,
+            0.2388950360000308,
+            0.23350096299964207
+          ],
+          "count": 5,
+          "min": 0.23350096299964207,
+          "max": 0.23943544199937605,
+          "median": 0.23713361200043437,
+          "q1": 0.23545578900029795,
+          "q3": 0.2388950360000308,
+          "iqr": 0.003439246999732859
+        }
+      },
+      "zoom_to_paint": {
+        "A": {
+          "raw": [
+            0.024939637999523256,
+            0.024799036000331398,
+            0.025193841000145767,
+            0.024812636000206112,
+            0.02429152900003828
+          ],
+          "count": 5,
+          "min": 0.02429152900003828,
+          "max": 0.025193841000145767,
+          "median": 0.024812636000206112,
+          "q1": 0.024799036000331398,
+          "q3": 0.024939637999523256,
+          "iqr": 0.00014060199919185834
+        },
+        "B": {
+          "raw": [
+            0.024680133999936515,
+            0.025016238999342022,
+            0.026696362000620866,
+            0.025141140000414453,
+            0.025087640000492684
+          ],
+          "count": 5,
+          "min": 0.024680133999936515,
+          "max": 0.026696362000620866,
+          "median": 0.025087640000492684,
+          "q1": 0.025016238999342022,
+          "q3": 0.025141140000414453,
+          "iqr": 0.00012490100107243052
+        }
+      },
+      "pan_to_paint": {
+        "A": {
+          "raw": [
+            0.024384029999964696,
+            0.024435031000393792,
+            0.02430982900023082,
+            0.02401262500006851,
+            0.024183028000152262
+          ],
+          "count": 5,
+          "min": 0.02401262500006851,
+          "max": 0.024435031000393792,
+          "median": 0.02430982900023082,
+          "q1": 0.024183028000152262,
+          "q3": 0.024384029999964696,
+          "iqr": 0.0002010019998124335
+        },
+        "B": {
+          "raw": [
+            0.025997653000558785,
+            0.024468231000355445,
+            0.024536932000046363,
+            0.025682947999484895,
+            0.023635620000277413
+          ],
+          "count": 5,
+          "min": 0.023635620000277413,
+          "max": 0.025997653000558785,
+          "median": 0.024536932000046363,
+          "q1": 0.024468231000355445,
+          "q3": 0.025682947999484895,
+          "iqr": 0.0012147169991294504
+        }
+      }
+    },
+    "paired_B_over_A": {
+      "warm_full_processing": {
+        "raw": [
+          1.073025804412388,
+          0.9711963407478484,
+          1.012131965640768,
+          1.0257345154142308,
+          1.000413804371383
+        ],
+        "count": 5,
+        "min": 0.9711963407478484,
+        "max": 1.073025804412388,
+        "median": 1.012131965640768,
+        "q1": 1.000413804371383,
+        "q3": 1.0257345154142308,
+        "iqr": 0.02532071104284772
+      },
+      "process_to_painted_current": {
+        "raw": [
+          0.9926531119089068,
+          0.9552282988404069,
+          1.0545653123796939,
+          0.9805456239457793,
+          1.022579737492104
+        ],
+        "count": 5,
+        "min": 0.9552282988404069,
+        "max": 1.0545653123796939,
+        "median": 0.9926531119089068,
+        "q1": 0.9805456239457793,
+        "q3": 1.022579737492104,
+        "iqr": 0.04203411354632469
+      },
+      "zoom_to_paint": {
+        "raw": [
+          0.989594716667832,
+          1.0087585258962373,
+          1.059638425139954,
+          1.013239383361188,
+          1.03277319432849
+        ],
+        "count": 5,
+        "min": 0.989594716667832,
+        "max": 1.059638425139954,
+        "median": 1.013239383361188,
+        "q1": 1.0087585258962373,
+        "q3": 1.03277319432849,
+        "iqr": 0.02401466843225264
+      },
+      "pan_to_paint": {
+        "raw": [
+          1.0661754025317565,
+          1.001358705047729,
+          1.0093420237474062,
+          1.0695602000785678,
+          0.9773639595557925
+        ],
+        "count": 5,
+        "min": 0.9773639595557925,
+        "max": 1.0695602000785678,
+        "median": 1.0093420237474062,
+        "q1": 1.001358705047729,
+        "q3": 1.0661754025317565,
+        "iqr": 0.06481669748402741
+      }
+    },
+    "predeclared_median_ratio_limit": 1.2,
+    "gate": {
+      "warm_full_processing": true,
+      "process_to_painted_current": true,
+      "zoom_to_paint": true,
+      "pan_to_paint": true
+    },
+    "worker_lifetime_peak_rss_bytes": {
+      "A": {
+        "raw": [
+          589860864,
+          589795328,
+          589774848,
+          589828096,
+          589729792
+        ],
+        "count": 5,
+        "min": 589729792,
+        "max": 589860864,
+        "median": 589795328,
+        "q1": 589774848.0,
+        "q3": 589828096.0,
+        "iqr": 53248.0
+      },
+      "B": {
+        "raw": [
+          590036992,
+          586690560,
+          589934592,
+          590053376,
+          589946880
+        ],
+        "count": 5,
+        "min": 586690560,
+        "max": 590053376,
+        "median": 589946880,
+        "q1": 589934592.0,
+        "q3": 590036992.0,
+        "iqr": 102400.0
+      }
+    },
+    "parent_controller_historical_pre_spawn_peak_bytes": {
+      "A": [
+        21192704,
+        23683072,
+        24469504,
+        26828800,
+        27746304
+      ],
+      "B": [
+        21979136,
+        22765568,
+        25255936,
+        26042368,
+        28532736
+      ]
+    }
+  },
+  "fresh_cli": {
+    "order": "five A then five B; descriptive only, no paired ratio/gate",
+    "elapsed_seconds": {
+      "A": {
+        "raw": [
+          0.944648841000344,
+          0.8459506219996911,
+          0.8998270370002501,
+          0.87227972600067,
+          0.8640397339995616
+        ],
+        "count": 5,
+        "min": 0.8459506219996911,
+        "max": 0.944648841000344,
+        "median": 0.87227972600067,
+        "mean": 0.8853491920001033,
+        "q1": 0.8640397339995616,
+        "q3": 0.8998270370002501,
+        "iqr": 0.03578730300068855,
+        "quartile_definition": "statistics.quantiles(n=4, method='inclusive')"
+      },
+      "B": {
+        "raw": [
+          0.8869979029996102,
+          0.8880930180002906,
+          0.8617082179998761,
+          0.8432177100003173,
+          0.8763361900000746
+        ],
+        "count": 5,
+        "min": 0.8432177100003173,
+        "max": 0.8880930180002906,
+        "median": 0.8763361900000746,
+        "mean": 0.8712706078000337,
+        "q1": 0.8617082179998761,
+        "q3": 0.8869979029996102,
+        "iqr": 0.025289684999734163,
+        "quartile_definition": "statistics.quantiles(n=4, method='inclusive')"
+      }
+    },
+    "child_lifetime_peak_rss_bytes": {
+      "A": {
+        "raw": [
+          408723456,
+          408936448,
+          408449024,
+          408403968,
+          409133056
+        ],
+        "count": 5,
+        "min": 408403968,
+        "max": 409133056,
+        "median": 408723456,
+        "mean": 408729190.4,
+        "q1": 408449024.0,
+        "q3": 408936448.0,
+        "iqr": 487424.0,
+        "quartile_definition": "statistics.quantiles(n=4, method='inclusive')"
+      },
+      "B": {
+        "raw": [
+          408727552,
+          408739840,
+          408653824,
+          408571904,
+          409100288
+        ],
+        "count": 5,
+        "min": 408571904,
+        "max": 409100288,
+        "median": 408727552,
+        "mean": 408758681.6,
+        "q1": 408653824.0,
+        "q3": 408739840.0,
+        "iqr": 86016.0,
+        "quartile_definition": "statistics.quantiles(n=4, method='inclusive')"
+      }
+    },
+    "parent_controller_historical_pre_spawn_peak_bytes": {
+      "A": [
+        20713472,
+        20713472,
+        20713472,
+        20713472,
+        20713472
+      ],
+      "B": [
+        22388736,
+        22388736,
+        22388736,
+        22388736,
+        22388736
+      ]
+    }
+  },
+  "equality": {
+    "all_twenty_numeric_digests": "43be3087ec487d3fea81730c16737afa9d28a6e9199acfa010c65a5b3c34908d",
+    "complete_component_values_checked_independently": 167772160,
+    "method": "Independent direct h5py/NumPy, without SpinFlow imports or processing rerun; all arrays bitwise equal, full axes/quadratures/metadata exact allowing only backend.version."
+  },
+  "memory_scope": "Each wait4 child lifetime high-water includes setup/imports and warmups where present. Parent pre-spawn RUSAGE_SELF historical peak is a separate quantity, not measured inherited resident bytes. No subtraction, incremental memory, OS cap, peak-thread trace or kernel page-cache claim.",
+  "scientific_status": "Original S19 FAIL (six of eighteen fixed targets); human/physical Ubuntu acceptance UNVERIFIED"
+}

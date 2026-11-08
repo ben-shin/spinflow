@@ -1,6 +1,6 @@
 # Process, analyze, and reopen a session
 
-This walkthrough describes the **0.3.0b2 experimental source candidate** under qualification for the targeted Ubuntu 24.04 desktop with the optional GUI and figures installed. The published 0.3.0b1 beta supports the processing and session steps, but selected-region scientific figure export requires this later candidate. This is not a stable 1.0 claim or a feature of the previous v0.2.0 prerelease. Confirm `spinflow doctor` reports the native backend available and use a [declared acquisition profile](../formats.md). The [support registry](../../compatibility/support.json) gives profile status; keep your original acquisition and its checksum.
+This walkthrough describes the **0.3.0b3 experimental source candidate** for Ubuntu 24.04 with the optional GUI and figures installed. Published v0.3.0b2 supplies processing, sessions and selected-region figures; b3 adds bounded adaptive viewport inspection. The [Stage 21 record](../stage21-results.md) distinguishes candidate checks from published b2 evidence. Scientific qualification remains FAIL and independent researcher acceptance UNVERIFIED. Confirm `spinflow doctor` reports the native backend available and use a [declared acquisition profile](../formats.md). Keep the original acquisition and checksum.
 
 ## Apply the complete recipe
 

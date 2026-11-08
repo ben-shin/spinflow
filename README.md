@@ -4,29 +4,31 @@ SpinFlow is an experimental, open source NMR processing workbench. It provides a
 
 **Scientific status:** this is an early processing slice, not a validated replacement for NMRPipe or a laboratory processing system. One public Bruker 1D acquisition has an archived peak-position check; two public 2D acquisitions add bounded both-axis automatic phase and fixed peak/relative-volume checks. One previously studied public Varian protein case has a bounded comparison with NMRPipe 13 and actual NMRDraw/Sparky reopening; broader real workflows, general parity, concentration accuracy and other independent reopening remain unverified. See [scope](docs/scope.md), [validation](docs/public-validation.md), and the [roadmap](ROADMAP.md).
 
-The published [v0.3.0b2 experimental beta](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b2) passed its selected installed Linux GUI, session and distribution checks. Its [scientific qualification](docs/bruker-qualification-results.md) **failed six of 18 fixed peak-target comparisons**; physical-user acceptance remains pending. The [qualification record](docs/v1-qualification-results.md) binds the actual tested artifacts and limits. Earlier v0.3.0b1 and v0.2.0 releases remain immutable. The [unreleased Stage 20 changes](docs/stage20-results.md) described below are source changes after b2, with no new release or stable profile.
+The **0.3.0b3 experimental beta** packages adaptive zoom/pan inspection, a smaller optional GUI and persistent raw records in the Linux acceptance runner. On the selected clean Ubuntu GUI-and-figure installation, the smaller dependency set used **42.68% fewer logical installed bytes**. The [Stage 21 record](docs/stage21-results.md) separates private installed checks, fixed performance measurements and final release evidence. At this prepublication source freeze, b3's exact CI assets and public-download checks are still pending; the versioned commands below target b3 once its release is available.
+
+The earlier published [v0.3.0b2 beta](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b2) and its [qualification record](docs/v1-qualification-results.md) remain unchanged. The original [scientific qualification](docs/bruker-qualification-results.md) **failed six of 18 fixed peak-target comparisons**. Physical Ubuntu and independent researcher acceptance remain **UNVERIFIED**. No stable profile is promoted.
 
 ## Install on Linux
 
-For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, use the published v0.3.0b2 versioned installer:
+For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, use the matching v0.3.0b3 versioned installer once the experimental release is published:
 
 ```bash
-curl -fL -o install-spinflow.py https://github.com/ben-shin/spinflow/releases/download/v0.3.0b2/install-spinflow.py
-python3 install-spinflow.py --version 0.3.0b2
-"$HOME/.local/share/spinflow/0.3.0b2/bin/spinflow" doctor
+curl -fL -o install-spinflow.py https://github.com/ben-shin/spinflow/releases/download/v0.3.0b3/install-spinflow.py
+python3 install-spinflow.py --version 0.3.0b3
+"$HOME/.local/share/spinflow/0.3.0b3/bin/spinflow" doctor
 ```
 
-Installation needs internet access to obtain the checked release assets and pinned Python dependencies. The matching prebuilt native wheel does not need a compiler. The versioned wheels target Ubuntu 24.04 x86-64 for these Python versions; they are not general manylinux wheels. To include the optional desktop and figure support, rerun the installer with `--gui --plot`, then run `"$HOME/.local/share/spinflow/0.3.0b2/bin/spinflow" gui` on a desktop. Optional extras already installed are retained on later runs. Use `--prefix PATH` for another installation location; an existing installation must match the selected version and Python. See the [beginner tutorials](docs/tutorials/index.md) for the first spectrum and public-data workflows.
+Installation needs internet access to obtain the checked release assets and pinned Python dependencies. The matching prebuilt native wheel does not need a compiler. The versioned wheels target Ubuntu 24.04 x86-64 for these Python versions; they are not general manylinux wheels. To include the optional desktop and figure support, rerun the installer with `--gui --plot`, then run `"$HOME/.local/share/spinflow/0.3.0b3/bin/spinflow" gui` on a desktop. Optional extras already installed are retained on later runs. Use `--prefix PATH` for another installation location; an existing installation must match the selected version and Python. See the [beginner tutorials](docs/tutorials/index.md) for the first spectrum and public-data workflows.
 
 After installation, this command works offline and creates a new folder containing a synthetic spectrum, processing recipe and analysis reports:
 
 ```bash
-"$HOME/.local/share/spinflow/0.3.0b2/bin/spinflow" first-spectrum first-spectrum
+"$HOME/.local/share/spinflow/0.3.0b3/bin/spinflow" first-spectrum first-spectrum
 ```
 
 The folder must not already exist. If a run fails after creating it, choose a new folder name before retrying. The synthetic example illustrates the workflow and is not evidence of experimental accuracy.
 
-The published [v0.3.0b1 release](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b1) and older [v0.2.0](https://github.com/ben-shin/spinflow/releases/tag/v0.2.0) remain available. Use a different prefix for each installed version. The b2 installer supplies the b2 assets; it does not supply unreleased main changes.
+The published [v0.3.0b2](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b2), [v0.3.0b1](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b1) and older [v0.2.0](https://github.com/ben-shin/spinflow/releases/tag/v0.2.0) remain immutable. Use a different prefix for each installed version and its matching installer/source archive.
 
 ## Install from source on Linux
 
@@ -64,7 +66,7 @@ Operations currently include explicit Bruker digital-filter correction and frequ
 
 The [bounded real-data walkthrough](docs/real-bruker-and-analysis.md) fetches nine hash-pinned BMRB files to an ignored local folder, runs an explicit correction/FFT/reference recipe, and shows headless `autophase`, signed 1D/2D `peaks` and `integrate` reports, and optional `figure` export. The [public 2D guide](docs/real-bruker-2d.md) adds hash-pinned HSQC/TOCSY ser imports, fixed recipes and both-axis full-hypercomplex automatic phase with identifiability and gauge flags. The 25 acquired files stay outside Git. The predeclared raw/reference volume-ratio gate is 30%; observed errors are 2.45–13.32%, without an absolute amplitude or concentration claim. Peak-derived region volumes are signed relative intensity·Hz or intensity·Hz² with inspectable bounds and flags; they are not concentrations or deconvolved assignments. The GUI exposes bounded phase, peak finding, entered-region integration and optional figures without changing the headless core.
 
-The published b2 supports **Save scientific figure** from an applied, selected Current region, using the bounded local dataset with compatible peak/integral annotations. Its selected installed 8,388,608-point workflow and 201×201 PNG/SVG/PDF export are recorded in the [qualification results](docs/v1-qualification-results.md). **Unreleased main after v0.3.0b2** adds adaptive zoom/pan: the [workbench](docs/gui.md) refreshes bounded visible samples and says when every visible sample fits. Sampled overviews can still omit narrow peaks; fixed signed color limits and complete processing/export data are retained. The source-host [Stage 20 observations](docs/stage20-results.md) are separate from the published b2 artifact checks.
+The b3 [workbench](docs/gui.md) supports **Save scientific figure** from an applied, selected Current region and refreshes bounded visible samples during zoom/pan. It says when every visible sample fits; sampled overviews can still omit narrow peaks. Fixed signed color limits and complete processing/export data are retained. The source-host [Stage 20 observations](docs/stage20-results.md), earlier installed [b2 qualification checks](docs/v1-qualification-results.md) and selected b3 installed [Stage 21 checks](docs/stage21-results.md) are distinct cohorts.
 
 The [Bruker qualification protocol](docs/bruker-qualification-protocol.md) froze a distinct public acquisition, 18 deposited 1D targets and four 2D reference regions before execution. Its [results record](docs/bruker-qualification-results.md) retains the failed scientific gate. A separate [post-failure stored-spectrum check](docs/stored-analysis-results.md) verifies the actual signed picker and all 16 signed mathematical rectangle volumes against independent software/arithmetic oracles on previously exposed TopSpin matrices. It does not replace the failed raw-data qualification, validate phase/biological assignments or establish sensitivity on new acquisitions.
 

@@ -1,16 +1,16 @@
 {
   "schema_version": "1",
-  "status_date": "2026-10-30",
+  "status_date": "2026-11-07",
   "distribution": {
-    "version": "0.3.0b2",
+    "version": "0.3.0b3",
     "release_status": "experimental beta",
-    "previous_release": "v0.3.0b1",
-    "qualification": "scientific and independent researcher acceptance unverified"
+    "previous_release": "v0.3.0b2",
+    "qualification": "S19 scientific qualification FAIL (six of 18 fixed peak targets); broader profile qualification and independent researcher acceptance UNVERIFIED"
   },
   "platform_target": {
     "os": "Ubuntu 24.04 x86-64",
     "python": ["CPython 3.12", "CPython 3.13"],
-    "qualification": "Ubuntu 24.04 CPython 3.12 installed wheel and automated X11 desktop workflow checked on one virtualized acquired case; this check does not establish other environments or independent researcher acceptance"
+    "qualification": "Private Ubuntu 24.04 CPython 3.12/3.13 Essentials installed GUI/session checks passed on one selected acquired case; exact CI/public artifacts and physical-user/independent researcher acceptance are separate gates"
   },
   "profiles": [
     {"id": "nmrnext-hdf5", "source_status": "implemented_experimental", "processing_v1_target": "1d_2d", "boundary": "Native schema 1 numeric data; eager Dataset and separate bounded native-file mode"},

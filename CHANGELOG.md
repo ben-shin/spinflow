@@ -1,5 +1,13 @@
 # Changes
 
+## 0.3.0b3 — experimental beta preparation, 2026-11-08
+
+- Packages bounded adaptive zoom/pan inspection from Stage 20, preserving complete processing/export data, signed levels and visible-sample warnings.
+- Pins the optional GUI to PySide6 Essentials 6.12.0 with unchanged pyqtgraph. Selected clean Ubuntu core+GUI+plot prefixes used 42.68% fewer logical installed bytes; this does not imply a runtime speedup.
+- Adds an exclusive flushed/fsynced acceptance-runner journal so completed original elapsed/RSS observations survive later failures or termination. Processing, measurement boundaries, public API/defaults and numerical schemas/tolerances remain unchanged.
+- Records selected installed Ubuntu CPython 3.12/3.13 acquired workflows, genuine older-session compatibility, fixed interactive regression measurements and the separate six-gate integer-Bruker import/filter result in [Stage 21](docs/stage21-results.md). Exact final CI/public assets are pending at this source freeze.
+- Retains the original S19 scientific FAIL (six of eighteen fixed peak targets). Physical Ubuntu/researcher acceptance, broad original-program parity and a stable 1.0 release remain UNVERIFIED. Earlier releases are unchanged.
+
 ## 0.3.0b1 — experimental beta
 
 - Adds an ordered Qt recipe editor with separate pending and applied state, explicit automatic-phase steps, and a saved session that reopens and verifies the applied result. The documented CLI recipe remains replayable.

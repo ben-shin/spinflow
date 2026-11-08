@@ -2,7 +2,19 @@
 
 This is a local check of your installed SpinFlow on Ubuntu 24.04 x86-64. It produces repeatable CLI observations and a **blank manual checklist** for you to complete. Automated checks do not establish that the application suits your research or that physical user hardware has passed. No files or results are uploaded.
 
-Use the matching release's tagged source archive for the runner, recipes and pinned fetch helper. A wheel or Python source distribution alone does not include these tools. Extract that archive into a separate folder, enter it, and keep your installed prefix outside it. Use an existing supported Python installation; no compiler is required by this check.
+Use the matching release's tagged source archive for the runner, recipes and pinned fetch helper. A wheel or Python source distribution alone does not include these tools. Use an existing supported Python installation; no compiler is required by this check. These commands target b3 and its installer-default prefix once the experimental release is published; public assets remain pending at this prepublication source freeze. Change both variables together for another published version or a custom prefix.
+
+```sh
+SPINFLOW_VERSION=0.3.0b3
+SPINFLOW_PREFIX="$HOME/.local/share/spinflow/$SPINFLOW_VERSION"
+"$SPINFLOW_PREFIX/bin/spinflow" --version
+curl -fL -o "spinflow-source-$SPINFLOW_VERSION.tar.gz" "https://github.com/ben-shin/spinflow/archive/refs/tags/v$SPINFLOW_VERSION.tar.gz"
+mkdir "spinflow-source-$SPINFLOW_VERSION"
+tar -xzf "spinflow-source-$SPINFLOW_VERSION.tar.gz" --strip-components=1 -C "spinflow-source-$SPINFLOW_VERSION"
+cd "spinflow-source-$SPINFLOW_VERSION"
+```
+
+The printed version must match the selected tag. Choose a new source folder for a repeat and keep the installation outside it. If the prefix is missing, first follow the [installation instructions](../../README.md#install-on-linux).
 
 Prepare the existing public acquisition once:
 
@@ -12,10 +24,10 @@ python3 tests/fixtures/fetch_varian_public.py
 
 The helper downloads only the existing hash-pinned nmrglue example archives, verifies their size and SHA256 and extracts declared members into a local cache. It does not run acquisition/processing scripts. Data remain private in `.artifacts/`; no redistribution permission for these acquisition binaries is assumed. Fetch errors are failures, not successful preparation.
 
-Then run, replacing the prefix with your actual installation:
+Then run with that same installation:
 
 ```sh
-python3 tools/linux_user_acceptance.py --prefix "$HOME/SpinFlow" --output "$HOME/SpinFlow acceptance 01"
+python3 tools/linux_user_acceptance.py --prefix "$SPINFLOW_PREFIX" --output "$HOME/SpinFlow acceptance 01"
 ```
 
 The output folder must be new and its parent must exist. Repeats require a new folder; the runner retains every trial output and refuses existing output folders or any overlap with the input. Do not place the report inside the acquisition directory. Allow roughly 200 MiB for the five default native output files and logs. This is separate from the recipe's 1 GiB working-array policy, which is not an RSS or total-memory limit.
@@ -30,11 +42,23 @@ The standard-library controller invokes only the selected prefix's `bin/python -
 
 Five fresh CLI processes run by default (`--samples 2` through `--samples 20` is available). Each timing includes startup, acquisition read, normal processing/finite checks/hashes/provenance, and native output write/close. Input identity hashing, installed probes and output comparisons are outside the measured endpoint. **Preflight input hashing warms filesystem caches: these are fresh-process timings, not cold-I/O measurements.** All samples are retained; none are discarded as outliers. JSON contains raw observations and minimum, maximum, median and inclusive-quartile IQR. A failed/nonzero/missing trial or an input mutation makes the bundle failed/incomplete and prevents a successful distribution.
 
-On Linux, `wait4` reaps each actual child exactly once and records its fork/spawn-to-exit lifetime RSS high-water. That value may include an inherited controller resident-memory floor before program execution; the controller's own pre-spawn lifetime peak is recorded separately. Nothing is subtracted. This is not pure post-exec or incremental memory, an OS memory cap, a flat-scaling result or a kernel file-cache measurement. When genuine `wait4` is unavailable, RSS is marked unavailable rather than estimated. Full-array and full-metadata comparisons occur in separate installed processes outside timing.
+The b3 runner exclusively creates `observations.journal.jsonl` and flushes each completed trial's original elapsed/RSS observation to disk before further validation or another trial. Stage markers identify a later stalled probe, trial or comparison. Keep this journal and all trial logs if a run is interrupted; the final report may be absent, and missing observations are never fabricated or promoted to a passing result.
+
+On Linux, `wait4` reaps each actual child exactly once and records its fork/spawn-to-exit lifetime RSS high-water. That value may include an inherited controller resident-memory floor before program execution. The controller's own pre-spawn historical lifetime peak is recorded separately; it does not directly measure the child's inherited resident bytes. Nothing is subtracted. This is not pure post-exec or incremental memory, an OS memory cap, a flat-scaling result or a kernel file-cache measurement. When genuine `wait4` is unavailable, RSS is marked unavailable rather than estimated. Full-array and full-metadata comparisons occur in separate installed processes outside timing.
 
 Every trial must have identical dtype, shape, all component samples and complete axes/metadata/global provenance. This proves deterministic replay within this installed cohort; it does **not** independently validate the science, accuracy on new acquisitions, performance parity with NMRPipe or suitability for every machine. No latency/RSS pass threshold has been predeclared, so measurements are descriptive. Human/user-hardware acceptance remains **UNVERIFIED** until you fill and return the manual results.
 
 ## Complete the manual part
+
+If a core-only installation reports `GUI_UNAVAILABLE`, add the optional desktop and figures with the **same version and prefix**. A binary installation needs the standalone release installer; the source-build `tools/bootstrap.sh` remedy in the existing CLI diagnostic does not apply to a wheel-only installation. From any writable folder:
+
+```sh
+curl -fL -o "install-spinflow-$SPINFLOW_VERSION.py" "https://github.com/ben-shin/spinflow/releases/download/v$SPINFLOW_VERSION/install-spinflow.py"
+"$SPINFLOW_PREFIX/bin/python" "install-spinflow-$SPINFLOW_VERSION.py" --version "$SPINFLOW_VERSION" --prefix "$SPINFLOW_PREFIX" --gui --plot
+"$SPINFLOW_PREFIX/bin/spinflow" gui
+```
+
+Using the prefix's Python preserves its selected Python ABI. Existing optional extras are retained. Use **Analysis / figures → Save scientific figure** for the complete selected-region PNG/SVG/PDF route. The separate plot context-menu SVG action has a retained failure in the pinned full and Essentials Qt stacks; context-menu PNG/CSV/HDF5 checks do not establish that SVG action works.
 
 Read `report.md` and `report.json`. Keep the generated trial files. Open `manual-checklist.md` and fill `manual-results.json` with your operator/date/hardware, observations, failures and decision. All entries deliberately start blank. Record whether this was your physical Linux machine or a VM; an automated VM test cannot stand in for physical user hardware.
 

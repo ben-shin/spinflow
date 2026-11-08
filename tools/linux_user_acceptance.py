@@ -73,12 +73,19 @@ def signature(d):
 mode=sys.argv[2]
 if mode=='probe':
     deps={}
-    for name in ('numpy','scipy','h5py','nmrglue','PySide6','pyqtgraph','matplotlib'):
+    for name in ('numpy','scipy','h5py','nmrglue','PySide6','PySide6_Essentials',
+                 'PySide6_Addons','PySide6_WebEngine','PySide6_Pdf','shiboken6','pyqtgraph','matplotlib'):
         try: deps[name]=md.version(name)
         except md.PackageNotFoundError: deps[name]=None
+    try:
+        import PySide6
+        qt_module_version=PySide6.__version__
+    except ModuleNotFoundError:
+        qt_module_version=None
     result={'version':nmrnext.__version__,'python':sys.version,'executable':sys.executable,
             'prefix':sys.prefix,'platform':platform.platform(),'machine':platform.machine(),
-            'dependencies':deps,'native':pin(_native.__file__),
+            'dependencies':deps,'optional_module_versions':{'PySide6':qt_module_version},
+            'native':pin(_native.__file__),
             'support_registry':pin(Path(nmrnext.__file__).parent/'support.json')}
     for name in ('cpuinfo','meminfo'):
         p=Path('/proc')/name
@@ -229,6 +236,25 @@ def require_success(observations, expected):
         raise ValueError("failed child; no successful distribution")
 
 
+class ObservationJournal:
+    """Persist completed observations before any later validation or work."""
+    def __init__(self, path):
+        self.path = Path(path)
+        self.stream = self.path.open("x", encoding="utf-8", newline="\n")
+        self.stage = "setup"
+
+    def emit(self, event, **fields):
+        self.stage = fields.pop("stage", self.stage)
+        record = {"schema_version": "1", "event": event, "stage": self.stage,
+                  "monotonic": time.perf_counter(), **fields}
+        self.stream.write(json.dumps(record, allow_nan=False)+"\n")
+        self.stream.flush()
+        os.fsync(self.stream.fileno())
+
+    def close(self):
+        self.stream.close()
+
+
 def run(args):
     if sys.platform != "linux" or platform.machine() not in ("x86_64", "amd64"):
         raise ValueError("This acceptance runner requires Linux x86-64")
@@ -251,7 +277,9 @@ def run(args):
     env.pop("PYTHONPATH", None)
     env.pop("PYTHONHOME", None)
     env.update({key: "1" for key in THREAD_ENV})
+    journal = ObservationJournal(output / "observations.journal.jsonl")
     try:
+        journal.emit("stage_started", stage="setup")
         allowed = sorted(os.sched_getaffinity(0))
         cpu = allowed[0] if args.cpu is None else args.cpu
         if cpu not in allowed:
@@ -269,6 +297,7 @@ def run(args):
             stream.writelines("- [ ] "+text+"\n" for text in MANUAL_CHECKS)
             stream.write("\nDecision and problems: ____\n\nNo automated result fills or approves this checklist.\n")
         def worker(mode, argument=None):
+            journal.emit("stage_started", stage="installed_"+mode)
             argv = [str(python), "-I", "-B", "-c", WORKER, str(prefix), mode]
             if argument is not None:
                 argv.append(str(argument))
@@ -278,6 +307,7 @@ def run(args):
                 raise ValueError("Installed "+mode+" check failed: "+result.stderr[-1000:])
             data = json.loads(result.stdout)
             write_json(output / (mode+".json"), data)
+            journal.emit("stage_finished", stage="installed_"+mode)
             return data
         report["installed"] = worker("probe")
         paths = []
@@ -290,9 +320,12 @@ def run(args):
             if index == 0:
                 report["source"] = worker("source", current_path)
             unchanged_input(source, before)
+            journal.emit("stage_started", stage="trial_measurement", trial=index+1)
             observed = measure([str(python), "-I", "-B", "-m", "nmrnext", "run", str(current_path)],
                                stem, output, env)
+            journal.emit("trial_completed", stage="trial_measurement", trial=index+1, observation=observed)
             report["observations"].append(observed)
+            journal.emit("stage_started", stage="trial_validation", trial=index+1)
             unchanged_input(source, before)
             require_success(report["observations"], index+1)
             if not target.is_file():
@@ -307,9 +340,14 @@ def run(args):
         rss = [o["peak_rss_bytes"] for o in report["observations"]]
         report["peak_rss_bytes"] = distribution(rss) if all(v is not None for v in rss) else None
         report["automated_status"] = "PASS_REPEATED_NATIVE_CLI_ONLY"
+        journal.emit("validation_complete", stage="complete")
     except Exception as exc:
         report["automated_status"] = "FAILED_OR_INCOMPLETE"
         report["error"] = str(exc)
+        journal.emit("runner_failed", error=str(exc))
+    finally:
+        journal.close()
+    report["observation_journal"] = file_pin(journal.path)
     write_json(output / "report.json", report)
     with (output / "report.md").open("x", encoding="utf-8", newline="\n") as stream:
         stream.write("# Installed Linux acceptance observations\n\n"+report["automated_status"]+"\n\n")

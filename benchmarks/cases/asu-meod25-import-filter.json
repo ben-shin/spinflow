@@ -1,0 +1,311 @@
+{
+  "schema": 1,
+  "id": "asu-meod25-import-filter-v1",
+  "commit": "af3b9c2c4642e63e379bc349cb40e1fe8c5730e6",
+  "commit_tree": "07b700fef27ac2bd031a8915a156e49c9ff0845e",
+  "archive": {
+    "url": "https://raw.githubusercontent.com/CHM343/NMR/af3b9c2c4642e63e379bc349cb40e1fe8c5730e6/Data/MeOD_25C_Temp_Cal_Bruker400.zip",
+    "bytes": 1060855,
+    "git_blob_sha1": "6b4d3850d0167a48d9301030bcbe458e5eb1b29e",
+    "sha256": "38c8d260169d42f0d15ab5c7b9ce7084735419688c9ea66e76dc34fa6b356094"
+  },
+  "member_prefix": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/",
+  "directory": [
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/uxnmr.par",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 3584493454,
+      "compressed_bytes": 3645,
+      "uncompressed_bytes": 26485,
+      "local_offset": 0
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pulseprogram",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 4194088143,
+      "compressed_bytes": 736,
+      "uncompressed_bytes": 2061,
+      "local_offset": 3744
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/.DS_Store",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 4281341186,
+      "compressed_bytes": 252,
+      "uncompressed_bytes": 6148,
+      "local_offset": 4582
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/precom.output",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 1073982854,
+      "compressed_bytes": 1371,
+      "uncompressed_bytes": 4139,
+      "local_offset": 4933
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/format.temp",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 2311307086,
+      "compressed_bytes": 660,
+      "uncompressed_bytes": 2389,
+      "local_offset": 6407
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/audita.txt",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 3161374556,
+      "compressed_bytes": 531,
+      "uncompressed_bytes": 824,
+      "local_offset": 7168
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/fq1list",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 1771689558,
+      "compressed_bytes": 3456,
+      "uncompressed_bytes": 10315,
+      "local_offset": 7799
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/fid",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 3999942738,
+      "compressed_bytes": 138945,
+      "uncompressed_bytes": 262144,
+      "local_offset": 11352
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/shimvalues",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 1905995449,
+      "compressed_bytes": 685,
+      "uncompressed_bytes": 1785,
+      "local_offset": 150390
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/uxnmr.info",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 3929854296,
+      "compressed_bytes": 1976,
+      "uncompressed_bytes": 5378,
+      "local_offset": 151175
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/scon2",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 1632890292,
+      "compressed_bytes": 390,
+      "uncompressed_bytes": 677,
+      "local_offset": 153251
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/acqu",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 2804984331,
+      "compressed_bytes": 2143,
+      "uncompressed_bytes": 8681,
+      "local_offset": 153736
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/topshimreport",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 2417962680,
+      "compressed_bytes": 454,
+      "uncompressed_bytes": 819,
+      "local_offset": 155973
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/acqus",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 2689736493,
+      "compressed_bytes": 2305,
+      "uncompressed_bytes": 8861,
+      "local_offset": 156530
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/specpar",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 3139418234,
+      "compressed_bytes": 1464,
+      "uncompressed_bytes": 3470,
+      "local_offset": 158930
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/proc",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 3198724520,
+      "compressed_bytes": 1090,
+      "uncompressed_bytes": 2456,
+      "local_offset": 160491
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/title",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 2756610101,
+      "compressed_bytes": 172,
+      "uncompressed_bytes": 207,
+      "local_offset": 161683
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/auditp.txt",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 3293044348,
+      "compressed_bytes": 759,
+      "uncompressed_bytes": 1491,
+      "local_offset": 161958
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/intrng",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 2886778736,
+      "compressed_bytes": 59,
+      "uncompressed_bytes": 69,
+      "local_offset": 162825
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/1r",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 4228304308,
+      "compressed_bytes": 445135,
+      "uncompressed_bytes": 524288,
+      "local_offset": 162988
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/1i",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 3604753946,
+      "compressed_bytes": 445095,
+      "uncompressed_bytes": 524288,
+      "local_offset": 608223
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/procs",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 3392441261,
+      "compressed_bytes": 1111,
+      "uncompressed_bytes": 2489,
+      "local_offset": 1053418
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/outd",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 2047460366,
+      "compressed_bytes": 353,
+      "uncompressed_bytes": 516,
+      "local_offset": 1054632
+    },
+    {
+      "name": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/thumb.png",
+      "flags": 2056,
+      "method": 8,
+      "crc32": 1875724924,
+      "compressed_bytes": 3232,
+      "uncompressed_bytes": 3227,
+      "local_offset": 1055087
+    }
+  ],
+  "known_metadata": [
+    {
+      "source_member": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/acqus",
+      "file": "asu-meod25-acqus",
+      "bytes": 8861,
+      "sha256": "6d108f8ae59c7a4eaaff8abe414d1794fda35fc6ef7bc300326c13843fb8480c"
+    },
+    {
+      "source_member": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/title",
+      "file": "asu-meod25-title",
+      "bytes": 207,
+      "sha256": "a49a74e8b8626cf2e6b8cd7769a287b3e14487dad490441b390093ca30670831"
+    },
+    {
+      "source_member": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/auditp.txt",
+      "file": "asu-meod25-auditp.txt",
+      "bytes": 1491,
+      "sha256": "365879e0ed2603e72acbd14ae892e041104517ebeffbe1c9d4e9190afb168dc3"
+    },
+    {
+      "source_member": "2023_10_04_AcAc_Solvents_Temp_Bruker400/232/pdata/1/procs",
+      "file": "asu-meod25-procs",
+      "bytes": 2489,
+      "sha256": "9d4e66cceb6e56d7e55a1da396a5d5b30815ec2a27593f052209cd5b62e7ce3e"
+    }
+  ],
+  "extract_allowlist": [
+    "acqus",
+    "fid"
+  ],
+  "profile": {
+    "AQ_mod": 3,
+    "PARMODE": 0,
+    "BYTORDA": 0,
+    "DTYPA": 0,
+    "TD": 65536,
+    "GRPDLY": 76,
+    "DECIM": 2568,
+    "DSPFVS": 21,
+    "DIGMOD": 3,
+    "SW_h": 7788.16199376947,
+    "SFO1": 400.13311072,
+    "BF1": 400.13,
+    "O1": 3110.71999999513,
+    "NUC1": "1H"
+  },
+  "required_checks": [
+    "ASU-01",
+    "ASU-02",
+    "ASU-03",
+    "ASU-04",
+    "ASU-05",
+    "ASU-06"
+  ],
+  "recipe": [
+    {
+      "op": "digital_filter",
+      "axis": "a0"
+    }
+  ],
+  "backend": "native",
+  "threads": 1,
+  "filter_rtol": 1e-11,
+  "filter_atol": 1e-07,
+  "candidate_version": "0.3.0b3",
+  "nmrglue_version": "0.12",
+  "provenance": {
+    "laboratory": "Arizona State University, CHM343",
+    "readme_url": "https://raw.githubusercontent.com/CHM343/NMR/af3b9c2c4642e63e379bc349cb40e1fe8c5730e6/README.md",
+    "readme_sha256": "4e573366247828d5c5084591a4895fa630dd0119fecf2b9f22b049b8a1c0ff5a",
+    "license": "Repository GPL-3.0; separate dataset declaration not found",
+    "license_url": "https://raw.githubusercontent.com/CHM343/NMR/af3b9c2c4642e63e379bc349cb40e1fe8c5730e6/LICENSE",
+    "license_sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+  },
+  "nonclaims": [
+    "Full TopSpin processing/phase/baseline/peak/volume parity UNVERIFIED",
+    "S19 six of eighteen comparisons FAIL unchanged",
+    "Human acceptance UNVERIFIED",
+    "No stable promotion"
+  ]
+}

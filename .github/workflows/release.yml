@@ -64,6 +64,8 @@ jobs:
           export PATH="$(dirname "$(command -v python)")"
           python tools/install.py --asset-dir dist --prefix "$RUNNER_TEMP/Spin Flow core" --gui --plot
           python tools/install.py --asset-dir dist --prefix "$RUNNER_TEMP/Spin Flow core"
+          "$RUNNER_TEMP/Spin Flow core/bin/python" -I -c "import importlib.metadata as m; import PySide6; assert m.version('PySide6-Essentials') == m.version('shiboken6') == PySide6.__version__ == '6.12.0'; installed={d.metadata['Name'].lower().replace('-','_') for d in m.distributions()}; assert not installed.intersection({'pyside6','pyside6_addons','pyside6_webengine','pyside6_pdf'})"
+          "$RUNNER_TEMP/Spin Flow core/bin/python" -I -m pip check
           python tools/release_assets.py smoke --prefix "$RUNNER_TEMP/Spin Flow core" --gui --plot
       - name: Record actual installed dependency and native versions
         run: |
