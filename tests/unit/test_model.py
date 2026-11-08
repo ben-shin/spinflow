@@ -1,4 +1,8 @@
+import subprocess
+import sys
+from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 import numpy as np
 
 try:
@@ -65,6 +69,65 @@ class ModelTests(unittest.TestCase):
             Dataset(np.array([[1.,float('inf')]]),(Axis('x',2),))
         with self.assertRaises(NMRNextError):
             Dataset(np.array([[1,2]]),(Axis('x',2),))
+
+    def test_optional_packer_errors_follow_sample_validation_and_precede_metadata(self):
+        raw = np.arange(12, dtype=np.float32).reshape(1, 4, 3).transpose(0, 2, 1)
+        axes = (Axis("x", 3), Axis("y", 4))
+        def allocation_failure(array):
+            raise MemoryError("sample packing")
+        module = SimpleNamespace(_try_pack_transposed=allocation_failure)
+        with patch.dict(sys.modules, {"nmrnext._native": module}):
+            for value in (np.nan, np.inf, -np.inf):
+                raw[0, -1, -1] = value
+                with self.assertRaises(NMRNextError) as error:
+                    Dataset(raw, axes, metadata=object())
+                self.assertEqual(error.exception.code, "NONFINITE_DATA")
+            with self.assertRaises(NMRNextError) as error:
+                Dataset(raw, axes[::-1])
+            self.assertEqual(error.exception.code, "INVALID_SHAPE")
+            with self.assertRaises(NMRNextError) as error:
+                Dataset(raw.astype(raw.dtype.newbyteorder("S")), axes)
+            self.assertEqual(error.exception.code, "INVALID_DTYPE")
+            raw[0, -1, -1] = 5
+            with self.assertRaisesRegex(MemoryError, "sample packing"):
+                Dataset(raw, axes, metadata=object())
+
+    def test_optional_packer_capability_is_checked_when_module_becomes_available(self):
+        raw = np.arange(12, dtype=np.float64).reshape(1, 4, 3).transpose(0, 2, 1)
+        axes = (Axis("x", 3), Axis("y", 4))
+        expected = raw.tobytes(order="C")
+        with patch.dict(sys.modules, {"nmrnext._native": SimpleNamespace()}):
+            self.assertEqual(Dataset(raw, axes).data.tobytes(), expected)
+            def decline(array):
+                return None
+            def cancel(array):
+                raise KeyboardInterrupt
+            module = sys.modules["nmrnext._native"]
+            module._try_pack_transposed = decline
+            self.assertEqual(Dataset(raw, axes).data.tobytes(), expected)
+            module._try_pack_transposed = cancel
+            with self.assertRaises(KeyboardInterrupt):
+                Dataset(raw, axes)
+
+    def test_cold_dataset_does_not_attempt_native_import(self):
+        program = """
+import sys
+class ForbidNative:
+    def find_spec(self, fullname, path, target=None):
+        if fullname == 'nmrnext._native':
+            raise AssertionError('cold constructor requested a native extension')
+sys.meta_path.insert(0, ForbidNative())
+import numpy as np
+from nmrnext import Axis, Dataset
+assert 'nmrnext._native' not in sys.modules
+raw = np.arange(12, dtype=np.float32).reshape(1, 4, 3).transpose(0, 2, 1)
+result = Dataset(raw, (Axis('x', 3), Axis('y', 4)))
+assert result.data.tobytes() == raw.tobytes(order='C')
+assert 'nmrnext._native' not in sys.modules
+"""
+        command = "import sys\nsys.path[:] = " + repr(sys.path) + "\n" + program
+        completed = subprocess.run([sys.executable, "-c", command], capture_output=True, text=True)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
 
     def test_malformed_enum_and_component_inputs_are_structured_errors(self):
         for field in ('role','domain','encoding'):
