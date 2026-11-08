@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 import json
 import math
 from numbers import Real
+import sys
 
 import numpy as np
 
@@ -87,6 +88,18 @@ class Axis:
         return asdict(self)
 
 
+def _sample_bytes(arr):
+    if arr.ndim == 3 and arr.shape[0] == 1 and arr.flags.f_contiguous and not arr.flags.c_contiguous:
+        # Native processing has already loaded the extension. Keep cold imports
+        # and older extensions on the NumPy reference path.
+        pack = getattr(sys.modules.get("nmrnext._native"), "_try_pack_transposed", None)
+        if pack is not None:
+            packed = pack(arr)
+            if packed is not None:
+                return packed
+    return arr.tobytes(order="C")
+
+
 class Dataset:
     """Owned immutable array with copied JSON metadata at public boundaries."""
     __slots__ = ("_data", "_dtype", "_shape", "_axes", "_complex_axes", "_metadata", "_provenance", "__weakref__")
@@ -102,7 +115,7 @@ class Dataset:
             raise NMRNextError("NONFINITE_DATA", "Dataset contains NaN or infinity")
         # Store no canonical ndarray: callers may change a read-only array's
         # shape/dtype, including those of any exposed ndarray base.
-        self._data = arr.tobytes(order="C")
+        self._data = _sample_bytes(arr)
         self._dtype, self._shape = arr.dtype, expected
         self._axes, self._complex_axes = axes, bits
         self._set_metadata(metadata, provenance)

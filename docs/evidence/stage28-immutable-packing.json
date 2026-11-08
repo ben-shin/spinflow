@@ -1,0 +1,700 @@
+{
+  "status": "Draft results for private candidate builds. The proposed branch is for source review. Main and released b3 do not contain this change.",
+  "stage": 28,
+  "cohort_start_UTC": "2026-11-08T13:38:36Z",
+  "case": "Varian cpjdcptan2d; fixed 14-operation recipe on a previously studied acquisition",
+  "published_release_version": "0.3.0b3",
+  "builds": {
+    "A": {
+      "source_commit": "7598ae53267d743fbd46ba708ed85f5b3478cbeb",
+      "model_sha256": "2ed3bc1d2e3a596999ac8f973fbe17a2882a71bc994015e269979571e370be74",
+      "wheel_sha256": "b2b22e001eae1d9e4ebd056312277e959f901d08036401633fb6e83dcf8cb737",
+      "native_sha256": "811fcb73e59727b13096c453a6a8f57c3e08e52957f9c0425f04363024f97d34",
+      "core": "9acd706706144b8a3cfaebecf6c957e3fbf5a0063a92b1563eec545049e50d7a",
+      "CXX": "GNU13.3.0",
+      "CMake": "4.4.4",
+      "scikit_build_core": "1.1.1",
+      "pybind11": "3.1.0",
+      "Ninja_requirement": "1.13.2",
+      "Release_LTO": "enabled; full effective public compiler/package/hash/flagline unpinned",
+      "build_Python": "3.12.16"
+    },
+    "B": {
+      "base_commit": "a743e93a77a35804c20a351e5a5e35e7ee76d1a5",
+      "source_archive_sha256": "c395ad1097096147888a88965078d6da8eff9a18d48c9c1fefdf413557436b14",
+      "patch_sha256": "10523913ec7bc8fb7b39d450e01ddd3b5681292918f7513db98f438f178c9878",
+      "wheel_sha256": "90dee286077f36e63fad33234b23fc124ea35e4b0aae889ce1a91d5192c3ac55",
+      "native_sha256": "4b8321670570bb2757dc876dd481bdb3b644e051250365c1ad6153e8ddcf66be",
+      "model_sha256": "e608704ebb5bff5e900abf237f7e88b5cef78bd3f90b1dacea9de49ec09febc7",
+      "core": "fefc2a982b8ae82fbd2674f03c57f79b73c657d230e33a430455149adec021bb",
+      "CXX": "GNU13.3.0",
+      "CMake": "4.4.4",
+      "scikit_build_core": "1.1.1",
+      "pybind11": "3.1.0",
+      "Ninja": "1.13.2",
+      "compile_flags": "-O3 -DNDEBUG -std=c++20 -fPIC -fvisibility=hidden -Wall -Wextra -Wpedantic -O3 -flto=auto -fno-fat-lto-objects",
+      "build_Python": "3.12.3",
+      "version_label": "0.3.0b3, private unpublished experiment",
+      "link_flags": "-shared -flto=auto -Wl,--dependency-file=CMakeFiles/_native.dir/link.d"
+    }
+  },
+  "attribution": "Complete installed builds. The released build's exact compiler executable, package identity and complete effective compile/link lines were unavailable. The rebuilt extension also contains unchanged FFT code.",
+  "source_context": {
+    "during_cohort": "8d03c7f591cbcc815504770df5b229e5e14bea2a",
+    "during_cohort_tree": "0af61612ab9a5d71b8414573cdbd729f6efd6bc8",
+    "tracked_files_verified": 322,
+    "public_head_when_note_prepared": "a738c328e7ef26e1bcd6c5dd7123d6f7b3db9908",
+    "product_files_changed_in_later_public_docs_and_tool_commits": 0,
+    "public_product_files": 28,
+    "public_tree_when_note_prepared": "341423164968dacfeeba495b7868896413b8719c",
+    "public_snapshot_scope": "The timed checkout preceded the later documentation change. Neither public checkout identifies the private candidate build."
+  },
+  "execution": {
+    "os": "Ubuntu x86-64 virtual machine",
+    "virtual_CPU_model": "AMD Ryzen 7 9800X3D",
+    "guest_vCPU": 1,
+    "affinity": [
+      0
+    ],
+    "guest_memory_config_GiB": 4,
+    "interpreter": "CPython 3.12.3",
+    "interpreter_sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "runtime_versions_both": {
+      "contourpy": "1.4.0",
+      "pip": "24.0",
+      "fonttools": "4.68.0",
+      "pillow": "13.0.0",
+      "scipy": "1.18.1",
+      "numpy": "2.5.4",
+      "pyqtgraph": "0.14.0",
+      "kiwisolver": "1.5.1",
+      "tzdata": "2026.6",
+      "cycler": "0.12.1",
+      "spinflow": "0.3.0b3",
+      "pyparsing": "3.3.3",
+      "packaging": "26.3",
+      "colorama": "0.4.6",
+      "PySide6_Essentials": "6.12.0",
+      "h5py": "3.16.0",
+      "python-dateutil": "4.0.0",
+      "matplotlib": "3.11.2",
+      "shiboken6": "6.12.0",
+      "nmrglue": "0.12"
+    },
+    "native_threads": 1,
+    "pool_variables": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1"
+    },
+    "working_array_budget_bytes": 1073741824,
+    "added_OS_memory_limit": false,
+    "endpoint": "one warmup and one measured run_operations call per fresh worker; no concurrent VM jobs",
+    "worker_deadline_TERM_KILL_seconds": [
+      120,
+      5,
+      5
+    ]
+  },
+  "orders": [
+    "AB",
+    "BA",
+    "AB",
+    "BA",
+    "AB",
+    "BA",
+    "AB"
+  ],
+  "journal_originals_count": 91,
+  "worker_count": 14,
+  "no_excluded_trials": true,
+  "raw_fields": {
+    "function_ns": "warmed whole14 function interval",
+    "raw_wait_s": "elapsed at worker reap",
+    "final_lifecycle_s": "elapsed at final receipt",
+    "worker_peak_KiB": "waited fresh-worker lifetime RSS",
+    "parent_peak_KiB": "controller historical peak before spawn"
+  },
+  "raw_observations": [
+    {
+      "slot": 0,
+      "pair": 1,
+      "arm": "A",
+      "function_ns": 214046235,
+      "raw_wait_s": 4.235135934999562,
+      "final_lifecycle_s": 4.24160951399972,
+      "worker_peak_KiB": 483304,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 1,
+      "pair": 1,
+      "arm": "B",
+      "function_ns": 114924415,
+      "raw_wait_s": 2.179407428993727,
+      "final_lifecycle_s": 2.184635093995894,
+      "worker_peak_KiB": 483108,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 2,
+      "pair": 2,
+      "arm": "B",
+      "function_ns": 119464671,
+      "raw_wait_s": 1.3092734180027037,
+      "final_lifecycle_s": 1.3141041769995354,
+      "worker_peak_KiB": 482800,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 3,
+      "pair": 2,
+      "arm": "A",
+      "function_ns": 161270586,
+      "raw_wait_s": 1.2596055059984792,
+      "final_lifecycle_s": 1.2644960670004366,
+      "worker_peak_KiB": 483304,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 4,
+      "pair": 3,
+      "arm": "A",
+      "function_ns": 159000358,
+      "raw_wait_s": 1.259034299000632,
+      "final_lifecycle_s": 1.2639949599979445,
+      "worker_peak_KiB": 483176,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 5,
+      "pair": 3,
+      "arm": "B",
+      "function_ns": 125924750,
+      "raw_wait_s": 1.2592347020035959,
+      "final_lifecycle_s": 1.2646035680008936,
+      "worker_peak_KiB": 482820,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 6,
+      "pair": 4,
+      "arm": "B",
+      "function_ns": 133633845,
+      "raw_wait_s": 1.25850719200389,
+      "final_lifecycle_s": 1.2634374530025525,
+      "worker_peak_KiB": 483056,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 7,
+      "pair": 4,
+      "arm": "A",
+      "function_ns": 150426152,
+      "raw_wait_s": 1.209291786995891,
+      "final_lifecycle_s": 1.2140013449970866,
+      "worker_peak_KiB": 483036,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 8,
+      "pair": 5,
+      "arm": "A",
+      "function_ns": 149487440,
+      "raw_wait_s": 1.2584271909945528,
+      "final_lifecycle_s": 1.263509153999621,
+      "worker_peak_KiB": 483016,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 9,
+      "pair": 5,
+      "arm": "B",
+      "function_ns": 113362996,
+      "raw_wait_s": 1.2656542810000246,
+      "final_lifecycle_s": 1.2701614360048552,
+      "worker_peak_KiB": 483020,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 10,
+      "pair": 6,
+      "arm": "B",
+      "function_ns": 113328895,
+      "raw_wait_s": 1.2601608129989472,
+      "final_lifecycle_s": 1.267098297998018,
+      "worker_peak_KiB": 482776,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 11,
+      "pair": 6,
+      "arm": "A",
+      "function_ns": 149133636,
+      "raw_wait_s": 1.2088370810015476,
+      "final_lifecycle_s": 1.213303835997067,
+      "worker_peak_KiB": 483176,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 12,
+      "pair": 7,
+      "arm": "A",
+      "function_ns": 148495928,
+      "raw_wait_s": 1.2087925800005905,
+      "final_lifecycle_s": 1.213496837997809,
+      "worker_peak_KiB": 482756,
+      "parent_peak_KiB": 24436
+    },
+    {
+      "slot": 13,
+      "pair": 7,
+      "arm": "B",
+      "function_ns": 111625274,
+      "raw_wait_s": 1.258880298002623,
+      "final_lifecycle_s": 1.263499655004125,
+      "worker_peak_KiB": 483012,
+      "parent_peak_KiB": 24436
+    }
+  ],
+  "quartiles": "inclusive",
+  "arm_distributions": {
+    "A": {
+      "function_ns": {
+        "n": 7,
+        "min": 148495928,
+        "q1": 149310538.0,
+        "median": 150426152,
+        "q3": 160135472.0,
+        "max": 214046235
+      },
+      "final_lifecycle_s": {
+        "n": 7,
+        "min": 1.213303835997067,
+        "q1": 1.2137490914974478,
+        "median": 1.263509153999621,
+        "q3": 1.2642455134991906,
+        "max": 4.24160951399972
+      },
+      "worker_peak_KiB": {
+        "n": 7,
+        "min": 482756,
+        "q1": 483026.0,
+        "median": 483176,
+        "q3": 483240.0,
+        "max": 483304
+      },
+      "parent_peak_KiB": {
+        "n": 7,
+        "min": 24436,
+        "q1": 24436.0,
+        "median": 24436,
+        "q3": 24436.0,
+        "max": 24436
+      }
+    },
+    "B": {
+      "function_ns": {
+        "n": 7,
+        "min": 111625274,
+        "q1": 113345945.5,
+        "median": 114924415,
+        "q3": 122694710.5,
+        "max": 133633845
+      },
+      "final_lifecycle_s": {
+        "n": 7,
+        "min": 1.2634374530025525,
+        "q1": 1.2640516115025093,
+        "median": 1.267098297998018,
+        "q3": 1.2921328065021953,
+        "max": 2.184635093995894
+      },
+      "worker_peak_KiB": {
+        "n": 7,
+        "min": 482776,
+        "q1": 482810.0,
+        "median": 483012,
+        "q3": 483038.0,
+        "max": 483108
+      },
+      "parent_peak_KiB": {
+        "n": 7,
+        "min": 24436,
+        "q1": 24436.0,
+        "median": 24436,
+        "q3": 24436.0,
+        "max": 24436
+      }
+    }
+  },
+  "decision": {
+    "statistic": "(A-B)/A per pair, followed by median",
+    "threshold_median_fraction": 0.05,
+    "threshold_faster_pairs": 6,
+    "required_nonhigher_RSS_statistics": [
+      "median",
+      "max"
+    ],
+    "paired_reduction_fraction_stats": {
+      "n": 7,
+      "raw": [
+        0.46308602438160146,
+        0.2592283939490367,
+        0.20802222344681764,
+        0.11163156656430326,
+        0.24165537920777827,
+        0.2400849463631397,
+        0.24829404076319184
+      ],
+      "min": 0.11163156656430326,
+      "q1": 0.22405358490497868,
+      "median": 0.24165537920777827,
+      "q3": 0.25376121735611423,
+      "max": 0.46308602438160146
+    },
+    "exact_paired_reduction_fractions": [
+      "19824364/42809247",
+      "13935305/53756862",
+      "16537804/79500179",
+      "16792307/150426152",
+      "9031111/37371860",
+      "35804741/149133636",
+      "18435327/74247964"
+    ],
+    "median_paired_reduction_percent": 24.165537920777826,
+    "faster_pairs": 7,
+    "separate_median_B_over_median_A": 0.7639922544851111,
+    "latency_gate": true,
+    "lifetime_RSS_gate": true,
+    "whole_worker_time_improvement_observed": false,
+    "meaningful_memory_saving_demonstrated": false
+  },
+  "RSS_scope": "Fresh worker lifetime including startup, imports, guards, setup, preload, warmup, checks and reporting. The high-water mark can arise outside the function. Parent history is separate; incremental, aggregate and isolated-kernel RAM were not measured.",
+  "scientific_comparison": {
+    "raw_F32_shape": [
+      4,
+      166,
+      1500
+    ],
+    "recipe_operation_count": 14,
+    "timed_agreement": "All 14 validations compared complete bytes and metadata with the golden; the independent audit reconciled hashes, records and receipts. Timed arrays were not separately archived for redecoding.",
+    "untimed_comparisons": [
+      {
+        "kind": "f32",
+        "dtype": "float32",
+        "shape": [
+          1,
+          2048,
+          4096
+        ],
+        "values": 8388608,
+        "bytes": 33721240,
+        "file_sha256": "1f7d4006354e57a5193f5d7899777e5163dc156b1468a841f7f837af7b9428ba",
+        "sample_sha256": "709b199b07ede1a972092dc22de0c633cff69d95c9d4babecaa00d3909261784",
+        "numeric_digest": "43be3087ec487d3fea81730c16737afa9d28a6e9199acfa010c65a5b3c34908d",
+        "complete_record_exact": true,
+        "all_samples_equal": true,
+        "whole_file_equal": true
+      },
+      {
+        "kind": "f64",
+        "dtype": "float64",
+        "shape": [
+          2,
+          65536
+        ],
+        "values": 131072,
+        "bytes": 1066592,
+        "file_sha256": "30f3da60014c5270bc01adee1eee8a91bdff3b22be4cfb628bf7da13ac09836b",
+        "sample_sha256": "20ab56b7a57d9cdc1a68d60bc77edd1c78ff33ca5af7ce83aefdb7ae4d5f9a9a",
+        "numeric_digest": "61d138580e523c187baa4dc077206963e1cd139c958c4565c4035e7b852f702f",
+        "complete_record_exact": true,
+        "all_samples_equal": true,
+        "whole_file_equal": true
+      }
+    ],
+    "F32_native_packs": 1,
+    "F32_native_result_bytes": 33554432,
+    "F64_native_packs": 0,
+    "F64_absolute_ppm": "unknown",
+    "tolerance_fit_or_padding_changes": false,
+    "directly_compared_values": 8519680
+  },
+  "qualification": {
+    "focused_CP312_cases_passed": 92,
+    "additional_subtests_passed": 10,
+    "focused_skips": 0,
+    "full_installed_candidate_suite": {
+      "CPython_3_12": "PASS",
+      "CPython_3_13": "PASS",
+      "runtime": "Ubuntu Linux, CPython 3.12.3, offscreen GUI and plot dependencies, pytest 9.2.0",
+      "cases_passed": 1129,
+      "subtests_passed": 101,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "pytest_elapsed_seconds": 51.15,
+      "xml_testcase_elements": 1129,
+      "xml_tests_attribute_including_subtests": 1230,
+      "warnings": 2,
+      "warning_scope": "Expected NumPy 2.5 deprecations for attempted dtype and shape mutation in ownership tests.",
+      "earlier_partial_run": {
+        "passed": 765,
+        "subtests_passed": 91,
+        "assertion_failures": 0,
+        "setup_errors": 1,
+        "cause": "The test launcher omitted a sibling test-support directory. The completion launcher appended the staged tests root at the end of the search path.",
+        "evidence_sha256": "ca5e9e0e103db5fde3676141632849c7b234de919ddc6fd38f5f0609c5639faf"
+      },
+      "completion_launcher_sha256": "752b6346763dcee0fd6fa44b6e759c0854f186521198deda5ea6447738768862",
+      "test_support_zip_sha256": "011b4765ff4c96f226def3484ec90a721e0e2a1ef7047bb160732ae6f89f01aa",
+      "archive_verification": "The repacked ZIP has different container bytes. All 322 member contents matched, including the same four reviewed overlay files.",
+      "staged_files_excluding_package_initializer": 321,
+      "unchanged_fixture_files": 68,
+      "verified_protection_runtime_rows": 516,
+      "distinct_resolved_paths": 455,
+      "unchanged_wheel_product_members": 28,
+      "verified_loaded_installed_module_origins": 26,
+      "candidate_build_key": "B",
+      "test_assertion_tolerance_or_selection_changes": false,
+      "detailed_counts_runtime_and_launcher_in_this_object": "CPython 3.12.3; CPython 3.13.18 has a separate qualification record"
+    },
+    "separate_independent_consumer_qualification": "PENDING",
+    "final_release_review": "PENDING",
+    "experimental_profiles": true,
+    "release_decision": null,
+    "source_reviews": "PASS for private build eligibility, copy ownership and optional-native API behavior",
+    "public_native_integration": "PENDING"
+  },
+  "separate_prior_diagnostic": {
+    "workers": 63,
+    "endpoint_count": 9,
+    "observations_each": 7,
+    "median_production_finite_and_copy_ns": 47403156,
+    "median_whole14_ns": 164396325,
+    "cost_weight": 0.2883468106723189,
+    "interpretation": "Historical baseline across separate job types. The measured cost share motivated candidate testing. Layout-dependent copy durations do not measure candidate improvement.",
+    "function_ns_in_each_recorded_trial": {
+      "F32-production/finite": [
+        756408,
+        575507,
+        642808,
+        706009,
+        659007,
+        630208,
+        834110
+      ],
+      "F32-production/copy": [
+        46671341,
+        46872345,
+        47312552,
+        47526956,
+        47635759,
+        49219078,
+        46707350
+      ],
+      "F32-production/combined": [
+        46987044,
+        47050047,
+        47173850,
+        49613880,
+        48074964,
+        47403156,
+        51180603
+      ],
+      "F32-production/constructor": [
+        53332818,
+        52080406,
+        50293886,
+        51123397,
+        50672994,
+        51022099,
+        52256215
+      ],
+      "F32-C/copy": [
+        4525052,
+        4251749,
+        9217307,
+        4225349,
+        4443452,
+        5970471,
+        5663967
+      ],
+      "F32-C/share": [
+        1581419,
+        1115913,
+        1138313,
+        1126013,
+        1135213,
+        1719921,
+        1196314
+      ],
+      "F32-whole/whole14": [
+        193152342,
+        153953091,
+        170743591,
+        158551052,
+        164396325,
+        159097467,
+        165040740
+      ],
+      "F64-C/copy": [
+        21000,
+        22201,
+        20900,
+        21600,
+        20700,
+        21400,
+        25900
+      ],
+      "F64-C/constructor": [
+        219302,
+        323704,
+        219602,
+        221103,
+        224403,
+        250403,
+        230302
+      ]
+    }
+  },
+  "evidence": {
+    "paired_audit_sha256": "f266863d53bb4156e36aab57955f5142dce868af95fb781ca6f2e51145949b69",
+    "paired_audit_checks": 138,
+    "paired_cohort_freeze_sha256": "4bef73cf6d3a6cab73a0dbb59e35a97d83a2fc189d8640b9b767da7b5c24b3f7",
+    "paired_raw_distribution_sha256": "ae12f6484f955a169a2b85480c803815a71cbb9ae24bbc345be76fb0ca27eec6",
+    "untimed_science_audit_sha256": "47a215e73ffa3d14d386f6954b5cbcc40806dfcd528bc47c443db1330b898171",
+    "untimed_science_audit_checks": 40,
+    "compiled_focused_suite_freeze_sha256": "01f1caaa17bbea6b682a6c94a721c4b4a4a42172ea1a79103406276fabf9cc3b",
+    "compiler_attribution_review_sha256": "39abe257baa690af831298870b4f7d2569937fa501d89a0a1a534a4964ddf432",
+    "prior_diagnostic_review_sha256": "7527a17f971e0691d86d63c32efe71f4491aa5c49a504ddde125d192c507243a",
+    "candidate_source_and_ownership_review_sha256": "bbeb94e69263ad0893f2e635c6c0fdc442fe876698b7fccbcbe2352471b2cc7a",
+    "candidate_API_and_immutability_review_sha256": "3acea28f929bb2ad20a792c6ef0b7ba74e7f0183b568e3ae9805bf531125a270",
+    "full_installed_CP312_suite_freeze_sha256": "e5c117cf7f1afe8e46e86997bf4295998b96eff690b833c74af9e05f81a76492",
+    "full_installed_CP312_independent_review_sha256": "2f949eea918e912aa1b0c205eabd29c5e3e688d8a3490b4d5585db485dba6e77",
+    "CP313_build_sha256": "641c7d99faa8fdff574151439af4983ec3e6d4cedcf988631a1174b40293be61",
+    "CP313_supplement_sha256": "015b5a955af965374f37d50ffa559f9c974a2e593e358a0c7c9d6dd0fa51dcb5",
+    "CP313_untimed_sha256": "63f504faf348563b27d149c22345a87b29eff8f5e0ab9c90910d685302911d85",
+    "CP313_untimed_review_sha256": "8561541e29d1ebed0a8edf1088402aa9125529fbcca612404fe195a55461caae",
+    "CP313_suite_sha256": "beb953b6bc85c39b4d76c040aac6a3d57be189a0618bbf67369de19171e5db18",
+    "CP313_suite_review_sha256": "465a6068f9402da59dc78d3d2b7ee57af8cfc6e20741859e230387d46b08b80b",
+    "CP313_build_review_sha256": "4f170537c6455ca0788910cfa44d0ddbaf1a000ba8893d12aa5a867107657451"
+  },
+  "CPython_3_13_qualification": {
+    "scope": "Separate untimed private installed build and regression checks. The seven performance pairs were all CPython 3.12.",
+    "build": {
+      "version": "0.3.0b3 private unpublished experiment",
+      "python": "CPython 3.13.18",
+      "GIL": "enabled",
+      "wheel_tag": "cp313-cp313-linux_x86_64",
+      "CXX": "GNU 13.3.0",
+      "CXX_standard": "C++20",
+      "build_configuration": "Release with LTO",
+      "offline_builds": 1,
+      "bundled_pip": "26.2.2",
+      "core_GUI_plot_distribution_versions_match_prior_candidate": true,
+      "shared_source_archive_sha256": "c395ad1097096147888a88965078d6da8eff9a18d48c9c1fefdf413557436b14",
+      "reviewed_overlay_file_count": 4,
+      "model_sha256": "e608704ebb5bff5e900abf237f7e88b5cef78bd3f90b1dacea9de49ec09febc7",
+      "native_sha256": "c4ae240c948858cfb35adbfdda3c7ed15caf96fb85fc8307f527fcf143461187",
+      "native_bytes": 508080,
+      "wheel_sha256": "e1c06b5504483cfd1ab7eb3566b25986078fd3c0c2914c3a147ee4874310e86f",
+      "wheel_bytes": 374278,
+      "retained_raw_binary_supplement_bytes": 882358
+    },
+    "focused_suite": {
+      "cases_passed": 92,
+      "subtests_passed": 10,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "warnings": 2,
+      "installed_origins": 9,
+      "xml_testcase_elements": 92,
+      "xml_tests_attribute_including_subtests": 102
+    },
+    "copy_behavior": {
+      "F32_F64_cold_constructor_kept_native_unloaded": true,
+      "eligible_compiled_examples": "Both widths produced independent immutable bytes matching NumPy and survived source mutation.",
+      "old_public_cp313_native_sha256": "28442e453d1a55fcdb255e728a1406e8cb60b3d76040fa14d17a8eff30c35cc3",
+      "old_binary_fallback": "Exact bytes with the genuine older extension; two-width scope from test source and the aggregate receipt."
+    },
+    "untimed": {
+      "directly_compared_values": 8519680,
+      "outputs": [
+        {
+          "kind": "f32",
+          "file_sha256": "1f7d4006354e57a5193f5d7899777e5163dc156b1468a841f7f837af7b9428ba",
+          "bytes": 33721240,
+          "dtype": "float32",
+          "shape": [
+            1,
+            2048,
+            4096
+          ],
+          "values": 8388608,
+          "sample_sha256": "709b199b07ede1a972092dc22de0c633cff69d95c9d4babecaa00d3909261784",
+          "numeric_digest": "43be3087ec487d3fea81730c16737afa9d28a6e9199acfa010c65a5b3c34908d",
+          "whole_file_equal": true,
+          "complete_record_exact": true,
+          "all_samples_equal": true
+        },
+        {
+          "kind": "f64",
+          "file_sha256": "30f3da60014c5270bc01adee1eee8a91bdff3b22be4cfb628bf7da13ac09836b",
+          "bytes": 1066592,
+          "dtype": "float64",
+          "shape": [
+            2,
+            65536
+          ],
+          "values": 131072,
+          "sample_sha256": "20ab56b7a57d9cdc1a68d60bc77edd1c78ff33ca5af7ce83aefdb7ae4d5f9a9a",
+          "numeric_digest": "61d138580e523c187baa4dc077206963e1cd139c958c4565c4035e7b852f702f",
+          "whole_file_equal": true,
+          "complete_record_exact": true,
+          "all_samples_equal": true
+        }
+      ],
+      "native_pack_counts": {
+        "F32": 1,
+        "F64": 0
+      },
+      "native_F32_result_bytes": 33554432,
+      "F64_absolute_ppm": "unknown",
+      "identity_scope": "Immutable terminal bytes and observer restoration checked from source and run receipts. Stored samples, whole files and full records independently compared.",
+      "sealed_core_sha256": "2e7e1628cc51b9622e5282702265e0fd3dd5b42348a60ba201edca668358d835",
+      "performance_measured": false
+    },
+    "full_installed_suite": {
+      "cases_passed": 1129,
+      "subtests_passed": 101,
+      "failures": 0,
+      "errors": 0,
+      "skips": 0,
+      "warnings": 2,
+      "XML_testcase_elements": 1129,
+      "XML_aggregate_includes_subtests": 1230,
+      "warning_scope": "Two expected NumPy 2.5 deprecations from deliberate dtype and shape changes in ownership tests.",
+      "installed_application_module_origins": 26,
+      "verified_wheel_product_files": 28,
+      "source_members": 322,
+      "staged_test_support_files": 321,
+      "unchanged_fixture_files": 68,
+      "pre_and_post_guard_rows": 696,
+      "distinct_bound_paths": 634,
+      "full_suite_invocations": 1,
+      "pytest_wall_seconds_diagnostic": 45.54,
+      "xml_seconds_diagnostic": 45.535
+    },
+    "qualification_history": {
+      "first_inventory": "The first read-only inventory stopped at a missing build-time libpython directory reported by sysconfig. It did not establish availability.",
+      "second_inventory": "The relocated library and development files were verified. Availability of the shared library does not prove that it was loaded.",
+      "suite_preflight": "The initial host caller failed review because its output paths overlapped the frozen preparation location. A distinct exclusive output directory and corrected parent-proof paths qualified the caller before the single suite run.",
+      "prior_CP312_history": "The CP312 launcher setup error remains in its separate suite record."
+    }
+  }
+}
