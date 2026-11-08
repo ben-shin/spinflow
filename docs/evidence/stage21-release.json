@@ -1,4 +1,32 @@
 {
+  "current_known_issue_qualification": {
+    "issue_id": "J21-R6-TIMEOUT-01",
+    "date_utc": "2026-11-08",
+    "current_stage21_mandatory_gate_status": "QUALIFIED_FAIL_R6_WHOLE_PROCESS_GROUP_TIMEOUT_CLEANUP",
+    "supersedes": "Prior unconditional Stage21 eight-of-eight PASS only for the R6 owned-group timeout escalation requirement; historical observations are preserved.",
+    "R6_whole_process_group_timeout_cleanup": "FAIL_SOURCE_FINDING",
+    "other_requirements": {
+      "R1": "PASS_WITHIN_ORIGINAL_SCOPE",
+      "R2": "PASS_WITHIN_ORIGINAL_SCOPE",
+      "R3": "PASS_WITHIN_ORIGINAL_SCOPE",
+      "R4": "PASS_WITHIN_ORIGINAL_SCOPE",
+      "R5": "PASS_WITHIN_ORIGINAL_SCOPE",
+      "R7": "PASS_WITHIN_ORIGINAL_SCOPE",
+      "R8": "PASS_WITHIN_ORIGINAL_SCOPE"
+    },
+    "public_source": "https://github.com/ben-shin/spinflow/blob/7598ae53267d743fbd46ba708ed85f5b3478cbeb/tools/measure_interactive.py#L119",
+    "affected_tool_sha256": "993ca43093a70b691c7fef21edc8b47b66b3cbb4ab7b7c1390fdfcf242bc74ae",
+    "impact": "Validation-tool timeout termination may stop when the leader is reaped after TERM, skipping KILL for a surviving owned TERM-ignoring descendant.",
+    "acquired_timeout_entered_faulty_branch": false,
+    "preserved_results": "Twenty saved outputs; four measured R6 performance gates; raw distributions; exact-source CI; actual CI/public installed1113+101subtests/zero-skips eachABI; normal R2 closure and completed seal remain valid in their original scopes.",
+    "application_scientific_code_changed": false,
+    "release_source_tag_assets_changed": false,
+    "source_commit": "7598ae53267d743fbd46ba708ed85f5b3478cbeb",
+    "tag": "v0.3.0b3",
+    "documentation_basis": "main c9c3; coordinator-provided documentation cut",
+    "repair_status_at_this_cut": "PENDING_AUTHORIZATION_AND_INDEPENDENT_REVIEW_NOT_FIXED",
+    "scope_limits_unchanged": "Original spectral-processing first-laboratory gate unmet; S19 six-of-eighteen FAIL; human acceptance UNVERIFIED. No scientific tolerance/API/precision/phase/benchmark-result change."
+  },
   "evidence_format": "stage21-publication-normal-closure-v1",
   "checkpoint_date_utc": "2026-11-08",
   "release": {

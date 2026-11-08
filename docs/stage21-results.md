@@ -6,6 +6,34 @@ size reduction**. This remains an experimental beta: S19's scientific result
 is **FAIL on six of eighteen targets**, and physical Ubuntu/independent
 researcher acceptance is **UNVERIFIED**.
 
+
+## Current qualification — 8 November 2026: J21-R6-TIMEOUT-01
+
+**Current mandatory-gate status: R6 FAIL for whole-process-group timeout
+cleanup; R1, R2, R3, R4, R5, R7 and R8 PASS within their original scopes.**
+This dated qualification supersedes prior unconditional Stage 21 eight-of-eight
+PASS statements only to that extent.
+
+The published validation tool's [termination loop](https://github.com/ben-shin/spinflow/blob/7598ae53267d743fbd46ba708ed85f5b3478cbeb/tools/measure_interactive.py#L119) can stop after
+reaping its direct leader following TERM, skipping KILL for an owned descendant
+that remains alive and ignores TERM. The impact is future timeout supervision
+by this validation tool. No acquired timeout entered this faulty branch;
+application scientific code is unchanged.
+
+The twenty retained outputs, all four R6 measured performance gates, original
+raw distributions, exact-source CI and actual public installed cohorts
+(1,113 passed, 101 subtests, zero skips per ABI) remain valid within their
+recorded scopes. R2's normal VM closure and completed evidence seal stand.
+Released source `7598ae53267d743fbd46ba708ed85f5b3478cbeb`, tag `v0.3.0b3`
+and assets are unchanged; this qualification applies to the later documentation
+basis `main c9c3`.
+
+Repair is pending authorization and independent review at this documentation
+cut. This disclosure repairs no code and changes no algorithm, API, scientific
+criterion, precision, phase, measured result or benchmark. The missing original
+spectral-processing first-laboratory gate, S19 FAIL and human acceptance pending
+status remain unchanged.
+
 [Published release](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b3)
 binds code/source `7598ae53267d743fbd46ba708ed85f5b3478cbeb`, annotated tag
 `573d860187991e3465b6c3919c56053256adeedc` and release ID `437980744`.
