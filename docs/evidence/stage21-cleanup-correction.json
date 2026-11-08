@@ -1,0 +1,110 @@
+{
+  "evidence_format": "stage21-source-cleanup-correction-v1",
+  "date_utc": "2026-11-08",
+  "issue_id": "J21-R6-TIMEOUT-01",
+  "status": "PASS_TARGETED_SOURCE_CORRECTION_AND_EIGHT_LINUX_OS_CONTROLS",
+  "scope": "Validation helper only; no acquired/product/UI/scientific/benchmark execution.",
+  "source": {
+    "path": "tools/measure_interactive.py",
+    "bytes": 37105,
+    "sha256": "acadf0785eb6babc1f3235a3b7ef04d9fcd2880953974303d053436fbd29885a",
+    "old_affected_sha256": "993ca43093a70b691c7fef21edc8b47b66b3cbb4ab7b7c1390fdfcf242bc74ae",
+    "changed_functions": [
+      "run_bounded",
+      "require_completed"
+    ],
+    "new_function": "_owned_group_members",
+    "other_module_AST_unchanged": true
+  },
+  "evidence_pins": {
+    "source_freeze_sha256": "d7b08f58792a9684dc77f26a54e5ba654ad5aff1da612bf1ba4e1013100962d5",
+    "actual_linux_freeze_sha256": "f347ace4c16d6113d1d43ddf9dfb4c50b522afe5c7a8292c6cb1f6be66c8871b",
+    "original_eight_control_results_sha256": "7e80bc84cf247ec0c824b3c814a99d0a7cc964d2e0686c76a1fc9ba4693edae5",
+    "independent_source_receipt_review_sha256": "9cd1c9c6eb66e417d6fe0d09f92392557386c2b6a3fd9a79aa7dc1924065cefc"
+  },
+  "runtime": {
+    "platform": "linux",
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "interpreter_sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "isolated": true,
+    "dont_write_bytecode": true,
+    "optimize": 0,
+    "normal_nonroot_uid": true,
+    "OS_release_kernel_scope": "Not independently specified by this public aggregate."
+  },
+  "actual_control_scope": {
+    "passed": 8,
+    "total": 8,
+    "child_process_executions": 6,
+    "derived_receipt_refusal_checks": 2,
+    "observed_helper_wait4_calls": 82,
+    "all_wait4_direct_leader_WNOHANG": true,
+    "helper_timeout_seconds": 0.75,
+    "each_TERM_and_KILL_grace_seconds": 0.3,
+    "fixture_self_expiry_seconds": 8,
+    "outer_timeout_seconds": 40,
+    "outer_each_TERM_and_KILL_grace_seconds": 2,
+    "outer_exitcode": 0,
+    "outer_cleanup_complete": true,
+    "postflight_remaining_fixture_processes": 0,
+    "all_source_runtime_protected_pins_unchanged": true,
+    "controls": [
+      {
+        "id": "old-reproduces-leader-reaped-skip-KILL",
+        "pass": true,
+        "observed": "Old leader reaped exit0 after TERM; same-group TERM-ignoring grandchild remained live; old helper omitted KILL. Separate regression cleanup killed/reaped it; timeout stayed refused."
+      },
+      {
+        "id": "normal-exit0-no-signal",
+        "pass": true,
+        "observed": "Candidate exit0, no signal/timeout, cleanup true and no group members."
+      },
+      {
+        "id": "stall-bounded-cleanup-not-successful-work",
+        "pass": true,
+        "observed": "Candidate timeout; TERM; direct exit-15; cleanup true/no live group members. Timeout stayed refused."
+      },
+      {
+        "id": "leader-ignore-bounded-cleanup-not-successful-work",
+        "pass": true,
+        "observed": "Candidate timeout; TERM then KILL; direct exit-9; cleanup true/no live group members. Timeout stayed refused."
+      },
+      {
+        "id": "grandchild-term-bounded-cleanup-not-successful-work",
+        "pass": true,
+        "observed": "Candidate leader exit0; TERM then KILL; cleanup true/no live members. Dead grandchild retained as Z; separately adopted/reaped by regression with exit-9. Timeout stayed refused."
+      },
+      {
+        "id": "missing-cleanup-refused",
+        "pass": true,
+        "observed": "Derived normal receipt missing cleanup witness refused."
+      },
+      {
+        "id": "false-cleanup-refused",
+        "pass": true,
+        "observed": "Derived normal receipt with cleanup false refused."
+      },
+      {
+        "id": "census-error-bounded-and-incomplete",
+        "pass": true,
+        "observed": "Injected census PermissionError retained; unknown members, cleanup false, no signals; bounded return and successful work refused."
+      }
+    ]
+  },
+  "cleanup_meaning": "Direct leader reaped, no live members in its verified newly owned PGID/SID, no observation/wait error. Dead Z/X rows remain recorded; an empty zombie census or direct grandchild reap is not asserted.",
+  "regression_subreaper": "The regression temporarily adopted/reaped test grandchildren separately and restored that process-local setting. Those actions are not attributed to the helper.",
+  "containment_limit": "Owned same-group/same-session benign fixtures only; not a process-tree sandbox or a guarantee for descendants escaping via setsid/setpgid. Outer supervisor owns the regression group; separate fixture sessions use witnessed regression cleanup and self-expiry.",
+  "history": {
+    "old_R6_whole_group_cleanup": "FAIL_UNCHANGED",
+    "prior_unconditional_Stage21_eight_of_eight": "WITHDRAWN_UNCHANGED",
+    "seven_other_original_gates": "PASS_WITHIN_ORIGINAL_SCOPES_UNCHANGED",
+    "released_b3_source_tag_assets": "UNCHANGED_IMMUTABLE",
+    "original_twenty_arrays_four_performance_gates_distributions_CI_public_installs_R2_closure": "REMAIN_VALID_WITHIN_ORIGINAL_SCOPES_NOT_RERUN_OR_RESTORED_BY_THIS_FIX",
+    "product_algorithms_numerical_tolerances_precision_API_benchmark_results_changed": false
+  },
+  "limits": [
+    "No acquired timing or numerical workflow was repeated.",
+    "No general safety, scientific parity, benchmark speed/memory, V1 or large-3D qualification follows.",
+    "S19 six-of-eighteen FAIL, missing original spectral-processing first-laboratory gate and human acceptance UNVERIFIED remain unchanged."
+  ]
+}

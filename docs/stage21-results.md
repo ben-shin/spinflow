@@ -7,9 +7,41 @@ is **FAIL on six of eighteen targets**, and physical Ubuntu/independent
 researcher acceptance is **UNVERIFIED**.
 
 
-## Current qualification — 8 November 2026: J21-R6-TIMEOUT-01
+## Source cleanup correction — 8 November 2026: J21-R6-TIMEOUT-01
 
-**Current mandatory-gate status: R6 FAIL for whole-process-group timeout
+**The new validation-helper source correction passed eight benign Linux OS
+controls.** This is separate from the original Stage 21 R6 cleanup **FAIL** and
+withdrawn unconditional eight-of-eight verdict, both preserved below. Released
+b3 source/tag/assets and all historical observations remain unchanged.
+
+The [updated helper](../tools/measure_interactive.py#L115), SHA-256
+`acadf0785eb6babc1f3235a3b7ef04d9fcd2880953974303d053436fbd29885a`,
+continues verified owned-group cleanup after its leader exits, using bounded
+TERM/KILL grace polling and direct-leader `wait4(..., WNOHANG)`. A missing,
+false or unknown cleanup witness cannot pass. [The compact evidence record](evidence/stage21-cleanup-correction.json)
+binds exact source/runtime hashes, limits and all eight outcomes.
+
+The actual Linux/CPython 3.12.3 run comprised six process executions and two
+receipt-refusal checks: old-bug reproduction, normal exit, cooperative timeout,
+TERM-ignoring leader, TERM-ignoring grandchild, missing/false cleanup witnesses
+and an injected census error. The old helper left its grandchild live; the new
+helper sent KILL and left no live owned members. Its dead grandchild remained
+recorded as **Z**. The regression separately adopted/reaped that child as a
+temporary subreaper; the helper reaps only its direct leader. This verifies the
+owned PGID/SID, not containment of processes that escape their group/session.
+
+This source-only correction reruns no acquired work and changes no processing
+algorithm, API, precision, numerical tolerance or benchmark result. The twenty
+arrays, four measured performance gates, normal cohorts and R2 closure retain
+their original scope. S19 FAIL, the missing original spectral-processing
+first-laboratory gate and human acceptance UNVERIFIED remain unchanged. The
+following dated disclosure retains its original then-pending repair wording.
+
+<a name="current-qualification--8-november-2026-j21-r6-timeout-01"></a>
+
+## Historical timeout qualification — 8 November 2026: J21-R6-TIMEOUT-01
+
+**Original mandatory-gate status: R6 FAIL for whole-process-group timeout
 cleanup; R1, R2, R3, R4, R5, R7 and R8 PASS within their original scopes.**
 This dated qualification supersedes prior unconditional Stage 21 eight-of-eight
 PASS statements only to that extent.

@@ -91,8 +91,29 @@ def guarded_worker(config, function):
         journal.close()
 
 
+def _owned_group_members(group):
+    """Linux metadata census of only the freshly owned process group/session."""
+    members = []
+    for directory in Path("/proc").iterdir():
+        if not directory.name.isdigit():
+            continue
+        try:
+            raw = (directory/"stat").read_bytes()
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        fields = raw[raw.rfind(b")")+2:].split()
+        if int(fields[2]) != group:
+            continue
+        if int(fields[3]) != group:
+            raise RuntimeError("Owned process group/session identity mismatch")
+        members.append({"pid": int(directory.name), "state": fields[0].decode("ascii"),
+                        "pgrp": int(fields[2]), "session": int(fields[3]),
+                        "start_ticks": int(fields[19])})
+    return members
+
+
 def run_bounded(command, stem, cwd, env, *, timeout, grace=TERMINATION_GRACE_SECONDS, role="worker"):
-    """Bound and reap only the newly owned process session; retain file logs."""
+    """Bound the owned group's live lifetime; reap its direct leader without blocking."""
     import resource
     started = time.perf_counter()
     floor = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
@@ -100,44 +121,71 @@ def run_bounded(command, stem, cwd, env, *, timeout, grace=TERMINATION_GRACE_SEC
     usage = status = None
     timed_out = False
     signals = []
+    members = None
+    wait_error = observation_error = None
     with stdout_path.open("xb") as stdout, stderr_path.open("xb") as stderr:
         child = subprocess.Popen(command, cwd=cwd, env=env, stdout=stdout, stderr=stderr,
                                  start_new_session=True)
-        assert os.getpgid(child.pid) == child.pid, "Owned process group not established"
+        assert os.getpgid(child.pid) == child.pid and os.getsid(child.pid) == child.pid, "Owned session not established"
         def reap_until(deadline):
-            nonlocal status, usage
-            while time.perf_counter() < deadline:
-                pid, result, observed = os.wait4(child.pid, os.WNOHANG)
-                if pid:
-                    status, usage = result, observed
-                    child.returncode = os.waitstatus_to_exitcode(status)
+            nonlocal status, usage, members, wait_error, observation_error
+            while True:
+                if status is None:
+                    try:
+                        pid, result, observed = os.wait4(child.pid, os.WNOHANG)
+                        if pid:
+                            status, usage = result, observed
+                            child.returncode = os.waitstatus_to_exitcode(status)
+                    except InterruptedError:
+                        pass
+                    except OSError as exc:
+                        wait_error = repr(exc)
+                try:
+                    members = _owned_group_members(child.pid)
+                except Exception as exc:
+                    observation_error = repr(exc)
+                    members = None
+                if status is not None and members is not None and not any(p["state"] not in ("Z", "X") for p in members):
                     return True
-                time.sleep(min(.05, max(0, deadline-time.perf_counter())))
-            return False
+                remaining = deadline-time.perf_counter()
+                if remaining <= 0:
+                    return False
+                time.sleep(min(.05, remaining))
         if not reap_until(started+timeout):
             timed_out = True
             for sig in (signal.SIGTERM, signal.SIGKILL):
                 try:
-                    # The child was launched as a fresh session leader. Its
-                    # group is the only group this controller is allowed to kill.
-                    os.killpg(child.pid, sig)
-                    signals.append(sig.name)
+                    # Never signal an unverified or unrelated group/session.
+                    current = _owned_group_members(child.pid)
+                    if any(p["state"] not in ("Z", "X") for p in current):
+                        os.killpg(child.pid, sig)
+                        signals.append(sig.name)
                 except ProcessLookupError:
                     pass
+                except Exception as exc:
+                    observation_error = repr(exc)
+                # Reaping the leader cannot skip escalation for live members.
                 if reap_until(time.perf_counter()+grace):
                     break
+    live = None if members is None else [p for p in members if p["state"] not in ("Z", "X")]
+    cleanup_complete = status is not None and live == [] and wait_error is None and observation_error is None
     return {"role": role, "command": command, "pid": child.pid,
-            "owned_process_group": child.pid, "timeout_seconds": timeout,
+            "owned_process_group": child.pid, "owned_session": child.pid,
+            "timeout_seconds": timeout,
             "termination_grace_seconds": grace, "signals": signals,
             "timed_out": timed_out, "reaped": status is not None,
             "exit_code": child.returncode, "elapsed_seconds": time.perf_counter()-started,
             "lifetime_peak_rss_bytes": usage.ru_maxrss*1024 if usage is not None else None,
             "controller_pre_spawn_lifetime_peak_bytes": floor,
+            "cleanup_complete": cleanup_complete, "owned_group_members_after": members,
+            "owned_live_members_after": live, "wait_error": wait_error,
+            "observation_error": observation_error,
             "stdout": pin(stdout_path), "stderr": pin(stderr_path)}
 
 
 def require_completed(receipt):
-    if receipt["timed_out"] or not receipt["reaped"] or receipt["exit_code"] != 0:
+    if (receipt["timed_out"] or not receipt["reaped"] or receipt["exit_code"] != 0
+            or receipt.get("cleanup_complete") is not True):
         raise ValueError("failed/incomplete "+receipt["role"]+"; all original logs and journal retained")
 
 
