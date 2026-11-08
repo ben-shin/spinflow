@@ -1,0 +1,151 @@
+{
+  "evidence_format": "stage21-publication-normal-closure-v1",
+  "checkpoint_date_utc": "2026-11-08",
+  "release": {
+    "version": "0.3.0b3",
+    "experimental_prerelease": true,
+    "release_id": 437980744,
+    "url": "https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b3",
+    "source_commit": "7598ae53267d743fbd46ba708ed85f5b3478cbeb",
+    "annotated_tag_object": "573d860187991e3465b6c3919c56053256adeedc",
+    "notes_sha256": "f571b6cab640fed907f5015be58fb69b0c2096044cad70af34ab9bb01b45cd6b",
+    "assets": [
+      {
+        "name": "build-manifest.json",
+        "bytes": 4327,
+        "sha256": "e2041a5392efc48cf34ec48659b4a5b214069528c25e183d833c0137c61cfa5d",
+        "url": "https://github.com/ben-shin/spinflow/releases/download/v0.3.0b3/build-manifest.json"
+      },
+      {
+        "name": "install-spinflow.py",
+        "bytes": 11078,
+        "sha256": "85676c2b1faca4e40456d61a2a99d47339a560af47c10bd70d834aa7bc75f21e",
+        "url": "https://github.com/ben-shin/spinflow/releases/download/v0.3.0b3/install-spinflow.py"
+      },
+      {
+        "name": "SHA256SUMS",
+        "bytes": 486,
+        "sha256": "dba91603d5116c8f1d53e92acee871577344ae27f9885a293b6ca6d124d3e388",
+        "url": "https://github.com/ben-shin/spinflow/releases/download/v0.3.0b3/SHA256SUMS"
+      },
+      {
+        "name": "spinflow-0.3.0b3-cp312-cp312-linux_x86_64.whl",
+        "bytes": 370900,
+        "sha256": "b2b22e001eae1d9e4ebd056312277e959f901d08036401633fb6e83dcf8cb737",
+        "url": "https://github.com/ben-shin/spinflow/releases/download/v0.3.0b3/spinflow-0.3.0b3-cp312-cp312-linux_x86_64.whl"
+      },
+      {
+        "name": "spinflow-0.3.0b3-cp313-cp313-linux_x86_64.whl",
+        "bytes": 370548,
+        "sha256": "14e9adf9f0a561f11c6249b9e4426df0569374600cbf4c11f55b3d56f056af51",
+        "url": "https://github.com/ben-shin/spinflow/releases/download/v0.3.0b3/spinflow-0.3.0b3-cp313-cp313-linux_x86_64.whl"
+      },
+      {
+        "name": "spinflow-0.3.0b3.tar.gz",
+        "bytes": 161355,
+        "sha256": "0cde9b82449a346c0c9a38c8241e7dd17c6ff53dcce7e8f5dab54f90bd646294",
+        "url": "https://github.com/ben-shin/spinflow/releases/download/v0.3.0b3/spinflow-0.3.0b3.tar.gz"
+      }
+    ],
+    "earlier_releases_and_assets_unchanged": true
+  },
+  "CI": {
+    "source_commit": "7598ae53267d743fbd46ba708ed85f5b3478cbeb",
+    "push_run": {
+      "id": 42435761390,
+      "url": "https://github.com/ben-shin/spinflow/actions/runs/42435761390",
+      "successful_jobs": 5
+    },
+    "asset_build_run": {
+      "id": 42435823209,
+      "url": "https://github.com/ben-shin/spinflow/actions/runs/42435823209",
+      "successful_jobs": 3,
+      "artifact_id": 13599238895,
+      "artifact_zip_sha256": "3a430fb5341e6ad20bb9d7a8a9856c0e0a738739bfeb27de7c09bede9d8d32ee"
+    },
+    "hosted_source_counts": {
+      "Qt_offscreen_cp313": {
+        "passed": 1104,
+        "skipped": 9,
+        "subtests_passed": 101
+      },
+      "headless_each_cp312_cp313": {
+        "passed": 982,
+        "skipped": 11,
+        "deselected": 3,
+        "subtests_passed": 87
+      }
+    },
+    "qualification": "Hosted source/in-place/offscreen checks are separate from actual installed virtual-xcb cohorts. Release CP312 optional-GUI steps were conditional skips; CP313 optional-GUI steps ran. No raw per-skip reason list is claimed."
+  },
+  "installed_cohorts": {
+    "actual_CI_wheel_each_ABI": {
+      "passed": 1113,
+      "subtests_passed": 101,
+      "skipped": 0,
+      "product_modules_in_selected_prefix": 26,
+      "actual_wheel_files_byte_exact_before_after": 28
+    },
+    "actual_public_URL_each_ABI": {
+      "passed": 1113,
+      "subtests_passed": 101,
+      "skipped": 0,
+      "product_modules_in_selected_prefix": 26,
+      "actual_wheel_files_byte_exact_before_after": 28
+    },
+    "actual_guest_python_versions": {
+      "cp312": "3.12.3",
+      "cp313": "3.13.18 normal GIL, task-private helper not shipped"
+    },
+    "workflow": "Acquired full14, fixed201x201 point/ppm ROI, signed analysis, scientificPNG/SVG/PDF, applied/pending, session/CLI replay, explicit export losses/errors/cancel and small automatic-phase persistence.",
+    "fixed_result_numeric_digest": "43be3087ec487d3fea81730c16737afa9d28a6e9199acfa010c65a5b3c34908d",
+    "old_compatibility": "Genuine b1/b2 selected cases and original v0.2 rtol=atol1e-12 gate; maximum v0.2 error1.4210854715202004e-14. Older b1/b2 recomputed arrays were not separately retained; independent review of those branches is source/strict receipt audit.",
+    "public_first_core_install": "Unmodified publicly downloaded installer, defaultb3/noasset-dir/no local wheel argument; actual pip direct_url temporary-wheel hashes equal public/CI wheel hashes. Independent prefetched HTTP headers describe separate GETs; normal installer internal download events retained. Dependency pip cache permitted."
+  },
+  "actual_public_GETs": {
+    "count": 8,
+    "all_status_200": true,
+    "all_redirects_HTTPS": true,
+    "six_release_assets_exact_CI_bytes": true,
+    "source_ZIP": {
+      "url": "https://github.com/ben-shin/spinflow/archive/refs/tags/v0.3.0b3.zip",
+      "sha256": "ea4a097939ed5cdca0f4cf91a98c497890f559a026a2818110ffecdee58e6a6d",
+      "member_files_exact_committed_blobs": 304
+    },
+    "source_TAR": {
+      "url": "https://github.com/ben-shin/spinflow/archive/refs/tags/v0.3.0b3.tar.gz",
+      "sha256": "0a0f01c684813096a1f22867490b7b78efad05bb941e340f1ec64ff4fb28e799",
+      "member_files_exact_committed_blobs": 304
+    },
+    "container_scope": "Public ZIP/TAR and local Git ZIP237d0dd4 are distinct archive containers; equality is ALL304 member bytes/pathsets against actual committed blobs, not archive-file equivalence."
+  },
+  "normal_runtime_closure": {
+    "requested_utc": "2026-11-08T02:53:21.5721772Z",
+    "exit_confirmed_utc": "2026-11-08T02:53:25.4236200Z",
+    "QEMU_exit_code": 0,
+    "SSH_poweroff_exit_code": 0,
+    "normal_serial_poweroff": true,
+    "owned_process_exited": true,
+    "no_port_listener_and_completed_TCP_10061_refusal": true,
+    "force_kill_used": false,
+    "old_VM_restart_used": false,
+    "new_closed_disk_sha256": "df23b19adf155696dee7dcdce5c8b7ab290f6c238969fb5c5a866172d4e166fb",
+    "new_closed_disk_bytes": 13673103360,
+    "closed_UEFI_sha256": "cbb0e793b2e8f2adbee3cad579f36d1b726d0aa92607aa503c1caeb3219aa3c8",
+    "old_protected_four_and170_S20_members_unchanged": true,
+    "critical_seal_scope": "Final local critical evidence sealing and postseal judge closure are separate later metadata; this documentation cut does not pretend they already existed. Old opaque disks are not retrospectively claimed sealed."
+  },
+  "qualification": {
+    "S19_scientific": "FAIL, six of eighteen original fixed peak targets",
+    "physical_Ubuntu_and_independent_researcher_acceptance": "UNVERIFIED",
+    "native_Wayland_physical_HiDPI_GPU_compositor": "UNVERIFIED; selected virtualxcb/scale observations only",
+    "original_spectral_processing_authority": "UNVERIFIED; locating cached original CONVERSION text does not establish an original SPECTRAL-processing method.",
+    "runtime_performance": "Private preregistered R6 CP312 VM/case/build cohorts only; actual CI/public functional checks add no new timing or general speed/memory claim. Full distributions in stage21-r6.json.",
+    "profile_status": "experimental; no stable1.0/RC/scientific tolerance/schema/processing promotion"
+  },
+  "immutable_original_criteria": {
+    "stage21_protocol_sha256": "2183d3c2344fe348b1a09802cab65d3485d09da35d355202875920437638abac",
+    "ASU_protocol_working_sha256": "48e7fcf3235a7dee2197adaa6f4c41d2566f3bd035a06f0151e7a237938a3cbb"
+  },
+  "public_review": "Separate A/B/C reviews and judge passed actual source/CI/public chain; normal closure and final documentation receive their own finite audit."
+}

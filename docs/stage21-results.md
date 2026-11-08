@@ -1,4 +1,87 @@
-# Stage 21: experimental b3 preparation
+# Stage 21: published experimental b3 and normal closure
+
+**v0.3.0b3 is published and its actual download/installed checks passed.** The
+optional Essentials GUI produced the selected **42.68% logical whole-prefix
+size reduction**. This remains an experimental beta: S19's scientific result
+is **FAIL on six of eighteen targets**, and physical Ubuntu/independent
+researcher acceptance is **UNVERIFIED**.
+
+[Published release](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b3)
+binds code/source `7598ae53267d743fbd46ba708ed85f5b3478cbeb`, annotated tag
+`573d860187991e3465b6c3919c56053256adeedc` and release ID `437980744`.
+Its six server assets retain the exact checked CI bytes and notes; earlier
+releases are unchanged. This later documentation checkpoint does not retag,
+rebuild or change those assets, processing code, versions, schemas or profiles.
+[Public scalar evidence](evidence/stage21-release.json) preserves identities,
+checksums, qualification and normal-closure metadata without acquired arrays or
+temporary signed download URLs.
+
+| Distinct check | Actual result |
+| --- | --- |
+| [Exact-source CI](https://github.com/ben-shin/spinflow/actions/runs/42435761390) | Five jobs PASS; Qt source/offscreen 1,104 passed, nine skipped, 101 subtests; each headless ABI 982 passed, eleven skipped, three deselected, 87 subtests |
+| [Exact-source asset build](https://github.com/ben-shin/spinflow/actions/runs/42435823209) | Three jobs PASS; artifact `13599238895`, ZIP SHA `3a430fb5341e6ad20bb9d7a8a9856c0e0a738739bfeb27de7c09bede9d8d32ee` |
+| Fresh actual CI-wheel installations | **1,113 passed, 101 subtests, zero skips on each ABI** |
+| Fresh actual public-URL installations | **1,113 passed, 101 subtests, zero skips on each ABI** |
+| Installed identity | All 26 product imports inside the selected prefix; all 28 product/resource files exact matching wheel before/after each installed suite |
+
+Installed guest interpreters were CPython 3.12.3 and normal-GIL 3.13.18; the
+latter is a task-private test helper, not shipped in SpinFlow. Hosted source
+tests, conditional release-builder smoke checks and installed xcb desktop
+workflows are different cohorts. Their skip counts are not relabelled as zero.
+The private-to-CI bridge contains 21/28 identical product files, six Python
+CRLF-to-LF serialization changes and the support registry's descriptive platform
+qualification update; both native binaries match. This does not substitute for
+the actual CI/public installed workflows above.
+
+Both installed ABIs completed all fourteen acquired operations, full
+`(1,2048,4096)` float32 Current, fixed point/ppm ROI, signed analysis,
+scientific PNG/SVG/PDF, pending/applied separation, session/CLI replay, explicit
+loss/error/cancel controls and small automatic-phase persistence. The complete
+result digest remained `43be3087ec487d3fea81730c16737afa9d28a6e9199acfa010c65a5b3c34908d`.
+Genuine selected b1/b2 cases and the unchanged v0.2 `rtol=atol=1e-12` gate
+passed; v0.2 maximum sample difference was `1.4210854715202004e-14`.
+Older b1/b2 recomputed arrays were not separately retained: those independent
+compatibility audits cover source and strict execution receipts, while retained
+GUI/CLI and v0.2 arrays permit direct independent value checks.
+
+The public chain made eight actual successful HTTPS GETs, retaining redirects,
+headers and hashes privately. All six public assets match CI byte for byte.
+Both documented GitHub tag ZIP/TAR archives contain exactly the committed 304
+file members; their container hashes differ from the local Git archive. Each
+first fresh core install used the unmodified downloaded installer's **default
+b3 URLs, with no asset directory/local wheel/version override**. Actual pip
+temporary-wheel hashes match public/CI wheels. Independent prefetch headers are
+separate requests from normal installer download events; dependency pip caches
+were permitted. The same-prefix GUI/plot add and later extras retention passed.
+
+The private verification VM powered off normally on **8 November 2026**:
+request `2026-11-08T02:53:21.5721772Z`, exit observed
+`2026-11-08T02:53:25.4236200Z`, SSH/QEMU exit zero, normal serial Powerdown,
+no remaining owned process/listener and a completed TCP connection refusal.
+The first short port probe was only a timeout and stayed conservatively
+incomplete; the later explicit listener/connection evidence is retained as an
+addendum. Closed disk, UEFI and log identities are retained. Older protected
+four pins and all 170 declared critical S20 members stayed unchanged. No force
+kill or old VM restart occurred. Final local critical sealing/postseal judgment
+is separate from this documentation cut; older opaque disks are not newly
+claimed sealed. Continuing stages require a fresh COW runtime and new logs.
+
+Private R6 measurements below retain their exact predeclared CP312 VM/case/build
+scope and full original distributions. Public functional checks add no speed
+claim. The narrow ASU six-gate result does not override S19 FAIL or establish a
+full original TopSpin/NMRPipe spectral method. Cached original **conversion**
+text was located; original **spectral-processing** authority remains open.
+Native Wayland, physical HiDPI/GPU behavior, researcher suitability and general
+scientific parity remain unverified. The context-menu SVG limitation and
+narrow-pane friction remain as previously recorded.
+
+## Historical prepublication checkpoint — 8 November 2026
+
+The remainder preserves the dated prepublication source-cut record, including
+its then-pending statuses, original working-byte pins, measured distributions
+and scientific limits. [The original tagged record](https://github.com/ben-shin/spinflow/blob/7598ae53267d743fbd46ba708ed85f5b3478cbeb/docs/stage21-results.md)
+remains immutable; later completion above does not rewrite its protocols.
+
 
 Stage 21 began on 7 November 2026. This 8 November prepublication checkpoint
 prepares **0.3.0b3**, packaging Stage 20's bounded viewport inspection and a
@@ -16,7 +99,7 @@ questions and do not repair that result. Physical Ubuntu and independent
 researcher acceptance remain **UNVERIFIED**. No stable profile, RC/1.0 release,
 general NMRPipe parity or biological-assignment claim follows.
 
-## Private installed workflow and compatibility
+### Private installed workflow and compatibility
 
 The initial full-Qt b3 working snapshot passed **1,070 installed tests and 101
 subtests**, with no skips. The conditional Essentials snapshot
@@ -67,7 +150,7 @@ the interpreter's default `clang++` was absent. A separate retained attempt used
 the existing GCC through process-local compiler variables and passed. No global
 interpreter, compiler or package configuration was installed or changed.
 
-## Smaller optional GUI, measured separately from speed
+### Smaller optional GUI, measured separately from speed
 
 Clean b3 **core + GUI + plot** prefixes were measured before adding test tools.
 The GUI requirement is now pinned PySide6 Essentials 6.12.0 plus unchanged
@@ -95,7 +178,7 @@ retained limitation, not repaired third-party code. Optional QtPdf image reading
 is absent from the smaller stack; it is outside the spectrum-workbench promise
 and separate from Matplotlib's scientific PDF writer.
 
-## Narrow independent integer-Bruker import/filter check
+### Narrow independent integer-Bruker import/filter check
 
 The [complete ASU result record](asu-import-filter-results.md) binds one
 authorized installed CPython 3.12 invocation of the
@@ -114,7 +197,7 @@ no spectral FFT/phase/baseline/peak/integral workflow and does not compare again
 an original final TopSpin script/result. S19 remains FAIL; human acceptance,
 full raw-to-reference processing and general parity remain UNVERIFIED.
 
-## Fixed installed engineering measurements
+### Fixed installed engineering measurements
 
 The main production benefit is the smaller GUI installation above. Runtime
 measurements were close to the baseline and establish only the predeclared
@@ -224,7 +307,7 @@ retained completed original elapsed/RSS records, an initial probe stall
 fabricated none, ordinary late failure retained originals, and overwrite was
 refused. No acquired run was repeated to obtain a passing result.
 
-## Review and retained checkpoints
+### Review and retained checkpoints
 
 The coordinator used separate correctness/evidence, robustness and usability
 reviews, with a separate integrated judge. The first reserved repair closed
@@ -237,7 +320,7 @@ original acquired observations remain retained. The final source cut and its
 CI/public-download receipts require their own review; earlier private test
 counts are never relabelled as final artifact tests.
 
-## Desktop and remaining release gates
+### Desktop and remaining release gates
 
 The checked desktop is Xvfb/Openbox with **xcb**, not a physical Ubuntu user or
 native Wayland session. Independent synthetic probes recorded 950x620 and

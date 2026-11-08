@@ -2,7 +2,7 @@
 
 This is a local check of your installed SpinFlow on Ubuntu 24.04 x86-64. It produces repeatable CLI observations and a **blank manual checklist** for you to complete. Automated checks do not establish that the application suits your research or that physical user hardware has passed. No files or results are uploaded.
 
-Use the matching release's tagged source archive for the runner, recipes and pinned fetch helper. A wheel or Python source distribution alone does not include these tools. Use an existing supported Python installation; no compiler is required by this check. These commands target b3 and its installer-default prefix once the experimental release is published; public assets remain pending at this prepublication source freeze. Change both variables together for another published version or a custom prefix.
+Use the matching release's tagged source archive for the runner, recipes and pinned fetch helper. A wheel or Python source distribution alone does not include these tools. Use an existing supported Python installation; no compiler is required by this check. These commands select the published b3 experimental release and its installer-default prefix. Both supported Python ABI installations and these source URLs were checked through the actual public release endpoints; your human record remains blank. Change both variables together for another published version or a custom prefix.
 
 ```sh
 SPINFLOW_VERSION=0.3.0b3

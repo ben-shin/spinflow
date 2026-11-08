@@ -4,13 +4,13 @@ SpinFlow is an experimental, open source NMR processing workbench. It provides a
 
 **Scientific status:** this is an early processing slice, not a validated replacement for NMRPipe or a laboratory processing system. One public Bruker 1D acquisition has an archived peak-position check; two public 2D acquisitions add bounded both-axis automatic phase and fixed peak/relative-volume checks. One previously studied public Varian protein case has a bounded comparison with NMRPipe 13 and actual NMRDraw/Sparky reopening; broader real workflows, general parity, concentration accuracy and other independent reopening remain unverified. See [scope](docs/scope.md), [validation](docs/public-validation.md), and the [roadmap](ROADMAP.md).
 
-The **0.3.0b3 experimental beta** packages adaptive zoom/pan inspection, a smaller optional GUI and persistent raw records in the Linux acceptance runner. On the selected clean Ubuntu GUI-and-figure installation, the smaller dependency set used **42.68% fewer logical installed bytes**. The [Stage 21 record](docs/stage21-results.md) separates private installed checks, fixed performance measurements and final release evidence. At this prepublication source freeze, b3's exact CI assets and public-download checks are still pending; the versioned commands below target b3 once its release is available.
+The published [v0.3.0b3 experimental beta](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b3) packages adaptive zoom/pan inspection, a smaller optional GUI and persistent raw records in the Linux acceptance runner. On the selected clean Ubuntu core+GUI+plot installation, the smaller dependency set used **42.68% fewer logical installed bytes**. Both supported Python ABIs passed **1,113 installed tests and 101 subtests with zero skips**, separately from actual CI-wheel and public-URL installations, plus the selected acquired desktop/session/CLI workflow. The [Stage 21 record](docs/stage21-results.md) binds exact source/build/public identities, preserves the earlier private measurements and records normal closure of the verification VM. These checks do not supply physical Ubuntu or researcher acceptance.
 
 The earlier published [v0.3.0b2 beta](https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b2) and its [qualification record](docs/v1-qualification-results.md) remain unchanged. The original [scientific qualification](docs/bruker-qualification-results.md) **failed six of 18 fixed peak-target comparisons**. Physical Ubuntu and independent researcher acceptance remain **UNVERIFIED**. No stable profile is promoted.
 
 ## Install on Linux
 
-For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, use the matching v0.3.0b3 versioned installer once the experimental release is published:
+For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, use the published v0.3.0b3 versioned installer:
 
 ```bash
 curl -fL -o install-spinflow.py https://github.com/ben-shin/spinflow/releases/download/v0.3.0b3/install-spinflow.py
