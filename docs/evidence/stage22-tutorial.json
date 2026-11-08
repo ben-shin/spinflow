@@ -1,0 +1,254 @@
+{
+  "evidence_format": "stage22-acquired-tutorial-workflow-v1",
+  "checkpoint_date_utc": "2026-11-08",
+  "scope": "Illustrative processing/arithmetic/session workflow; no scientific-accuracy, reference-program parity or performance claim.",
+  "product": {
+    "version": "0.3.0b3",
+    "experimental_prerelease": true,
+    "source_commit": "7598ae53267d743fbd46ba708ed85f5b3478cbeb",
+    "release_url": "https://github.com/ben-shin/spinflow/releases/tag/v0.3.0b3",
+    "annotated_tag_object": "573d860187991e3465b6c3919c56053256adeedc",
+    "cp312_public_wheel_sha256": "b2b22e001eae1d9e4ebd056312277e959f901d08036401633fb6e83dcf8cb737",
+    "native_sha256": "811fcb73e59727b13096c453a6a8f57c3e08e52957f9c0425f04363024f97d34",
+    "installed_product_resource_files_unchanged": 28,
+    "source_API_schema_precision_algorithms_unchanged": true,
+    "release_tag_assets_unchanged": true
+  },
+  "input": {
+    "url": "https://raw.githubusercontent.com/CHM343/NMR/af3b9c2c4642e63e379bc349cb40e1fe8c5730e6/Data/MeOD_25C_Temp_Cal_Bruker400.zip",
+    "archive_bytes": 1060855,
+    "archive_sha256": "38c8d260169d42f0d15ab5c7b9ce7084735419688c9ea66e76dc34fa6b356094",
+    "fid_sha256": "34457683c737ca05b3bc632b71959a3eb3f892a96e65886ea4c7a8b840cb147d",
+    "acqus_sha256": "6d108f8ae59c7a4eaaff8abe414d1794fda35fc6ef7bc300326c13843fb8480c",
+    "data_redistributed": false
+  },
+  "runtime": {
+    "OS": "Ubuntu24.04.5 x86-64",
+    "python": "3.12.3",
+    "vCPU": 1,
+    "guest_memory_MiB": 4096,
+    "guest_CPU_affinity": [
+      0
+    ],
+    "numerical_thread_pools": 1,
+    "working_array_budget_bytes_not_RSS": 67108864,
+    "GUI_platform": "xcb",
+    "GUI_logical_window": [
+      1320,
+      840
+    ],
+    "virtual_screen": [
+      3200,
+      2000
+    ],
+    "DPR": 1.0,
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "h5py": "3.16.0",
+    "nmrglue": "0.12",
+    "matplotlib": "3.11.2",
+    "PySide6_Essentials": "6.12.0",
+    "pyqtgraph": "0.14.0",
+    "CP313_tutorial_case_executed": false
+  },
+  "data_contract": {
+    "input_storage": "int32 Bruker interleaved complex",
+    "runtime_output_dtype": "float64",
+    "processed_shape": [
+      2,
+      65536
+    ],
+    "complex_axes": [
+      "a0"
+    ],
+    "all_quadratures_retained": true,
+    "Source_display_unit": "ms",
+    "Current_frequency_unit": "relative Hz",
+    "reference_ppm": null,
+    "unphased_digest": "b6ddd218c02c618035e66317f3f9899cca384bc3200184094d66796733a8ec04",
+    "phased_and_normal_CLI_digest": "61d138580e523c187baa4dc077206963e1cd139c958c4565c4035e7b852f702f"
+  },
+  "illustration": {
+    "literal_phase": {
+      "p0": 61.879063537629605,
+      "p1": -0.0,
+      "pivot": 32767.5
+    },
+    "phase_estimation_repeated_by_session_GUI_replay": false,
+    "phase_review_flags_retained": [
+      "inspect_phase",
+      "positive_lorentzian_line_assumption",
+      "background_fitted_for_estimation_only",
+      "first_order_not_estimated"
+    ],
+    "peak_search": {
+      "sign": "both",
+      "snr": 5,
+      "baseline": "none",
+      "min_separation_Hz": 8,
+      "max_peaks": 20
+    },
+    "selected_candidates": 6,
+    "selected_positive_candidates": 6,
+    "selected_negative_candidates": 0,
+    "acquired_negative_signal_validation": false,
+    "integration": {
+      "region_count": 6,
+      "half_width_Hz": 2,
+      "baseline": "none",
+      "units": "relative signed intensity*Hz",
+      "concentration_claim": false,
+      "deconvolution": false
+    },
+    "PNG_labels_visible": 4,
+    "complete_candidate_records": 6,
+    "formats": [
+      "PNG",
+      "SVG",
+      "PDF"
+    ]
+  },
+  "exact_checks": [
+    "dtype",
+    "shape",
+    "quadratures",
+    "samples",
+    "dataset_digest",
+    "serialized_axes",
+    "metadata",
+    "provenance",
+    "complete_metadata",
+    "input_files_unchanged",
+    "installed_origins_unchanged"
+  ],
+  "GUI_cycle": {
+    "status": "PASS_BOUNDED_AUTOMATED_CONTROLLER_WORKFLOW",
+    "fresh_GUI_processes": 2,
+    "original_files_retained": 28,
+    "screenshots": 10,
+    "saved_five_operations_and_three_reports_exact": true,
+    "peak_candidates_and_area_regions_each": 6,
+    "actual_after_export_CLI_exact_checks_passed": 11,
+    "Source_overview_stride": 2,
+    "Current_overview_stride": 4,
+    "every_displayed_value_coordinate_checked_against_parent_slices": true,
+    "full_unsampled_arrays_unchanged": true,
+    "complete_offscreen_report_tables_visually_verified": false,
+    "mouse_menu_coverage_claim": false
+  },
+  "packaged_validation": {
+    "status": "PASS_ONE_NORMAL_ATTEMPT_PLUS_EXPLICIT_CONTROLS",
+    "shell": "/bin/sh resolved /usr/bin/dash",
+    "literal_normal_stages": [
+      "00",
+      "10",
+      "20",
+      "30"
+    ],
+    "normal_stage_exitcodes": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "RUN_and_asset_paths_contained_spaces": true,
+    "setup_CWD_outside_example_folder": true,
+    "normal_native_arrays_axes_fullmetadata_provenance_phase_analysis_exact_original": true,
+    "normal_after_CLI_exact_checks_passed": 11,
+    "constructed31": {
+      "status": "PASS_CONTROL_ONLY",
+      "actual_ASU_phase_refusal_observed": false,
+      "autophase_executed_for_control": false,
+      "operations": 4,
+      "analysis_reports": 0,
+      "after_CLI_exact_checks_passed": 11
+    },
+    "non_NMR_controls": [
+      "asset discovery with quoted paths/spaces/inherited CDPATH from outside CWD",
+      "missing PY refused",
+      "missing SF refused",
+      "existing RUN refused with sentinel unchanged",
+      "invalid continuation refused before product action"
+    ],
+    "owned_groups": 11,
+    "all_reaped_no_timeout_no_live_descendants": true,
+    "verified_original_files": 115,
+    "controller_files": 25,
+    "normal_files": 58,
+    "control_files": 32,
+    "full_result_manifest_members": 138,
+    "earlier_Stage1_Stage2_GUI_files_protected": 86,
+    "installed_product_resource_files_protected": 28,
+    "no_retries_or_retuning": true
+  },
+  "retained_private_receipt_bindings": {
+    "original_fourteen_asset_freeze": "4b269543dd66533103ab485aace78f7e57238d0f6e0afe12765da7e072dee9c2",
+    "GUI_source_freeze": "91cc3454bbbf3eb5d4a0b41ce150ca82f5453ad5aca2aad39e0e1c069f97a9ea",
+    "GUI_results_freeze": "f62e8ce0fc37498fead77b0d88da018b8c50b2e990742a2a4b67aac7d0e669f3",
+    "public_candidate_v2_freeze": "b03e7846eeebd98fc1c77f0aab7d1a61fafb03834e80c502dde57854a4c75f2b",
+    "packaged_source_and_bindings_freeze": "16b2829794c5977e61a8b321d7b56dc9cd0dbe889a7040c7fb71e6f936f399a6",
+    "packaged_results_freeze": "47fad9e61c03daa4134daca79355503e0bb4ed4f9aa0577766bb76877f1fc157",
+    "packaged_owner_reconciliation": "1e0cd617d712b3831426fdb60dbdc7972050243701651d4b50552ec75a766750"
+  },
+  "tutorial_file_manifest": {
+    "docs/tutorials/asu-calibration.md": {
+      "bytes": 10529,
+      "sha256": "0f26c176b3b1e147edfcc99cad61b36de6185fed0c8163cc7552db792385b581"
+    },
+    "examples/asu-calibration/00-setup.sh": {
+      "bytes": 1088,
+      "sha256": "40b5a5ee97a708d0ca86f0893a8b2352cb7659e686ae65f6a80476d0d85a5907"
+    },
+    "examples/asu-calibration/10-process-and-diagnostics.sh": {
+      "bytes": 1914,
+      "sha256": "4000d47f7927e1fc054a614ae530d560777a623e13219a4b201bb570798bfcbb"
+    },
+    "examples/asu-calibration/20-analysis-and-figures.sh": {
+      "bytes": 1957,
+      "sha256": "bb4ea8a3399e4862a355b9f299f1912a98a7a7c7b9cb4b218b4b63221b04bdd0"
+    },
+    "examples/asu-calibration/30-session-replay.sh": {
+      "bytes": 758,
+      "sha256": "e3d8e1da6305d24e6b64dd830a1857fad61ede12b1d586d5135d3ef4aa14acdb"
+    },
+    "examples/asu-calibration/31-diagnostic-session-replay.sh": {
+      "bytes": 879,
+      "sha256": "3217410958f114abff17130940586a9ca1d1ade02f05b5780f5b96af2be5aacc"
+    },
+    "examples/asu-calibration/check-cli-replay.py": {
+      "bytes": 5247,
+      "sha256": "dc2a53433492aeae638f678297d93fb10153cbb1b8db649579bc880bdbcbdf58"
+    },
+    "examples/asu-calibration/phase-summary.py": {
+      "bytes": 1161,
+      "sha256": "51a5a1513bdeb8c7301a5daf1ace0610fc4a8c6bca5a29e38bb5bda9cfbed9cf"
+    },
+    "examples/asu-calibration/preprocess.recipe.json": {
+      "bytes": 492,
+      "sha256": "9ab6075d35f05050bf23c398c4a2dbc49372d43eb847c0fa1024d6096ce02884"
+    },
+    "examples/asu-calibration/README.md": {
+      "bytes": 615,
+      "sha256": "714d1af0888db0e86ddb35a3aad1f2ba9c2c5f9be37a8f4a9381782d93b1802f"
+    },
+    "examples/asu-calibration/session-bridge.py": {
+      "bytes": 3152,
+      "sha256": "7693f3e41458ef290f970522ce5bfea6afd4549a83dbbd3f081fe0d80b4f583d"
+    },
+    "examples/asu-calibration/SHA256SUMS": {
+      "bytes": 870,
+      "sha256": "11350a68b76f4a6d61ceee46e48a5c563be814fc82f09addc4b4fc549cfa9431"
+    }
+  },
+  "qualification": {
+    "human_acceptance": "UNVERIFIED",
+    "scientific_phase_acceptance": false,
+    "S19": "FAIL six of eighteen targets unchanged",
+    "S21_R6_whole_group_timeout_guard": "FAIL; released tool unchanged, repair pending authorization and independent review",
+    "private_S22_executor": "Separately reviewed bounded whole-file helper; no reuse or repair of the failed released guard. Private helper source is not distributed.",
+    "whole_shell_resources": "Retained wait4 peaks are whole-shell lifetime maxima including descendants waited for, not aggregate or per-command RAM. Elapsed times are diagnostic only, not a benchmark.",
+    "original_spectral_processing_reference_parity": "UNVERIFIED",
+    "physical_human_native_Wayland_HiDPI_GPU_acceptance": "UNVERIFIED",
+    "sealed_S21_parent_identity_unchanged": true
+  }
+}

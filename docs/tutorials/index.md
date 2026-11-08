@@ -52,6 +52,8 @@ Install the optional GUI extra using the [installation instructions](../../READM
 
 The [public-data walkthrough](public-data.md) uses separately downloaded, hash-checked Bruker and Varian data and the tagged source archive matching your installation. Its b3 source-tag commands match the published release; earlier versioned archives remain immutable. It requires internet access. Data are not redistributed with SpinFlow.
 
+For a smaller acquired 1D example, follow the [ASU calibration walkthrough](asu-calibration.md): fixed processing, phase diagnostics, relative-Hz peaks/areas, figures and session/CLI replay, with scientific and human acceptance still unverified.
+
 ## Interpretation and troubleshooting
 
 Automatic phase fits a restricted positive, separable line model and can refuse unsuitable data. Inspect its diagnostics and the resulting spectrum; manual phase is available in recipes and the GUI. Peak picking finds signed local extrema, not assignments. Integrals are signed relative intensity times Hz (or Hz² in 2D), not concentrations. Thresholds, bounds, baselines and referencing require scientific judgment.

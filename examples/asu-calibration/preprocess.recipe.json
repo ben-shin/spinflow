@@ -1,0 +1,16 @@
+{
+  "schema_version": "1",
+  "input": "inputs/acq",
+  "input_format": "bruker-raw-1d",
+  "output": "outputs/unphased.nmrh5",
+  "output_format": "native",
+  "backend": "native",
+  "threads": 1,
+  "memory_bytes": 67108864,
+  "operations": [
+    {"op": "digital_filter", "axis": "a0"},
+    {"op": "window", "axis": "a0", "kind": "exponential", "lb_hz": 0.5, "first_point_scale": 1.0},
+    {"op": "zero_fill", "axis": "a0", "size": 65536},
+    {"op": "fft", "axis": "a0", "inverse": false}
+  ]
+}
