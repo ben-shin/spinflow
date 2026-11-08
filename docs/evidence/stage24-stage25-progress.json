@@ -1,0 +1,107 @@
+{
+  "record": "Stage 24 and Stage 25 scoped progress",
+  "publication_scope": "source-only aggregate evidence; not a release qualification",
+  "source_context": {
+    "main_commit": "a738c328e7ef26e1bcd6c5dd7123d6f7b3db9908",
+    "main_tree": "341423164968dacfeeba495b7868896413b8719c",
+    "main_files": 322,
+    "proposal_commit": "2db7a2788a124c80ad86a21aa5d754045dddc265",
+    "public_application_version": "0.3.0b3",
+    "public_application_source_commit": "7598ae53267d743fbd46ba708ed85f5b3478cbeb",
+    "public_cpython312_native_sha256": "811fcb73e59727b13096c453a6a8f57c3e08e52957f9c0425f04363024f97d34",
+    "public_native_scope": "immutable public CPython 3.12 binary only",
+    "private_export_build": {
+      "reported_version": "0.3.0b3",
+      "runtime": "CPython 3.12",
+      "native_sha256": "4b8321670570bb2757dc876dd481bdb3b644e051250365c1ad6153e8ddcf66be",
+      "wheel_sha256": "90dee286077f36e63fad33234b23fc124ea35e4b0aae889ce1a91d5192c3ac55",
+      "reviewed_source_commit": "2db7a2788a124c80ad86a21aa5d754045dddc265",
+      "identity_note": "private export test binary, distinct from public CPython 3.12 binary; source-review commit identifies reviewed source correspondence"
+    },
+    "release_assets_changed": false
+  },
+  "stage24": {
+    "baseline_trials": 40,
+    "scenario_count": 8,
+    "trials_per_scenario": 5,
+    "original_cohort_statuses": {
+      "pass": 25,
+      "pdf_semantics_unverified": 15
+    },
+    "separate_audits": {
+      "retained_svg_pass": 41,
+      "host_pdf_pass": 40
+    },
+    "timings": {
+      "warm_formats": ["PNG", "SVG", "PDF"],
+      "workers_per_warm_format": 5,
+      "warm_workers_total": 15,
+      "calls_per_warm_worker": {
+        "first_calls": 1,
+        "subsequent_calls": 5,
+        "clustered_within_worker": true
+      },
+      "interpretation": "baseline only; no measured speedup or improvement claim"
+    },
+    "import_profile": {
+      "diagnostic_runs": 1,
+      "interpretation": "nested trace only; not causal timing or a benchmark"
+    },
+    "two_file_startup_candidate": "not yet Linux-qualified or timed"
+  },
+  "stage25": {
+    "export_pairs": 1,
+    "input": {
+      "description": "accepted 14-step native result",
+      "sha256": "1f7d4006354e57a5193f5d7899777e5163dc156b1468a841f7f837af7b9428ba",
+      "new_processing_run": false,
+      "environment": "private CPython 3.12 package candidate"
+    },
+    "formats": ["Pipe real", "UCSF real"],
+    "float32_values_per_format": 8388608,
+    "values_bitwise_equal_per_format_including_sign": true,
+    "nondate_bytes": "exact in both formats",
+    "date_fields": {
+      "pipe_four_byte_words": 6,
+      "ucsf_bytes": 26,
+      "prediction_from_actual_defaults_before_write": true,
+      "written_date_fields_matched_predictions": true,
+      "durably_recorded_before_write": true
+    },
+    "coordinates": {
+      "scalar_axis_coordinates_per_format": 6144,
+      "dimensions_per_format": [2048, 4096],
+      "total_scalar_axis_coordinates_across_both_formats": 12288,
+      "gate_ppm": 0.00002
+    },
+    "fixed_rois": {
+      "count": 5,
+      "bounds_covered_by_exact_samples_and_axes": true,
+      "new_peak_or_volume_assessment": false
+    },
+    "native_record_and_provenance_preserved": true,
+    "reported_existing_losses": ["axis annotations", "metadata", "provenance"],
+    "independent_end_user_sparky_or_nmrdraw_reopen": "not performed",
+    "timing_or_gain_claim": false
+  },
+  "limits_unchanged": {
+    "original_conversion_script": {
+      "bytes": 493,
+      "scope": "retained original conversion-only script"
+    },
+    "original_author_full_spectral_processing_script": "unavailable",
+    "absolute_original_ppm_truth": "not established",
+    "physical_ubuntu_or_human_acceptance": "unverified",
+    "S19": "FAIL on six of eighteen targets",
+    "support_profiles": "experimental"
+  },
+  "evidence_pins": {
+    "stage24_baseline_freeze_sha256": "53060226ad61a561d3d05c6aa6543a16c66182e139c900c9a9773066db1f6626",
+    "stage24_import_diagnostic_freeze_sha256": "6f89ae16340fb1aa3681ca8bf359d590b410eac4538781157c1a7b61cbdc4e52",
+    "stage25_export_pair_freeze_sha256": "792d3ae16b1066c7eceaf4818c9f23179048233e3f4becb4ed761348961febe5",
+    "stage25_independent_review_sha256": "77c6e7daa66ce204ecb35a3256509d2bca9f11418001a8b1940d135c1839436b"
+  },
+  "links": {
+    "stage21_release_record": "stage21-release.json"
+  }
+}
