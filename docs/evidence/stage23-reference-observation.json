@@ -1,0 +1,80 @@
+{
+  "record": "Stage 23 one-conversion header-only observation",
+  "status": {
+    "conversion_artifact": "PASS",
+    "independent_header_audit": "PASS",
+    "private_v3_A23_L02_raw_word_guard": "FAIL",
+    "scientific_array_gates": "UNVERIFIED",
+    "original_processing_and_physical_acceptance": "UNVERIFIED"
+  },
+  "application": {
+    "public_repository_commit": "fc0df9c5b29c9041203142647b68e99ef681468c",
+    "tutorial_run": "42455201565",
+    "tutorial_checks_passed": 5,
+    "installed_version": "0.3.0b3",
+    "application_source_commit": "7598ae53267d743fbd46ba708ed85f5b3478cbeb",
+    "release_or_asset_changed": false
+  },
+  "conversion": {
+    "script_bytes": 493,
+    "script_sha256": "71622387d57b4d80e677e2facddeb1e92273429424a40641ae889fc7789eeb6b",
+    "script_scope": "original conversion only; original processing script not supplied",
+    "spinflow_recipe_scope": "validation-authored 14-operation recipe, not the original processing workflow",
+    "suite_version": "NMRPipe 13.0 revision 2026.072.12.03",
+    "platform": "Ubuntu 24.04.5",
+    "python": "CPython 3.12.3",
+    "cpu_count": 1,
+    "numerical_threads": 1,
+    "exit_code": 0,
+    "reaped": true,
+    "owned_process_group_empty": true,
+    "output_bytes": 3986048,
+    "output_sha256": "66cf36c912487fc939bb513a4a7f18758e0aad9526a758c78fc3f86735182e95",
+    "distribution": "private; not included"
+  },
+  "header_audit": {
+    "bytes_read": 2048,
+    "fields_decoded": [0, 1, 2],
+    "field_1_raw_hex": "efee6e4f",
+    "field_1_little_endian_uint32": "0x4f6eeeef",
+    "field_1_float32": 4008636160.0,
+    "fdieeecons_integer_macro": "0xeeeeeeee",
+    "field_2_float32": 2.3450000286102295,
+    "interpretation": "field 1 is the numeric float32 encoding of FDIEEECONS for this observed artifact"
+  },
+  "checker_finding": {
+    "id": "A23-L02",
+    "severity": "major",
+    "frozen_v3_requires_raw_uint32": "0xeeeeeeee",
+    "result": "observed target header rejected by frozen private checker",
+    "classification": "checker representation defect; no sample mismatch demonstrated",
+    "checker_changed": false
+  },
+  "unrun": [
+    "sample arrays or product decoder",
+    "numerical comparator or FFT",
+    "phase, peak or volume checks",
+    "benchmark or original spectral-processing workflow",
+    "human or physical laboratory acceptance"
+  ],
+  "unchanged_qualification": {
+    "strict_raw_float32_quadrature_tolerance": "0/0",
+    "alignment_scaling_or_phase_fitting": false,
+    "tolerance_relaxed": false,
+    "scientific_phase_acceptance": false,
+    "S19_six_of_eighteen": "FAIL",
+    "released_S21_R6_process_group_timeout_guard": "FAIL; repair pending approval and independent review"
+  },
+  "evidence_pins": {
+    "observation_freeze_sha256": "1973645f7bb8e260976c432e8a3f2980c5cc2749a2e9c3eac131376eb661846a",
+    "owner_reconciliation_sha256": "4fd1e41e5b5a973d0599db177043f306639a64b05252de213e5704d5a3000a3f",
+    "independent_header_review_sha256": "86c20e6b255e5ce4b4ea4639cbe412c0316c3c4c0336ffaba280f8de761d1cb9",
+    "private_v3_freeze_sha256": "fcfee4b68f9c2a2295d435a719d1bbe3c1ac0b0c1f9e123f485310bdf5bd613c",
+    "private_comparator_sha256": "1b72d0fbada7b18ef63cb71e31e87b8c515c7345079fef4bdf5b1d4e964c8a4a"
+  },
+  "links": {
+    "results": "../stage23-results.md",
+    "laboratory_protocol": "../laboratory-workflow-protocol.md",
+    "stage22_results": "../stage22-results.md"
+  }
+}
