@@ -10,6 +10,10 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import threading
+import csv
+import shutil
+from types import MappingProxyType
 from types import SimpleNamespace
 
 import numpy as np
@@ -32,6 +36,12 @@ SURFACE = "#f4f8fb"
 PAPER = "#ffffff"
 BORDER = "#d6e1e9"
 _font_loaded = False
+
+
+class _BatchProgressBridge(QtCore.QObject):
+    """Deliver immutable worker progress snapshots on the GUI thread."""
+
+    progressed = QtCore.Signal(object)
 
 
 def _save_json_report(path, report):
@@ -299,8 +309,33 @@ class Workbench(QtWidgets.QMainWindow):
         self._viewport_timer.timeout.connect(self._refresh_viewport)
         self._state_generation = 0
         self._recipe_cache = RecipeCache()
+        self._batch_manifest_path = None
+        self._batch_manifest_snapshot = None
+        self._batch_template_path = None
+        self._batch_template = None
+        self._batch_draft_reference = None
+        self._batch_draft_digest = None
+        self._batch_template_dirty = True
+        self._batch_manifest_dirty = False
+        self._batch_operations = None
+        self._batch_capture_current_applied = False
+        self._batch_preserve_loaded_settings = False
+        self._batch_backend = None
+        self._batch_threads = 1
+        self._batch_memory_bytes = None
+        self._batch_pipe_script = None
+        self._batch_plan_result = None
+        self._batch_csv_path = None
+        self._batch_stop_event = None
+        self._batch_running = False
+        self._batch_run_returned = False
+        self._batch_progress_ticket = 0
+        self._batch_next_item_number = 1
+        self._batch_progress_bridge = _BatchProgressBridge(self)
         self._build_ui()
-        self._style()
+        self._batch_progress_bridge.progressed.connect(
+            self._on_batch_progress, QtCore.Qt.ConnectionType.QueuedConnection)
+        self._batch_processing_mode_changed()
         self._refresh()
 
     def _build_ui(self):
@@ -335,7 +370,7 @@ class Workbench(QtWidgets.QMainWindow):
         splitter.addWidget(center)
         right = self._right_panel()
         splitter.addWidget(right)
-        splitter.setSizes([240, 760, 320])
+        splitter.setSizes([210, 500, 610])
         splitter.setStretchFactor(1, 1)
 
         self.status = QtWidgets.QLabel("Open a dataset or create a synthetic example.")
@@ -639,7 +674,1200 @@ class Workbench(QtWidgets.QMainWindow):
         tabs = QtWidgets.QTabWidget()
         tabs.addTab(container, 'Processing')
         tabs.addTab(self._analysis_panel(), 'Analysis / figures')
+        self.batch_tab_index = tabs.addTab(self._batch_panel(), 'Batch')
+        tabs.setMinimumWidth(590)
         return tabs
+
+    def _batch_panel(self):
+        panel = QtWidgets.QWidget()
+        self.batch_panel = panel
+        layout = QtWidgets.QVBoxLayout(panel)
+        intro = QtWidgets.QLabel(
+            "Copy spectra with no processing, or reuse an applied recipe. Optional labels measure fixed regions.")
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        files_box = QtWidgets.QGroupBox("Input files")
+        files_layout = QtWidgets.QVBoxLayout(files_box)
+        self.batch_items_table = QtWidgets.QTableWidget(0, 5)
+        self.batch_items_table.setHorizontalHeaderLabels(
+            ["ID", "Input", "Output", "Axis map", "Status"])
+        self.batch_items_table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.batch_items_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.batch_items_table.setFixedHeight(88)
+        self.batch_items_table.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.batch_items_table.horizontalHeader().setStretchLastSection(True)
+        for column, width in enumerate((70, 112, 95, 108, 90)):
+            self.batch_items_table.setColumnWidth(column, width)
+        self.batch_items_table.cellDoubleClicked.connect(self._batch_map_item_dialog)
+        files_layout.addWidget(self.batch_items_table)
+        file_actions = QtWidgets.QHBoxLayout()
+        self.batch_add_files_button = QtWidgets.QPushButton("Files…")
+        self.batch_add_files_button.clicked.connect(self._batch_add_files_dialog)
+        self.batch_add_folder_button = QtWidgets.QPushButton("Folder…")
+        self.batch_add_folder_button.clicked.connect(self._batch_add_folder_dialog)
+        self.batch_remove_item_button = QtWidgets.QPushButton("Remove")
+        self.batch_remove_item_button.clicked.connect(self._batch_remove_selected_items)
+        self.batch_map_axes_button = QtWidgets.QPushButton("Map axes…")
+        self.batch_map_axes_button.clicked.connect(self._batch_map_selected_item)
+        for button in (self.batch_add_files_button, self.batch_add_folder_button,
+                       self.batch_remove_item_button, self.batch_map_axes_button):
+            file_actions.addWidget(button)
+        files_layout.addLayout(file_actions)
+        output_row = QtWidgets.QHBoxLayout()
+        output_row.addWidget(QtWidgets.QLabel("New output folder"))
+        self.batch_output_directory_edit = QtWidgets.QLineEdit()
+        self.batch_output_directory_edit.setToolTip("Choose an existing folder; batch creates unique new native outputs here.")
+        self.batch_output_directory_edit.textChanged.connect(self._batch_items_changed)
+        output_row.addWidget(self.batch_output_directory_edit, 1)
+        self.batch_choose_output_button = QtWidgets.QPushButton("Choose…")
+        self.batch_choose_output_button.clicked.connect(self._batch_choose_output_directory)
+        output_row.addWidget(self.batch_choose_output_button)
+        files_layout.addLayout(output_row)
+        layout.addWidget(files_box)
+
+        assignment_box = QtWidgets.QGroupBox("Optional labels and fixed regions")
+        assignment_layout = QtWidgets.QVBoxLayout(assignment_box)
+        assignment_intro = QtWidgets.QLabel(
+            "Label a current 1D/2D spectrum or open a template. Search and integration bounds stay fixed; no automatic alignment is performed.")
+        assignment_intro.setWordWrap(True)
+        assignment_layout.addWidget(assignment_intro)
+        self.batch_include_labels_check = QtWidgets.QCheckBox("Measure these labels for each input")
+        self.batch_include_labels_check.setChecked(False)
+        self.batch_include_labels_check.toggled.connect(self._batch_labels_toggled)
+        assignment_layout.addWidget(self.batch_include_labels_check)
+        channel_row = QtWidgets.QHBoxLayout()
+        channel_row.addWidget(QtWidgets.QLabel("Analysis component"))
+        self.assignment_channel_combo = QtWidgets.QComboBox()
+        self.assignment_channel_combo.currentIndexChanged.connect(self._batch_template_edited)
+        channel_signals = self.assignment_channel_combo.blockSignals(True)
+        self.assignment_channel_combo.addItem("Component 0", 0)
+        self.assignment_channel_combo.blockSignals(channel_signals)
+        channel_row.addWidget(self.assignment_channel_combo)
+        channel_row.addStretch()
+        assignment_layout.addLayout(channel_row)
+        self.assignment_table = QtWidgets.QTableWidget(0, 6)
+        self.assignment_table.setHorizontalHeaderLabels(
+            ["ID", "Label", "Sign", "Units", "Fixed regions", "Cutoff"])
+        self.assignment_table.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.DoubleClicked |
+                                              QtWidgets.QAbstractItemView.EditTrigger.EditKeyPressed)
+        self.assignment_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.assignment_table.setFixedHeight(88)
+        self.assignment_table.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollMode.ScrollPerPixel)
+        self.assignment_table.horizontalHeader().setStretchLastSection(True)
+        for column, width in enumerate((80, 90, 70, 60, 140, 70)):
+            self.assignment_table.setColumnWidth(column, width)
+        self.assignment_table.cellDoubleClicked.connect(self._batch_assignment_region_dialog)
+        self.assignment_table.itemChanged.connect(self._batch_template_edited)
+        assignment_layout.addWidget(self.assignment_table)
+        assignment_actions = QtWidgets.QHBoxLayout()
+        self.batch_label_button = QtWidgets.QPushButton("Label assignment…")
+        self.batch_label_button.setText("Label")
+        self.batch_label_button.clicked.connect(self._batch_add_assignment)
+        self.batch_new_template_button = QtWidgets.QPushButton("New template from current…")
+        self.batch_new_template_button.setText("New")
+        self.batch_new_template_button.clicked.connect(self._batch_new_template)
+        self.batch_remove_assignment_button = QtWidgets.QPushButton("Remove label")
+        self.batch_remove_assignment_button.setText("Remove")
+        self.batch_remove_assignment_button.clicked.connect(self._batch_remove_assignment)
+        self.batch_save_template_button = QtWidgets.QPushButton("Save template…")
+        self.batch_save_template_button.setText("Save")
+        self.batch_save_template_button.clicked.connect(self._batch_save_template_dialog)
+        self.batch_open_template_button = QtWidgets.QPushButton("Open template…")
+        self.batch_open_template_button.setText("Open")
+        self.batch_open_template_button.clicked.connect(self._batch_open_template_dialog)
+        for button in (self.batch_label_button, self.batch_new_template_button,
+                       self.batch_remove_assignment_button, self.batch_save_template_button,
+                       self.batch_open_template_button):
+            assignment_actions.addWidget(button)
+        assignment_layout.addLayout(assignment_actions)
+        self.batch_template_label = QtWidgets.QLabel("No template loaded")
+        self.batch_template_label.setWordWrap(True)
+        assignment_layout.addWidget(self.batch_template_label)
+        layout.addWidget(assignment_box)
+
+        recipe_box = QtWidgets.QGroupBox("Batch processing")
+        recipe_layout = QtWidgets.QVBoxLayout(recipe_box)
+        recipe_row = QtWidgets.QHBoxLayout()
+        self.batch_processing_mode = QtWidgets.QComboBox()
+        self.batch_processing_mode.setMaximumWidth(255)
+        self.batch_processing_mode.addItem("No processing · copy input", "copy")
+        self.batch_processing_mode.addItem("Use applied processing", "applied")
+        self.batch_processing_mode.addItem("Import command file", "script")
+        self.batch_processing_mode.currentIndexChanged.connect(self._batch_processing_mode_changed)
+        recipe_row.addWidget(self.batch_processing_mode)
+        self.batch_use_applied_recipe_button = QtWidgets.QPushButton("Use applied recipe")
+        self.batch_use_applied_recipe_button.clicked.connect(self._batch_use_applied_recipe)
+        self.batch_import_script_button = QtWidgets.QPushButton("Import…")
+        self.batch_import_script_button.setMaximumWidth(110)
+        self.batch_import_script_button.clicked.connect(self._batch_import_pipe_script)
+        recipe_row.addWidget(self.batch_import_script_button)
+        recipe_layout.addLayout(recipe_row)
+        self.batch_recipe_label = QtWidgets.QLabel("No processing selected. Current backend and memory limit will be recorded.")
+        self.batch_recipe_label.setWordWrap(True)
+        recipe_layout.addWidget(self.batch_recipe_label)
+        manifest_row = QtWidgets.QHBoxLayout()
+        self.batch_open_manifest_button = QtWidgets.QPushButton("Open manifest…")
+        self.batch_open_manifest_button.clicked.connect(self._batch_open_manifest_dialog)
+        self.batch_save_manifest_button = QtWidgets.QPushButton("Save manifest…")
+        self.batch_save_manifest_button.clicked.connect(self._batch_save_manifest_dialog)
+        manifest_row.addWidget(self.batch_open_manifest_button)
+        manifest_row.addWidget(self.batch_save_manifest_button)
+        recipe_layout.addLayout(manifest_row)
+        self.batch_manifest_label = QtWidgets.QLabel("Manifest not saved")
+        self.batch_manifest_label.setWordWrap(True)
+        recipe_layout.addWidget(self.batch_manifest_label)
+        run_row = QtWidgets.QHBoxLayout()
+        self.batch_plan_button = QtWidgets.QPushButton("Plan")
+        self.batch_plan_button.clicked.connect(self._batch_plan_async)
+        self.batch_apply_button = QtWidgets.QPushButton("Apply to files")
+        self.batch_apply_button.setObjectName("primary")
+        self.batch_apply_button.clicked.connect(self._batch_run_async)
+        self.batch_stop_button = QtWidgets.QPushButton("Stop after current file")
+        self.batch_stop_button.setText("Stop after file")
+        self.batch_stop_button.clicked.connect(self._batch_request_stop)
+        for button in (self.batch_plan_button, self.batch_apply_button, self.batch_stop_button):
+            run_row.addWidget(button)
+        recipe_layout.addLayout(run_row)
+        self.batch_progress_label = QtWidgets.QLabel("No batch plan or results")
+        self.batch_progress_label.setWordWrap(True)
+        recipe_layout.addWidget(self.batch_progress_label)
+        self.batch_export_csv_button = QtWidgets.QPushButton("Export CSV…")
+        self.batch_export_csv_button.clicked.connect(self._batch_export_csv_dialog)
+        recipe_layout.addWidget(self.batch_export_csv_button)
+        layout.addWidget(recipe_box)
+
+        self.batch_advanced_toggle = QtWidgets.QToolButton()
+        self.batch_advanced_toggle.setText("Advanced run options")
+        self.batch_advanced_toggle.setCheckable(True)
+        self.batch_advanced_toggle.setChecked(False)
+        self.batch_advanced_widget = QtWidgets.QWidget()
+        advanced_layout = QtWidgets.QVBoxLayout(self.batch_advanced_widget)
+        self.batch_axis_mapping_advanced = QtWidgets.QLabel(
+            "Axis mappings are edited per item with the Map axes action. Raw JSON is not required.")
+        self.batch_axis_mapping_advanced.setWordWrap(True)
+        advanced_layout.addWidget(self.batch_axis_mapping_advanced)
+        self.batch_resume_check = QtWidgets.QCheckBox("Resume exact matching items")
+        self.batch_continue_check = QtWidgets.QCheckBox("Continue after item failures")
+        advanced_layout.addWidget(self.batch_resume_check)
+        advanced_layout.addWidget(self.batch_continue_check)
+        self.batch_advanced_widget.setVisible(False)
+        self.batch_advanced_toggle.toggled.connect(self.batch_advanced_widget.setVisible)
+        layout.addWidget(self.batch_advanced_toggle)
+        layout.addWidget(self.batch_advanced_widget)
+        layout.addStretch(1)
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setWidget(panel)
+        self.batch_scroll = scroll
+        return scroll
+
+    def _batch_assignment_source(self):
+        if self.current is None or self.preview is not None:
+            raise NMRNextError("NO_APPLIED_SPECTRUM", "Process or open a current spectrum before labeling assignments")
+        if (len(self.current.axes) not in (1, 2) or
+                any(axis.role != "spectral" or axis.domain != "frequency" for axis in self.current.axes)):
+            raise NMRNextError("UNSUPPORTED_ASSIGNMENT_DIMENSIONS",
+                               "Assignments require an applied 1D or 2D frequency spectrum")
+        if self._batch_template is None:
+            self.assignment_channel_combo.blockSignals(True)
+            try:
+                self.assignment_channel_combo.clear()
+                for channel in range(self.current.data.shape[0]):
+                    self.assignment_channel_combo.addItem(f"Component {channel}", channel)
+            finally:
+                self.assignment_channel_combo.blockSignals(False)
+        return self.current
+
+    def _batch_add_assignment(self):
+        try:
+            dataset = self._batch_assignment_source()
+        except NMRNextError as exc:
+            self._show_error(exc)
+            return
+        from .analysis import dataset_digest
+
+        source = dataset
+        loaded_reference = deepcopy(self._batch_template["reference"]) if self._batch_template is not None else None
+        draft_reference = deepcopy(self._batch_draft_reference)
+        draft_digest = self._batch_draft_digest
+
+        def check_reference():
+            digest = dataset_digest(source)
+            if loaded_reference is not None:
+                if digest != loaded_reference["dataset_digest"]:
+                    raise NMRNextError("TEMPLATE_REFERENCE_MISMATCH",
+                                       "This template belongs to another reference spectrum. Start a new template from the current spectrum to change its origin.")
+                return loaded_reference, False
+            if draft_reference is not None:
+                if digest != draft_digest:
+                    raise NMRNextError("TEMPLATE_REFERENCE_MISMATCH",
+                                       "The draft belongs to another reference spectrum. Start a new template from the current spectrum to change its origin.")
+                return draft_reference, False
+            from .operations import quadrature_index_orientation
+            reference = {
+                "dataset_digest": digest,
+                "axes": [axis.to_dict() for axis in source.axes],
+                "complex_axes": list(source.complex_axes),
+                "quadrature_index_orientation": quadrature_index_orientation(source),
+            }
+            return reference, True
+
+        def ready(result):
+            reference, created = result
+            if created:
+                self._batch_draft_reference = deepcopy(reference)
+                self._batch_draft_digest = reference["dataset_digest"]
+            self._batch_insert_assignment(reference)
+
+        self._start_job(check_reference, ready, "Checking the assignment reference…")
+
+    def _batch_new_template(self):
+        try:
+            dataset = self._batch_assignment_source()
+        except NMRNextError as exc:
+            self._show_error(exc)
+            return
+        from .analysis import dataset_digest
+        from .operations import quadrature_index_orientation
+
+        def prepare():
+            return {
+                "dataset_digest": dataset_digest(dataset),
+                "axes": [axis.to_dict() for axis in dataset.axes],
+                "complex_axes": list(dataset.complex_axes),
+                "quadrature_index_orientation": quadrature_index_orientation(dataset),
+            }
+
+        def ready(reference):
+            self._batch_template = None
+            self._batch_template_path = None
+            self._batch_draft_reference = reference
+            self._batch_draft_digest = reference["dataset_digest"]
+            self._batch_template_dirty = True
+            self.assignment_table.setRowCount(0)
+            self._set_assignment_channels(reference)
+            self.batch_template_label.setText("New template draft from this spectrum. Add labels and save a new file.")
+            self.batch_include_labels_check.setChecked(True)
+            self._batch_template_edited()
+
+        self._start_job(prepare, ready, "Recording the current spectrum as a new template reference…")
+
+    def _batch_insert_assignment(self, reference):
+        row = self.assignment_table.rowCount()
+        used_ids = {self.assignment_table.item(i, 0).text()
+                    for i in range(row) if self.assignment_table.item(i, 0) is not None}
+        number = row + 1
+        assignment_id = f"assignment-{number:03d}"
+        while assignment_id in used_ids:
+            number += 1
+            assignment_id = f"assignment-{number:03d}"
+        axes = [dict(record) for record in reference["axes"]]
+        unit = "points"
+        search, integration = {}, {}
+        selected = self.selected_regions[0] if self.selected_regions else None
+        selected_bounds = selected.get("bounds", {}) if isinstance(selected, dict) else {}
+        selected_matches = bool(selected and set(selected_bounds) == {axis["id"] for axis in axes})
+        if selected_matches:
+            unit = selected.get("unit", "points")
+        else:
+            selected_bounds = {}
+        for axis in axes:
+            axis_id = axis["id"]
+            if axis_id in selected_bounds:
+                low, high = map(float, selected_bounds[axis_id])
+            else:
+                size = int(axis["size"])
+                center = (size - 1) / 2
+                half = min(2.0, max(0.5, (size - 1) / 20))
+                low, high = max(0.0, center - half), min(size - 1.0, center + half)
+            integration[axis_id] = [low, high]
+            search[axis_id] = [low, high]
+        assignment = {"assignment_id": assignment_id, "label": f"Assignment {number}",
+                      "sign": "positive", "unit": unit, "search_bounds": search,
+                      "integration_bounds": integration, "threshold": 0.0}
+        self._batch_add_assignment_row(assignment, axes)
+        self.batch_include_labels_check.setChecked(True)
+        self._batch_template_edited()
+
+    def _batch_add_assignment_row(self, assignment, axes):
+        row = self.assignment_table.rowCount()
+        self.assignment_table.blockSignals(True)
+        try:
+            self.assignment_table.insertRow(row)
+            identity = QtWidgets.QTableWidgetItem(assignment["assignment_id"])
+            identity.setFlags(identity.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
+            self.assignment_table.setItem(row, 0, identity)
+            label = QtWidgets.QTableWidgetItem(assignment["label"])
+            label.setFlags(label.flags() | QtCore.Qt.ItemFlag.ItemIsEditable)
+            self.assignment_table.setItem(row, 1, label)
+            sign = QtWidgets.QComboBox()
+            sign.addItems(["positive", "negative"])
+            sign.setCurrentText(assignment["sign"])
+            sign.currentTextChanged.connect(self._batch_template_edited)
+            self.assignment_table.setCellWidget(row, 2, sign)
+            unit = QtWidgets.QComboBox()
+            unit.addItems(["points", "Hz", "ppm"])
+            unit.setCurrentText(assignment["unit"])
+            unit.currentTextChanged.connect(
+                lambda new, item=identity: self._batch_unit_changed(self.assignment_table.row(item), new))
+            self.assignment_table.setCellWidget(row, 3, unit)
+            regions = QtWidgets.QPushButton("Edit fixed regions…")
+            regions.setToolTip(
+                "Search: " + self._bounds_summary(axes, assignment["search_bounds"], assignment["unit"]) +
+                "\nIntegration: " + self._bounds_summary(axes, assignment["integration_bounds"], assignment["unit"]))
+            regions.clicked.connect(
+                lambda _checked=False, item=identity: self._batch_edit_assignment_bounds(
+                    self.assignment_table.row(item)))
+            self.assignment_table.setCellWidget(row, 4, regions)
+            threshold = QtWidgets.QDoubleSpinBox()
+            threshold.setRange(0.0, 1e15)
+            threshold.setDecimals(6)
+            threshold.setValue(float(assignment["threshold"]))
+            threshold.valueChanged.connect(self._batch_template_edited)
+            self.assignment_table.setCellWidget(row, 5, threshold)
+            identity.setData(QtCore.Qt.ItemDataRole.UserRole, deepcopy(assignment))
+            identity.setData(QtCore.Qt.ItemDataRole.UserRole + 1, deepcopy(axes))
+        finally:
+            self.assignment_table.blockSignals(False)
+
+    @staticmethod
+    def _axis_coordinate_values(axis, unit):
+        size, start, step = int(axis["size"]), float(axis["start"]), float(axis["step"])
+        values = np.arange(size, dtype=np.float64) if unit == "points" else start + np.arange(size) * step
+        if unit == "ppm":
+            obs, ref_ppm = axis.get("observation_mhz"), axis.get("reference_ppm")
+            if obs is None or ref_ppm is None:
+                raise NMRNextError("UNAVAILABLE_COORDINATES", f"{axis.get('nucleus') or axis['id']} has no ppm calibration")
+            ref_hz = float(axis.get("reference_hz") or 0.0)
+            values = float(ref_ppm) + (values - ref_hz) / float(obs)
+        return values
+
+    def _bounds_summary(self, axes, bounds, unit):
+        parts = []
+        for axis in axes:
+            pair = bounds[axis["id"]]
+            parts.append(f"{axis.get('nucleus') or axis['id']} {pair[0]:.4g}–{pair[1]:.4g} {unit}")
+        return "; ".join(parts)
+
+    def _batch_edit_assignment_bounds(self, row):
+        identity = self.assignment_table.item(row, 0)
+        if identity is None:
+            return
+        assignment = deepcopy(identity.data(QtCore.Qt.ItemDataRole.UserRole))
+        axes = identity.data(QtCore.Qt.ItemDataRole.UserRole + 1)
+        unit = self.assignment_table.cellWidget(row, 3).currentText()
+        self._batch_bounds_dialog(row, assignment, axes, unit)
+
+    def _batch_unit_changed(self, row, new_unit):
+        identity = self.assignment_table.item(row, 0)
+        if identity is None:
+            return
+        assignment = deepcopy(identity.data(QtCore.Qt.ItemDataRole.UserRole))
+        old_unit = assignment["unit"]
+        axes = identity.data(QtCore.Qt.ItemDataRole.UserRole + 1)
+        try:
+            for key in ("search_bounds", "integration_bounds"):
+                for axis in axes:
+                    axis_id = axis["id"]
+                    for index, value in enumerate(assignment[key][axis_id]):
+                        assignment[key][axis_id][index] = self._convert_axis_value(axis, value, old_unit, new_unit)
+        except NMRNextError as exc:
+            combo = self.assignment_table.cellWidget(row, 3)
+            combo.blockSignals(True)
+            combo.setCurrentText(old_unit)
+            combo.blockSignals(False)
+            self._show_error(exc)
+            return
+        assignment["unit"] = new_unit
+        identity.setData(QtCore.Qt.ItemDataRole.UserRole, assignment)
+        self.assignment_table.cellWidget(row, 4).setToolTip(
+            "Search: " + self._bounds_summary(axes, assignment["search_bounds"], new_unit) +
+            "\nIntegration: " + self._bounds_summary(axes, assignment["integration_bounds"], new_unit))
+        self._batch_template_edited()
+
+    @classmethod
+    def _convert_axis_value(cls, axis, value, source_unit, target_unit):
+        if source_unit == target_unit:
+            return value
+        def to_hz(number, unit):
+            if unit == "Hz":
+                return number
+            if unit == "points":
+                return float(axis["start"]) + number * float(axis["step"])
+            obs, reference_ppm = axis.get("observation_mhz"), axis.get("reference_ppm")
+            if obs is None or reference_ppm is None:
+                raise NMRNextError("UNAVAILABLE_COORDINATES", f"{axis.get('nucleus') or axis['id']} has no ppm calibration")
+            return float(axis.get("reference_hz") or 0.0) + (number - float(reference_ppm)) * float(obs)
+        hz = to_hz(float(value), source_unit)
+        if target_unit == "Hz":
+            return hz
+        if target_unit == "points":
+            return (hz - float(axis["start"])) / float(axis["step"])
+        obs, reference_ppm = axis.get("observation_mhz"), axis.get("reference_ppm")
+        if obs is None or reference_ppm is None:
+            raise NMRNextError("UNAVAILABLE_COORDINATES", f"{axis.get('nucleus') or axis['id']} has no ppm calibration")
+        return float(reference_ppm) + (hz - float(axis.get("reference_hz") or 0.0)) / float(obs)
+
+    def _batch_assignment_region_dialog(self, row, column):
+        if column == 4:
+            self._batch_edit_assignment_bounds(row)
+
+    def _batch_bounds_dialog(self, row, assignment, axes, unit):
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("Edit fixed search and integration regions")
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.addWidget(QtWidgets.QLabel("Bounds are inclusive. They are not shifted to follow detected peaks."))
+        form = QtWidgets.QFormLayout()
+        controls = {}
+        for axis in axes:
+            title = axis.get("nucleus") or axis["id"]
+            group = QtWidgets.QGroupBox(f"{title} ({axis['id']})")
+            grid = QtWidgets.QGridLayout(group)
+            coordinates = self._axis_coordinate_values(axis, unit)
+            maximum = max(float(np.max(np.abs(coordinates))), float(np.ptp(coordinates)), 1.0) * 2
+            fields = {}
+            for index, (key, name) in enumerate((("search_bounds", "Search"),
+                                                   ("integration_bounds", "Integration"))):
+                grid.addWidget(QtWidgets.QLabel(name), index, 0)
+                values = []
+                for side, label in enumerate(("Start", "End")):
+                    box = QtWidgets.QDoubleSpinBox()
+                    box.setRange(float(np.min(coordinates)) - maximum,
+                                 float(np.max(coordinates)) + maximum)
+                    box.setDecimals(6)
+                    box.setValue(float(assignment[key][axis["id"]][side]))
+                    grid.addWidget(box, index, side + 1)
+                    values.append(box)
+                fields[key] = values
+            controls[axis["id"]] = fields
+            form.addRow(group)
+        layout.addLayout(form)
+        actions = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Save |
+                                             QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        actions.accepted.connect(dialog.accept)
+        actions.rejected.connect(dialog.reject)
+        layout.addWidget(actions)
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return
+        updated = deepcopy(assignment)
+        for axis_id, fields in controls.items():
+            for key, pair in fields.items():
+                low, high = pair[0].value(), pair[1].value()
+                if low == high:
+                    self._show_error(NMRNextError("INVALID_ASSIGNMENT_TEMPLATE", "Each region needs nonzero width."))
+                    return
+                updated[key][axis_id] = [low, high]
+        identity = self.assignment_table.item(row, 0)
+        identity.setData(QtCore.Qt.ItemDataRole.UserRole, updated)
+        self.assignment_table.cellWidget(row, 4).setToolTip(
+            "Search: " + self._bounds_summary(axes, updated["search_bounds"], unit) +
+            "\nIntegration: " + self._bounds_summary(axes, updated["integration_bounds"], unit))
+        self._batch_template_edited()
+
+    def _batch_remove_assignment(self):
+        rows = sorted({index.row() for index in self.assignment_table.selectedIndexes()}, reverse=True)
+        for row in rows:
+            self.assignment_table.removeRow(row)
+        if rows:
+            self._batch_template_edited()
+
+    def _batch_template_edited(self, *_args):
+        self._batch_template_dirty = True
+        self._batch_plan_result = None
+        self._batch_csv_path = None
+        self._batch_manifest_dirty = True
+        if hasattr(self, "batch_template_label"):
+            self.batch_template_label.setText("Template edits are not saved. Save a new template before planning.")
+        self._refresh_buttons()
+
+    def _batch_template_record(self):
+        reference = (deepcopy(self._batch_template["reference"]) if self._batch_template is not None
+                     else deepcopy(self._batch_draft_reference))
+        if reference is None:
+            raise NMRNextError("MISSING_TEMPLATE_REFERENCE", "Label the current spectrum or open a template first")
+        assignments = []
+        for row in range(self.assignment_table.rowCount()):
+            identity = self.assignment_table.item(row, 0)
+            label = self.assignment_table.item(row, 1)
+            if identity is None or label is None:
+                raise NMRNextError("INVALID_ASSIGNMENT_TEMPLATE", f"Assignment row {row + 1} is incomplete")
+            assignment = deepcopy(identity.data(QtCore.Qt.ItemDataRole.UserRole))
+            assignment["label"] = label.text().strip()
+            assignment["sign"] = self.assignment_table.cellWidget(row, 2).currentText()
+            assignment["unit"] = self.assignment_table.cellWidget(row, 3).currentText()
+            assignment["threshold"] = self.assignment_table.cellWidget(row, 5).value()
+            if not assignment["label"]:
+                raise NMRNextError("INVALID_ASSIGNMENT_TEMPLATE", f"Assignment row {row + 1} needs a label")
+            assignments.append(assignment)
+        channel = self.assignment_channel_combo.currentData()
+        if type(channel) is not int:
+            raise NMRNextError("INVALID_CHANNEL", "Choose an analysis component")
+        base = deepcopy(self._batch_template) if self._batch_template is not None else {
+            "schema_version": "1", "kind": "assignment_template", "reference": reference,
+            "assignments": []}
+        base["analysis_channel"] = channel
+        base["assignments"] = assignments
+        return base
+
+    def _batch_save_template_dialog(self):
+        try:
+            record = self._batch_template_record()
+        except (NMRNextError, ValueError) as exc:
+            self._show_error(exc if isinstance(exc, Exception) else NMRNextError("INVALID_ASSIGNMENT_TEMPLATE", str(exc)))
+            return
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save assignment template", "", "JSON (*.json)")
+        if not path:
+            return
+        from .assignments import save_assignment_template
+        target = Path(path).expanduser().resolve()
+        try:
+            saved = save_assignment_template(record, target)
+        except Exception as exc:
+            self._show_error(exc)
+            return
+        self._batch_accept_template(saved, target)
+
+    def _batch_open_template_dialog(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Open assignment template", "", "JSON (*.json);;All files (*)")
+        if not path:
+            return
+        from .assignments import load_assignment_template
+        target = Path(path)
+        self._start_job(lambda: load_assignment_template(target),
+                        lambda template: self._batch_accept_template(template, target),
+                        "Opening assignment template…")
+
+    def _batch_accept_template(self, template, path):
+        self._batch_template = deepcopy(template)
+        self._batch_template_path = Path(path).resolve()
+        self._batch_draft_reference = None
+        self._batch_draft_digest = None
+        self._batch_template_dirty = False
+        self.batch_include_labels_check.setChecked(True)
+        self.assignment_table.blockSignals(True)
+        self.assignment_channel_combo.blockSignals(True)
+        try:
+            self.assignment_table.setRowCount(0)
+            axes = template["reference"]["axes"]
+            for assignment in template["assignments"]:
+                self._batch_add_assignment_row(assignment, axes)
+            self._set_assignment_channels(template["reference"])
+            self.assignment_channel_combo.setCurrentIndex(template["analysis_channel"])
+        finally:
+            self.assignment_table.blockSignals(False)
+            self.assignment_channel_combo.blockSignals(False)
+        self.batch_template_label.setText(
+            f"Reference: {self._batch_template_path} · {len(template['assignments'])} labels · component {template['analysis_channel']}")
+        self._batch_manifest_dirty = True
+        self._batch_plan_result = None
+        self._batch_csv_path = None
+        self._batch_update_item_axis_maps()
+        self._refresh_buttons()
+
+    def _set_assignment_channels(self, reference):
+        self.assignment_channel_combo.blockSignals(True)
+        try:
+            self.assignment_channel_combo.clear()
+            count = 2 ** len(reference["complex_axes"])
+            for channel in range(count):
+                self.assignment_channel_combo.addItem(f"Component {channel}", channel)
+        finally:
+            self.assignment_channel_combo.blockSignals(False)
+
+    def _batch_update_item_axis_maps(self):
+        reference = (self._batch_template["reference"] if self._batch_template is not None
+                     else self._batch_draft_reference)
+        if reference is None:
+            return
+        for row in range(self.batch_items_table.rowCount()):
+            cell = self.batch_items_table.item(row, 3)
+            if cell is not None and self.batch_include_labels_check.isChecked():
+                cell.setData(QtCore.Qt.ItemDataRole.UserRole, {})
+                cell.setText("Map required")
+
+    def _batch_labels_toggled(self, enabled):
+        if enabled:
+            self._batch_update_item_axis_maps()
+        else:
+            for row in range(self.batch_items_table.rowCount()):
+                cell = self.batch_items_table.item(row, 3)
+                if cell is not None:
+                    cell.setData(QtCore.Qt.ItemDataRole.UserRole, {})
+                    cell.setText("No labels")
+        self._batch_items_changed()
+
+    def _axis_map_summary(self, axis_map):
+        return ", ".join(f"{ref} → {target}" for ref, target in sorted(axis_map.items())) or "No labels"
+
+    def _batch_map_selected_item(self):
+        rows = sorted({index.row() for index in self.batch_items_table.selectedIndexes()})
+        if not rows:
+            self._set_status("Select one input row to map its axes.")
+            return
+        self._batch_map_item_dialog(rows[0], 3)
+
+    def _batch_map_item_dialog(self, row, column):
+        if column != 3 or not 0 <= row < self.batch_items_table.rowCount():
+            return
+        if self._batch_template is None and self._batch_draft_reference is None:
+            self._set_status("Open or create an assignment template before mapping axes.")
+            return
+        path_item = self.batch_items_table.item(row, 1)
+        if path_item is None:
+            return
+        source = Path(path_item.data(QtCore.Qt.ItemDataRole.UserRole) or path_item.text())
+        def inspect():
+            from .io import describe_dataset
+            return describe_dataset(source)
+        self._start_job(inspect, lambda header: self._batch_show_axis_map_dialog(row, header),
+                        "Reading input headers for axis mapping…")
+
+    def _batch_show_axis_map_dialog(self, row, header):
+        if row >= self.batch_items_table.rowCount() or (self._batch_template is None and self._batch_draft_reference is None):
+            return
+        reference = (self._batch_template["reference"] if self._batch_template is not None
+                     else self._batch_draft_reference)
+        reference_axes = reference["axes"]
+        target_axes = list(header.axes)
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle("Map assignment axes for this input")
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.addWidget(QtWidgets.QLabel("Map each template axis to one distinct input axis. No remapping is inferred."))
+        form = QtWidgets.QFormLayout()
+        choices = {}
+        old_map = self.batch_items_table.item(row, 3).data(QtCore.Qt.ItemDataRole.UserRole) or {}
+        for reference in reference_axes:
+            combo = QtWidgets.QComboBox()
+            for axis in target_axes:
+                combo.addItem(f"{axis.nucleus or axis.id} · {axis.id}", axis.id)
+            if reference["id"] in old_map:
+                index = combo.findData(old_map[reference["id"]])
+            else:
+                index = combo.findData(reference["id"])
+            if index >= 0:
+                combo.setCurrentIndex(index)
+            form.addRow(f"{reference.get('nucleus') or reference['id']} ({reference['id']})", combo)
+            choices[reference["id"]] = combo
+        layout.addLayout(form)
+        buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Save |
+                                             QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return
+        mapped = {ref: combo.currentData() for ref, combo in choices.items()}
+        if len(set(mapped.values())) != len(mapped):
+            self._show_error(NMRNextError("INVALID_AXIS_MAP", "Each template axis must map to a distinct input axis."))
+            return
+        cell = self.batch_items_table.item(row, 3)
+        cell.setData(QtCore.Qt.ItemDataRole.UserRole, mapped)
+        cell.setText(self._axis_map_summary(mapped))
+        self._batch_items_changed()
+
+    def _batch_choose_output_directory(self):
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose new native output folder")
+        if path:
+            self.batch_output_directory_edit.setText(path)
+
+    def _batch_add_files_dialog(self):
+        paths, _ = QtWidgets.QFileDialog.getOpenFileNames(
+            self, "Add processed spectra", "",
+            "NMR spectra (*.nmrh5 *.h5 *.ft1 *.ft2 *.ucsf);;All files (*)")
+        if paths:
+            self._batch_add_input_paths(paths)
+
+    def _batch_add_folder_dialog(self):
+        path = QtWidgets.QFileDialog.getExistingDirectory(self, "Add supported acquisition folder")
+        if path:
+            self._batch_add_input_paths([path])
+
+    def _batch_add_input_paths(self, paths):
+        output_dir = Path(self.batch_output_directory_edit.text()).expanduser() if self.batch_output_directory_edit.text().strip() else None
+        self.batch_items_table.blockSignals(True)
+        try:
+            for raw_path in paths:
+                row = self.batch_items_table.rowCount()
+                existing = {self.batch_items_table.item(i, 0).text()
+                            for i in range(self.batch_items_table.rowCount())
+                            if self.batch_items_table.item(i, 0) is not None}
+                counter = self._batch_next_item_number
+                item_id = f"item-{counter:04d}"
+                while item_id in existing:
+                    counter += 1
+                    item_id = f"item-{counter:04d}"
+                self._batch_next_item_number = counter + 1
+                source = str(Path(raw_path).expanduser().resolve())
+                output = (str((output_dir / f"{item_id}.nmrh5").resolve()) if output_dir else "")
+                self.batch_items_table.insertRow(row)
+                values = (item_id, Path(raw_path).name, Path(output).name if output else "",
+                          "Map required" if self.batch_include_labels_check.isChecked() else "No labels", "Ready")
+                for column, value in enumerate(values):
+                    cell = QtWidgets.QTableWidgetItem(value)
+                    cell.setFlags(cell.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
+                    if column == 3:
+                        cell.setData(QtCore.Qt.ItemDataRole.UserRole, {})
+                    elif column == 1:
+                        cell.setData(QtCore.Qt.ItemDataRole.UserRole, source)
+                        cell.setToolTip(source)
+                    elif column == 2:
+                        cell.setData(QtCore.Qt.ItemDataRole.UserRole, output)
+                        cell.setToolTip(output)
+                    self.batch_items_table.setItem(row, column, cell)
+        finally:
+            self.batch_items_table.blockSignals(False)
+        self._batch_items_changed()
+
+    def _batch_remove_selected_items(self):
+        rows = sorted({index.row() for index in self.batch_items_table.selectedIndexes()}, reverse=True)
+        self.batch_items_table.blockSignals(True)
+        try:
+            for row in rows:
+                self.batch_items_table.removeRow(row)
+        finally:
+            self.batch_items_table.blockSignals(False)
+        if rows:
+            self._batch_items_changed()
+
+    def _batch_items_changed(self, *_args):
+        self._batch_manifest_dirty = True
+        self._batch_plan_result = None
+        self._batch_csv_path = None
+        if hasattr(self, "batch_manifest_label") and self._batch_manifest_path is not None:
+            self.batch_manifest_label.setText("Manifest edits are not saved. Save a new manifest before planning.")
+        self._refresh_buttons()
+
+    def _batch_processing_mode_changed(self, *_args):
+        mode = self.batch_processing_mode.currentData()
+        self._batch_pipe_script = None
+        self._batch_capture_current_applied = mode == "applied"
+        self._batch_preserve_loaded_settings = False
+        if mode == "copy":
+            self._batch_operations = []
+            self._batch_backend = self.backend_combo.currentData()
+            self._batch_threads = 1
+            self._batch_memory_bytes = self.memory_spin.value() * 1024**2
+            self.batch_recipe_label.setText(
+                f"No processing: input values and quadratures are copied. Saved backend/memory: {self._batch_backend}, "
+                f"{self._batch_memory_bytes / 1024**2:g} MiB.")
+        elif mode == "applied":
+            if self.last_plan is None or self.last_backend is None or self.last_memory_bytes is None:
+                self._batch_operations = None
+                self._batch_backend = None
+                self._batch_memory_bytes = None
+                self.batch_recipe_label.setText("Apply a recipe in Processing first, then choose this mode.")
+            else:
+                self._batch_operations = deepcopy(self.last_operations)
+                self._batch_backend = self.last_backend
+                self._batch_threads = 1
+                self._batch_memory_bytes = self.last_memory_bytes
+                self.batch_recipe_label.setText(
+                    f"Applied recipe selected · {len(self._batch_operations)} operations · {self._batch_backend} · "
+                    f"{self._batch_memory_bytes / 1024**2:g} MiB. Unapplied edits and previews are excluded.")
+        else:
+            self._batch_operations = None
+            self._batch_backend = self.backend_combo.currentData()
+            self._batch_threads = 1
+            self._batch_memory_bytes = self.memory_spin.value() * 1024**2
+            self.batch_recipe_label.setText("Import supported command text; it is parsed as data and never executed.")
+        self._batch_plan_result = None
+        self._batch_manifest_dirty = True
+        self._batch_csv_path = None
+        self._refresh_buttons()
+
+    def _batch_use_applied_recipe(self):
+        index = self.batch_processing_mode.findData("applied")
+        self.batch_processing_mode.setCurrentIndex(index)
+        if self.batch_processing_mode.currentData() == "applied":
+            self._batch_processing_mode_changed()
+
+    def _batch_import_pipe_script(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Import NMRPipe command file", "", "Command files (*.com *.csh *.txt);;All files (*)")
+        if not path:
+            return
+        from .pipe_script import parse_pipe_script
+        source = Path(path).expanduser().resolve()
+
+        backend = self.backend_combo.currentData()
+        memory_bytes = self.memory_spin.value() * 1024**2
+
+        def parse():
+            with source.open("rb") as stream:
+                raw = stream.read(1024 * 1024 + 1)
+            if len(raw) > 1024 * 1024:
+                raise NMRNextError("PIPE_SCRIPT_TOO_LARGE", "Command text exceeds the 1 MiB input limit")
+            text = raw.decode("utf-8", errors="strict")
+            return parse_pipe_script(text, source_name=str(source))
+
+        def done(parsed):
+            self._batch_pipe_script = source
+            self._batch_operations = None
+            self._batch_backend = backend
+            self._batch_threads = 1
+            self._batch_memory_bytes = memory_bytes
+            self._batch_manifest_dirty = True
+            self._batch_csv_path = None
+            stages = ", ".join(f"{stage['name']}@{stage['line']}" for stage in parsed["stages"])
+            overwrite = " Script requests overwrite; batch outputs remain exclusive." if parsed.get("overwrite_requested") else ""
+            self.batch_recipe_label.setText(
+                f"Parsed {len(parsed['stages'])} data-only stages: {stages}. "
+                f"Input {parsed['input_literal']!r} and output {parsed['output_literal']!r} bind per item.{overwrite}")
+            self._batch_plan_result = None
+            self._refresh_buttons()
+
+        self._start_job(parse, done, "Reading command text; no commands are executed…")
+
+    def _batch_manifest_from_widgets(self):
+        include_labels = self.batch_include_labels_check.isChecked()
+        if include_labels and (self._batch_template_path is None or self._batch_template_dirty):
+            raise NMRNextError("MISSING_ASSIGNMENT_TEMPLATE", "Save or open the label template before applying it")
+        mode = self.batch_processing_mode.currentData()
+        if mode in ("copy", "script") and not self._batch_preserve_loaded_settings:
+            self._batch_backend = self.backend_combo.currentData()
+            self._batch_memory_bytes = self.memory_spin.value() * 1024**2
+            self._batch_threads = 1
+        elif mode == "applied" and self._batch_capture_current_applied and not self._batch_preserve_loaded_settings:
+            if self.last_plan is None or self.last_backend is None or self.last_memory_bytes is None:
+                raise NMRNextError("MISSING_BATCH_RECIPE", "Apply processing first to reuse its exact recipe")
+            self._batch_operations = deepcopy(self.last_operations)
+            self._batch_backend = self.last_backend
+            self._batch_memory_bytes = self.last_memory_bytes
+            self._batch_threads = 1
+        if self._batch_backend is None or self._batch_memory_bytes is None:
+            raise NMRNextError("MISSING_BATCH_RECIPE", "Choose a processing mode with a backend and memory limit")
+        items = []
+        for row in range(self.batch_items_table.rowCount()):
+            cells = [self.batch_items_table.item(row, column) for column in range(4)]
+            if any(cell is None or not cell.text().strip() for cell in cells[:3]):
+                raise NMRNextError("INVALID_BATCH_MANIFEST", f"Input row {row + 1} is incomplete")
+            axis_map = (cells[3].data(QtCore.Qt.ItemDataRole.UserRole) or {}) if include_labels else {}
+            if include_labels:
+                expected = {axis["id"] for axis in self._batch_template["reference"]["axes"]}
+                if set(axis_map) != expected:
+                    raise NMRNextError("INVALID_AXIS_MAP", f"Map axes for input row {row + 1}")
+            item = {"item_id": cells[0].text(),
+                    "input": cells[1].data(QtCore.Qt.ItemDataRole.UserRole) or cells[1].text(),
+                    "output": cells[2].data(QtCore.Qt.ItemDataRole.UserRole) or cells[2].text()}
+            if include_labels or axis_map:
+                item["axis_map"] = axis_map
+            items.append(item)
+        if not items:
+            raise NMRNextError("INVALID_BATCH_MANIFEST", "Add at least one input item")
+        record = {"schema_version": "1", "kind": "batch_manifest", "backend": self._batch_backend,
+                  "threads": self._batch_threads, "memory_bytes": self._batch_memory_bytes, "items": items}
+        if include_labels:
+            record["assignment_template"] = str(self._batch_template_path)
+        if mode == "script":
+            if self._batch_pipe_script is None:
+                raise NMRNextError("MISSING_BATCH_RECIPE", "Import a supported command file first")
+            record["pipe_script"] = str(self._batch_pipe_script)
+        else:
+            record["operations"] = deepcopy(self._batch_operations)
+        return record
+
+    def _batch_save_manifest_dialog(self):
+        try:
+            manifest = self._batch_manifest_from_widgets()
+        except NMRNextError as exc:
+            self._show_error(exc)
+            return
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save new batch manifest", "", "JSON (*.json)")
+        if not path:
+            return
+        from .batch import save_batch_manifest
+        target = Path(path).expanduser().resolve()
+        try:
+            saved = save_batch_manifest(manifest, target)
+        except Exception as exc:
+            self._show_error(exc)
+            return
+        self._batch_manifest_path = target
+        self._batch_manifest_snapshot = deepcopy(saved)
+        self._batch_manifest_dirty = False
+        self._batch_plan_result = None
+        self._batch_csv_path = None
+        self.batch_manifest_label.setText(str(target))
+        self._refresh_buttons()
+
+    def _batch_open_manifest_dialog(self):
+        path, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Open batch manifest", "", "JSON (*.json);;All files (*)")
+        if not path:
+            return
+        from .batch import load_batch_manifest
+        target = Path(path).expanduser().resolve()
+
+        def load():
+            manifest = load_batch_manifest(target)
+            if not manifest.get("assignment_template"):
+                return manifest, None, None
+            from .assignments import load_assignment_template
+            template_path = Path(manifest["assignment_template"])
+            if not template_path.is_absolute():
+                template_path = target.parent / template_path
+            template_path = template_path.resolve()
+            return manifest, load_assignment_template(template_path), template_path
+
+        self._start_job(load, lambda result: self._batch_accept_manifest(target, *result),
+                        "Opening batch manifest and template…")
+
+    def _batch_accept_manifest(self, path, manifest, template, template_path):
+        self._batch_manifest_path = Path(path)
+        self._batch_manifest_snapshot = deepcopy(manifest)
+        self._batch_manifest_dirty = False
+        self._batch_plan_result = None
+        self._batch_csv_path = None
+        self._batch_backend = manifest["backend"]
+        self._batch_threads = manifest["threads"]
+        self._batch_memory_bytes = manifest["memory_bytes"]
+        self._batch_operations = deepcopy(manifest.get("operations"))
+        self._batch_capture_current_applied = False
+        self._batch_pipe_script = None
+        if template is not None:
+            self._batch_accept_template(template, template_path)
+            self.batch_include_labels_check.setChecked(True)
+        else:
+            self._batch_template = None
+            self._batch_template_path = None
+            self._batch_draft_reference = None
+            self._batch_draft_digest = None
+            self._batch_template_dirty = False
+            self.batch_include_labels_check.setChecked(False)
+            self.assignment_table.setRowCount(0)
+            self.batch_template_label.setText("No label template selected. Processing-only batches keep all quadratures.")
+        if "pipe_script" in manifest:
+            mode = "script"
+        elif manifest.get("operations") == []:
+            mode = "copy"
+        else:
+            mode = "applied"
+        mode_index = self.batch_processing_mode.findData(mode)
+        self.batch_processing_mode.blockSignals(True)
+        self.batch_processing_mode.setCurrentIndex(max(0, mode_index))
+        self.batch_processing_mode.blockSignals(False)
+        self.batch_items_table.blockSignals(True)
+        try:
+            self.batch_items_table.setRowCount(0)
+            for row, item in enumerate(manifest["items"]):
+                self.batch_items_table.insertRow(row)
+                axis_map = item.get("axis_map", {})
+                map_text = self._axis_map_summary(axis_map) if axis_map else (
+                    "Map required" if template is not None else "No labels")
+                values = (item["item_id"], Path(item["input"]).name, Path(item["output"]).name, map_text, "Ready")
+                for column, value in enumerate(values):
+                    cell = QtWidgets.QTableWidgetItem(value)
+                    cell.setFlags(cell.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
+                    if column == 3:
+                        cell.setData(QtCore.Qt.ItemDataRole.UserRole, deepcopy(axis_map))
+                    elif column == 1:
+                        cell.setData(QtCore.Qt.ItemDataRole.UserRole, item["input"])
+                        cell.setToolTip(item["input"])
+                    elif column == 2:
+                        cell.setData(QtCore.Qt.ItemDataRole.UserRole, item["output"])
+                        cell.setToolTip(item["output"])
+                    self.batch_items_table.setItem(row, column, cell)
+        finally:
+            self.batch_items_table.blockSignals(False)
+        outputs = [Path(item["output"]) for item in manifest["items"]]
+        if outputs:
+            self.batch_output_directory_edit.setText(str(outputs[0].parent))
+        self._batch_manifest_dirty = False
+        self._batch_manifest_snapshot = deepcopy(manifest)
+        if "pipe_script" in manifest:
+            script = Path(manifest["pipe_script"])
+            if not script.is_absolute():
+                script = Path(path).parent / script
+            self._batch_pipe_script = script.resolve()
+            self._batch_operations = None
+            self.batch_recipe_label.setText(f"NMRPipe command text: {self._batch_pipe_script}")
+        else:
+            count = len(manifest["operations"])
+            self.batch_recipe_label.setText(
+                ("No processing · all input quadratures are copied. " if not count else "Saved processing · ")
+                + f"{count} operation(s) · {self._batch_backend} · {self._batch_memory_bytes / 1024**2:g} MiB")
+        self.batch_manifest_label.setText(str(path))
+        self._batch_preserve_loaded_settings = True
+        self._refresh_buttons()
+
+    def _batch_plan_async(self):
+        if self._busy or self._batch_manifest_path is None or self._batch_manifest_dirty:
+            return
+        from .batch import load_batch_manifest, plan_batch
+        path = Path(self._batch_manifest_path)
+        snapshot = deepcopy(self._batch_manifest_snapshot)
+        ticket = self._batch_progress_ticket + 1
+        self._batch_progress_ticket = ticket
+        self._batch_plan_result = None
+
+        def work():
+            if load_batch_manifest(path) != snapshot:
+                raise NMRNextError("BATCH_MANIFEST_CHANGED", "Saved manifest changed after it was opened")
+            return plan_batch(path)
+
+        def done(plan):
+            if ticket != self._batch_progress_ticket:
+                return
+            self._batch_plan_result = plan
+            self.batch_progress_label.setText(
+                f"Plan ready · {len(plan['items'])} items · run {plan['run_sha256'][:12]}")
+            self._refresh_buttons()
+
+        self._start_job(work, done, "Planning every batch input…")
+
+    def _batch_run_async(self):
+        if (self._busy or self._batch_manifest_path is None or self._batch_manifest_dirty or
+                self._batch_plan_result is None or
+                (self.batch_include_labels_check.isChecked() and self._batch_template_dirty)):
+            return
+        from .batch import load_batch_manifest, run_batch
+        path = Path(self._batch_manifest_path)
+        snapshot = deepcopy(self._batch_manifest_snapshot)
+        resume = self.batch_resume_check.isChecked()
+        continue_on_error = self.batch_continue_check.isChecked()
+        stop_event = threading.Event()
+        ticket = self._batch_progress_ticket + 1
+        self._batch_progress_ticket = ticket
+        self._batch_stop_event = stop_event
+        self._batch_running = True
+        self._batch_run_returned = False
+        self._batch_progress_states = {}
+        progress_states = {}
+        progress_lock = threading.Lock()
+        for row in range(self.batch_items_table.rowCount()):
+            self._batch_set_item_status(row, "queued")
+        bridge = self._batch_progress_bridge
+
+        def progress(snapshot_value):
+            event = MappingProxyType(dict(snapshot_value))
+            with progress_lock:
+                progress_states[event["item_id"]] = event["state"]
+            bridge.progressed.emit((ticket, event))
+
+        def work():
+            if load_batch_manifest(path) != snapshot:
+                raise NMRNextError("BATCH_MANIFEST_CHANGED", "Saved manifest changed after it was planned")
+            result = run_batch(path, resume=resume, continue_on_error=continue_on_error,
+                               should_stop=stop_event.is_set, on_progress=progress)
+            summaries = self._batch_read_status_csv(Path(result["csv_path"]))
+            with progress_lock:
+                final_states = dict(progress_states)
+            return result, summaries, final_states
+
+        def done(value):
+            if ticket != self._batch_progress_ticket:
+                return
+            result, summaries, final_states = value
+            self._batch_run_returned = True
+            self._batch_progress_states = final_states
+            self._batch_running = False
+            self._batch_stop_event = None
+            self._batch_csv_path = Path(result["csv_path"])
+            for row in range(self.batch_items_table.rowCount()):
+                item_id = self.batch_items_table.item(row, 0).text()
+                summary = summaries.get(item_id, {})
+                counts = summary.get("counts", {})
+                status = final_states.get(item_id)
+                if status is None:
+                    if counts.get("not_run"):
+                        status = "not_run"
+                    elif counts.get("failed"):
+                        status = "failed"
+                    else:
+                        status = "completed"
+                details = ", ".join(f"{key}={counts[key]}" for key in sorted(counts))
+                label = status + (f" · {details}" if details else "")
+                self._batch_set_item_status(row, label, summary.get("error"))
+            self.batch_progress_label.setText(
+                f"Batch finished · completed {result['completed']} · skipped {result['skipped']} · "
+                f"failed {result['failed']} · not run {result['not_run']}"
+                + (f" · {result['stop_reason']}" if result.get("stop_reason") else ""))
+            self._refresh_buttons()
+
+        self._start_job(work, done, "Applying batch sequentially…")
+
+    @staticmethod
+    def _batch_read_status_csv(path):
+        summaries = {}
+        with Path(path).open("r", encoding="utf-8-sig", newline="") as stream:
+            for row in csv.DictReader(stream):
+                identity = row.get("item_id", "")
+                status = row.get("status", "unknown")
+                summary = summaries.setdefault(identity, {"counts": {}, "error": None})
+                counts = summary["counts"]
+                counts[status] = counts.get(status, 0) + 1
+                if row.get("error") and summary["error"] is None:
+                    try:
+                        error = json.loads(row["error"])
+                        if isinstance(error, dict):
+                            summary["error"] = f"{error.get('code', 'ERROR')}: {error.get('message', str(error))}"
+                        else:
+                            summary["error"] = str(error)
+                    except ValueError:
+                        summary["error"] = row["error"]
+        return summaries
+
+    def _batch_set_item_status(self, row, status, error=None):
+        self.batch_items_table.blockSignals(True)
+        try:
+            cell = self.batch_items_table.item(row, 4)
+            if cell is None:
+                cell = QtWidgets.QTableWidgetItem()
+                cell.setFlags(cell.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
+                self.batch_items_table.setItem(row, 4, cell)
+            cell.setText(status)
+            cell.setToolTip(error or "")
+        finally:
+            self.batch_items_table.blockSignals(False)
+
+    @QtCore.Slot(object)
+    def _on_batch_progress(self, envelope):
+        if not self._batch_running:
+            return
+        ticket, event = envelope
+        if ticket != self._batch_progress_ticket or not isinstance(event, MappingProxyType):
+            return
+        item_id = event["item_id"]
+        self._batch_progress_states[item_id] = event["state"]
+        for row in range(self.batch_items_table.rowCount()):
+            if self.batch_items_table.item(row, 0).text() == item_id:
+                self._batch_set_item_status(row, event["state"])
+                break
+        self.batch_progress_label.setText(
+            f"{event['state']} · {event['item_id']} · {event['completed']}/{event['total']}")
+
+    def _batch_request_stop(self):
+        if self._batch_running and self._batch_stop_event is not None:
+            self._batch_stop_event.set()
+            self.batch_progress_label.setText("Stop requested; the current spectrum will finish first.")
+
+    def _batch_export_csv_dialog(self):
+        if self._batch_csv_path is None or not self._batch_csv_path.is_file():
+            return
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(self, "Export batch results CSV", "", "CSV (*.csv)")
+        if not path:
+            return
+        source, target = self._batch_csv_path, Path(path).expanduser().resolve()
+        if source.resolve() == target:
+            self._set_status("Choose a different CSV destination; batch results are retained.", error=True)
+            return
+        try:
+            with source.open("rb") as incoming, target.open("xb") as outgoing:
+                shutil.copyfileobj(incoming, outgoing)
+                outgoing.flush()
+                os.fsync(outgoing.fileno())
+        except FileExistsError:
+            self._set_status("CSV destination already exists; choose a new path.", error=True)
+            return
+        except OSError as exc:
+            self._show_error(exc)
+            return
+        self._set_status(f"Exported batch results to {target}")
 
     def _analysis_panel(self):
         panel = QtWidgets.QWidget()
@@ -1104,6 +2332,12 @@ class Workbench(QtWidgets.QMainWindow):
         if self._thread is not None:
             self._thread.wait()
             self._thread.deleteLater()
+        if self._batch_running and not self._batch_run_returned:
+            self._batch_running = False
+            self._batch_stop_event = None
+            for row in range(self.batch_items_table.rowCount()):
+                if self.batch_items_table.item(row, 4).text() == "queued":
+                    self._batch_set_item_status(row, "not processed · batch preflight failed")
         self._thread = None
         self._worker = None
         self._on_success = None
@@ -1700,6 +2934,53 @@ class Workbench(QtWidgets.QMainWindow):
                        and set(self.current.complex_axes) == {a.id for a in self.current.axes})
         self.autophase_button.setEnabled(phase_ready)
         self.analysis_export_button.setEnabled(can_analyze and bool(self.analysis_reports))
+        batch_ready = (has and self.preview is None and len(self.current.axes) in (1, 2)
+                       and all(axis.role == "spectral" and axis.domain == "frequency"
+                               for axis in self.current.axes))
+        batch_idle = not self._busy
+        self.batch_open_template_button.setEnabled(batch_idle)
+        self.batch_open_manifest_button.setEnabled(batch_idle)
+        self.batch_processing_mode.setEnabled(batch_idle)
+        self.batch_import_script_button.setEnabled(batch_idle and self.batch_processing_mode.currentData() == "script")
+        self.batch_use_applied_recipe_button.setEnabled(False)
+        self.batch_add_files_button.setEnabled(batch_idle)
+        self.batch_add_folder_button.setEnabled(batch_idle)
+        self.batch_choose_output_button.setEnabled(batch_idle)
+        self.batch_remove_item_button.setEnabled(batch_idle and self.batch_items_table.rowCount() > 0)
+        self.batch_map_axes_button.setEnabled(batch_idle and self.batch_include_labels_check.isChecked()
+                                              and self.batch_items_table.rowCount() > 0)
+        self.batch_items_table.setEnabled(batch_idle)
+        self.batch_output_directory_edit.setEnabled(batch_idle)
+        self.batch_include_labels_check.setEnabled(batch_idle)
+        self.assignment_channel_combo.setEnabled(batch_idle and batch_ready)
+        self.assignment_table.setEnabled(batch_idle)
+        self.batch_label_button.setEnabled(batch_idle and batch_ready)
+        self.batch_new_template_button.setEnabled(batch_idle and batch_ready)
+        self.batch_remove_assignment_button.setEnabled(
+            batch_idle and self.assignment_table.rowCount() > 0)
+        self.batch_save_template_button.setEnabled(
+            batch_idle and self.assignment_table.rowCount() > 0
+            and (self._batch_template is not None or self._batch_draft_reference is not None))
+        self.batch_template_label.setEnabled(batch_idle)
+        recipe_ready = (self._batch_pipe_script is not None if self.batch_processing_mode.currentData() == "script"
+                        else self._batch_operations is not None)
+        labels_ready = (not self.batch_include_labels_check.isChecked() or
+                        (self._batch_template_path is not None and not self._batch_template_dirty))
+        self.batch_save_manifest_button.setEnabled(batch_idle and labels_ready and recipe_ready
+                                                   and self._batch_backend is not None
+                                                   and self._batch_memory_bytes is not None
+                                                   and self.batch_items_table.rowCount() > 0)
+        can_plan_batch = (batch_idle and self._batch_manifest_path is not None
+                          and not self._batch_manifest_dirty)
+        self.batch_plan_button.setEnabled(can_plan_batch)
+        self.batch_apply_button.setEnabled(can_plan_batch and self._batch_plan_result is not None
+                                           and (not self.batch_include_labels_check.isChecked()
+                                                or not self._batch_template_dirty))
+        self.batch_stop_button.setEnabled(self._batch_running and self._batch_stop_event is not None)
+        self.batch_export_csv_button.setEnabled(
+            batch_idle and self._batch_csv_path is not None and self._batch_csv_path.is_file())
+        for control in (self.batch_resume_check, self.batch_continue_check):
+            control.setEnabled(batch_idle)
         self._refresh_visible_region_button()
 
     def _refresh_visible_region_button(self):
