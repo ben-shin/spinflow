@@ -23,6 +23,13 @@ workflows:
     loss_policy: explicit-per-code-acknowledgment
     independent_check: test-only-header-and-payload-decoder
     established_external_consumer: unverified
+    batch_100_processed_real_plane:
+      status: experimental
+      evidence: docs/validation/batch-scale-100-2026-11-09.md
+      scope: "100 distinct items from one already processed NMRPipe real F32 plane (2048 x 4096, 32 MiB); two byte-identical input copies; native output; operations []; channel 0"
+      result: "100 retained native outputs; all stored samples and qualified records exact; 100 ambiguous rows with four candidates and null heights/volumes; 102 sealed generations; max one active item"
+      memory_observation: "210516 KiB peak RSS over entire worker lifetime, diagnostic only; no aggregate or improvement claim"
+      limits: "Prior legacy projection lost full quadratures and some original annotations, metadata and provenance; not 100 acquisitions, real measured volumes, 3D/4D capacity or human acceptance"
   - id: bruker-raw-1d-inspection
     status: experimental
     profile: controlled-acqus-fid
@@ -80,6 +87,11 @@ workflows:
     blockers: [broader-permitted-real-fixtures, quantitative-phase-and-integral-reference, independent-export-consumer, nmrpipe-parity]
   - id: legacy-script-migration
     status: unsupported
+    guarded_literal_subset_status: experimental
+    guarded_literal_subset: "EM, SP, explicit-size ZF and zero-only PS on supported headers; strict literal parsing, native fresh output and saved recipe"
+    refused: [FT, TP, nonzero-PS, -di, unqualified-headers, shell-execution, vendor-converters]
+    evidence: [docs/batch-workflows.md, tests/test_pipe_script.py, tests/cli/test_batch_cli.py]
+    full_nmrpipe_script_migration: unsupported
   - id: complete-native-nmrpipe-suite
     status: unsupported
     inventory: "Seed preserved in functions.yaml; exact installation inventory not frozen"
