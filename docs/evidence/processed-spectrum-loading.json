@@ -1,0 +1,847 @@
+{
+  "task": "Load one existing processed real-only 2D NMRPipe-format file into each public Python reader's native return type.",
+  "arms": {
+    "A": "SpinFlow 0.3.0b3 immutable Dataset",
+    "B": "nmrglue 0.12 header dictionary and mutable array"
+  },
+  "system": {
+    "architecture": "x86_64 Linux VM",
+    "cpu_affinity": [
+      0
+    ],
+    "numerical_pool_threads": 1,
+    "guest_RAM_bytes": 4294967296,
+    "child_virtual_address_limit_bytes": 2147483648,
+    "python_version": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "installed_versions": {
+      "contourpy": "1.4.0",
+      "pip": "24.0",
+      "fonttools": "4.68.0",
+      "pillow": "13.0.0",
+      "scipy": "1.18.1",
+      "numpy": "2.5.4",
+      "pyqtgraph": "0.14.0",
+      "kiwisolver": "1.5.1",
+      "tzdata": "2026.6",
+      "cycler": "0.12.1",
+      "spinflow": "0.3.0b3",
+      "pyparsing": "3.3.3",
+      "packaging": "26.3",
+      "colorama": "0.4.6",
+      "PySide6_Essentials": "6.12.0",
+      "h5py": "3.16.0",
+      "python-dateutil": "4.0.0",
+      "matplotlib": "3.11.2",
+      "shiboken6": "6.12.0",
+      "nmrglue": "0.12"
+    },
+    "python_sha256": "e50d468e8b0adfb05733f5b87b3cff34829c4a8c1aea50c865aa8bdfe4bb150f",
+    "public_SpinFlow_source": "7598ae53267d743fbd46ba708ed85f5b3478cbeb",
+    "SpinFlow_native_sha256": "811fcb73e59727b13096c453a6a8f57c3e08e52957f9c0425f04363024f97d34",
+    "reader_source_sha256": {
+      "nmrnext/io/__init__.py": "641ee1022bebe8bc9133a178af3a05a2bd1558fae20fd8bd5cf1ba9b11de9237",
+      "nmrnext/io/headers.py": "398dd65f2c7591d6eb452d55835147706bc99097a0870ed664c6aa173e7944b8",
+      "nmrnext/model.py": "2ed3bc1d2e3a596999ac8f973fbe17a2882a71bc994015e269979571e370be74",
+      "nmrglue/fileio/pipe.py": "d41b6a2f71d05414389313ad602942a88d97674976202f262c5325973ae69908",
+      "nmrglue/fileio/fileiobase.py": "2bc4cceacdf5adcaaf97873832ac48f905adf2ed755ec582618f62d250438c25"
+    },
+    "cohort_OS_detail": "The timed cohorts record Linux x86-64, CPU affinity and memory limits. Distribution version, kernel release and processor model were not recorded in the timing records.",
+    "post_run_observation": {
+      "utc": "2026-11-09T14:36:48Z",
+      "os": "Ubuntu 24.04.5 LTS",
+      "kernel": "6.8.0-147-generic",
+      "architecture": "x86_64",
+      "guest_CPU_descriptor": "AMD Ryzen 7 9800X3D 8-Core Processor",
+      "exposed_vCPU": 1,
+      "same_boot_identity_verified_during_cohorts": false,
+      "scope": "Separate observation after timing. The timed cohorts did not record a boot identifier.",
+      "public_safe_projection_sha256": "80c8e4cd2ffea2747c6623fb2a21c36bcf572613d95f8bdce1f894af6bca7771"
+    }
+  },
+  "input": {
+    "file_bytes": 33556480,
+    "file_sha256": "172884f2d6e88e14b1d50b2b458f86690fa55d075ae544f7934a34d14572021d",
+    "shape": [
+      2048,
+      4096
+    ],
+    "stored_dtype": "little-endian float32",
+    "stored_planes": 1,
+    "labels": [
+      "N15",
+      "C13"
+    ],
+    "result_bytes_each": 33554432,
+    "result_sha256": "709b199b07ede1a972092dc22de0c633cff69d95c9d4babecaa00d3909261784",
+    "stored_input_distributed": false,
+    "prior_legacy_export": {
+      "omitted_native_fields": [
+        "axis_annotations",
+        "metadata",
+        "provenance"
+      ],
+      "reader_can_restore_omitted_fields_from_file": false,
+      "conversion_timed": false,
+      "real_projection_predates_timing": true
+    }
+  },
+  "validation": {
+    "outputs": 98,
+    "values_per_output": 8388608,
+    "total_values_compared": 822083584,
+    "samples": "Complete bitwise comparison of every output",
+    "axis_points": [
+      2048,
+      4096
+    ],
+    "previously_qualified_absolute_tolerance_ppm": 2e-05,
+    "qualified_max_abs_deviation_ppm": [
+      5.2641188403868e-06,
+      9.001948086506673e-06
+    ],
+    "per_arm_qualified_metadata_sha256": {
+      "A": "72e93df8f3e265cd25df9ee6e29f72e5c0d4ffc1310275b4f0417513ffb18316",
+      "B": "f0d4969b14d3ec03a843bb78f13c71946b021c5b90a7857e5806b7614c20aad4"
+    }
+  },
+  "method": {
+    "order": [
+      "AB",
+      "BA",
+      "AB",
+      "BA",
+      "AB",
+      "BA",
+      "AB"
+    ],
+    "trials_per_arm_per_cohort": 7,
+    "fresh_and_warm_cohorts_independent": true,
+    "paired_difference": "A - B in seconds",
+    "paired_percent": "100 * (A - B) / A in each pair, then take the median of seven percentages",
+    "MAD": "median absolute deviation about the arm median, unscaled",
+    "worker_RSS": "wait4 peak KiB across the full worker, including startup, imports, read, serialization and writes",
+    "controller_RSS": "historical high-water mark before spawning each worker, separate from worker RSS",
+    "aggregate_cgroup_peak_gate": "UNVERIFIED",
+    "qualified_winner": false
+  },
+  "cohorts": {
+    "fresh": {
+      "workers_in_run_order": [
+        {
+          "pair": 1,
+          "arm": "A",
+          "read_ns_all_calls": [
+            1588575586
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 180760,
+          "controller_pre_spawn_highwater_RSS_KiB": 21400,
+          "whole_command_elapsed_seconds_diagnostic_scope": 2.4182109420071356
+        },
+        {
+          "pair": 1,
+          "arm": "B",
+          "read_ns_all_calls": [
+            430415211
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135492,
+          "controller_pre_spawn_highwater_RSS_KiB": 23508,
+          "whole_command_elapsed_seconds_diagnostic_scope": 0.6184207990008872
+        },
+        {
+          "pair": 2,
+          "arm": "B",
+          "read_ns_all_calls": [
+            570180539
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135248,
+          "controller_pre_spawn_highwater_RSS_KiB": 23512,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.176229794989922
+        },
+        {
+          "pair": 2,
+          "arm": "A",
+          "read_ns_all_calls": [
+            741300333
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 180880,
+          "controller_pre_spawn_highwater_RSS_KiB": 23516,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.2173826770012965
+        },
+        {
+          "pair": 3,
+          "arm": "A",
+          "read_ns_all_calls": [
+            505795792
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 180880,
+          "controller_pre_spawn_highwater_RSS_KiB": 23524,
+          "whole_command_elapsed_seconds_diagnostic_scope": 0.9154932629899122
+        },
+        {
+          "pair": 3,
+          "arm": "B",
+          "read_ns_all_calls": [
+            414108724
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135384,
+          "controller_pre_spawn_highwater_RSS_KiB": 23528,
+          "whole_command_elapsed_seconds_diagnostic_scope": 0.6763601799902972
+        },
+        {
+          "pair": 4,
+          "arm": "B",
+          "read_ns_all_calls": [
+            403890106
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135356,
+          "controller_pre_spawn_highwater_RSS_KiB": 23528,
+          "whole_command_elapsed_seconds_diagnostic_scope": 0.9691468920063926
+        },
+        {
+          "pair": 4,
+          "arm": "A",
+          "read_ns_all_calls": [
+            968761890
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 180748,
+          "controller_pre_spawn_highwater_RSS_KiB": 23528,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.475396495006862
+        },
+        {
+          "pair": 5,
+          "arm": "A",
+          "read_ns_all_calls": [
+            560255731
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 181148,
+          "controller_pre_spawn_highwater_RSS_KiB": 23532,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.1342852230009157
+        },
+        {
+          "pair": 5,
+          "arm": "B",
+          "read_ns_all_calls": [
+            430356518
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135540,
+          "controller_pre_spawn_highwater_RSS_KiB": 23540,
+          "whole_command_elapsed_seconds_diagnostic_scope": 0.7138393240020378
+        },
+        {
+          "pair": 6,
+          "arm": "B",
+          "read_ns_all_calls": [
+            388247227
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135388,
+          "controller_pre_spawn_highwater_RSS_KiB": 23540,
+          "whole_command_elapsed_seconds_diagnostic_scope": 0.8140751930041006
+        },
+        {
+          "pair": 6,
+          "arm": "A",
+          "read_ns_all_calls": [
+            687482718
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 180760,
+          "controller_pre_spawn_highwater_RSS_KiB": 23540,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.173408186994493
+        },
+        {
+          "pair": 7,
+          "arm": "A",
+          "read_ns_all_calls": [
+            710979394
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 180868,
+          "controller_pre_spawn_highwater_RSS_KiB": 23540,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.1146749040053692
+        },
+        {
+          "pair": 7,
+          "arm": "B",
+          "read_ns_all_calls": [
+            380569340
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135208,
+          "controller_pre_spawn_highwater_RSS_KiB": 23548,
+          "whole_command_elapsed_seconds_diagnostic_scope": 0.6191432239866117
+        }
+      ],
+      "metrics": {
+        "first_use_reader": {
+          "unit": "seconds",
+          "A": {
+            "all7": [
+              1.588575586,
+              0.741300333,
+              0.505795792,
+              0.96876189,
+              0.560255731,
+              0.687482718,
+              0.710979394
+            ],
+            "min": 0.505795792,
+            "median": 0.710979394,
+            "max": 1.588575586
+          },
+          "B": {
+            "all7": [
+              0.430415211,
+              0.570180539,
+              0.414108724,
+              0.403890106,
+              0.430356518,
+              0.388247227,
+              0.38056934
+            ],
+            "min": 0.38056934,
+            "median": 0.414108724,
+            "max": 0.570180539
+          },
+          "paired_A_minus_B_seconds_all7": [
+            1.158160375,
+            0.171119794,
+            0.09168706800000004,
+            0.5648717839999999,
+            0.129899213,
+            0.2992354910000001,
+            0.330410054
+          ],
+          "paired_comparator_faster_percent_all7": [
+            72.90558820158024,
+            23.08373359384421,
+            18.12728959991032,
+            58.30862979137215,
+            23.185699995989868,
+            43.526256466566196,
+            46.472521818262436
+          ],
+          "median_paired_delta_seconds": 0.2992354910000001,
+          "median_paired_comparator_faster_percent": 43.526256466566196,
+          "comparator_faster_pairs": 7,
+          "raw_unscaled_MAD_A_seconds": 0.15072366299999995,
+          "raw_unscaled_MAD_B_seconds": 0.016306487000000036,
+          "predeclared_time_conditions_only": true,
+          "qualified_winner": false,
+          "missing_gate": "Matched aggregate cgroup peak median/max UNVERIFIED"
+        },
+        "whole_worker_elapsed_descriptive": {
+          "unit": "seconds",
+          "A": {
+            "all7": [
+              2.4182109420071356,
+              1.2173826770012965,
+              0.9154932629899122,
+              1.475396495006862,
+              1.1342852230009157,
+              1.173408186994493,
+              1.1146749040053692
+            ],
+            "min": 0.9154932629899122,
+            "median": 1.173408186994493,
+            "max": 2.4182109420071356
+          },
+          "B": {
+            "all7": [
+              0.6184207990008872,
+              1.176229794989922,
+              0.6763601799902972,
+              0.9691468920063926,
+              0.7138393240020378,
+              0.8140751930041006,
+              0.6191432239866117
+            ],
+            "min": 0.6184207990008872,
+            "median": 0.7138393240020378,
+            "max": 1.176229794989922
+          },
+          "paired_A_minus_B_seconds_all7": [
+            1.7997901430062484,
+            0.04115288201137446,
+            0.239133082999615,
+            0.5062496030004695,
+            0.42044589899887796,
+            0.3593329939903924,
+            0.49553168001875747
+          ],
+          "paired_comparator_faster_percent_all7": [
+            74.42651555915992,
+            3.3804392644015446,
+            26.1206818954221,
+            34.312783357812904,
+            37.06703485799872,
+            30.623017460852164,
+            44.455264780624375
+          ],
+          "median_paired_delta_seconds": 0.42044589899887796,
+          "median_paired_comparator_faster_percent": 34.312783357812904,
+          "comparator_faster_pairs": 7,
+          "raw_unscaled_MAD_A_seconds": 0.058733282989123836,
+          "raw_unscaled_MAD_B_seconds": 0.09541852500115056,
+          "predeclared_time_conditions_only": true,
+          "qualified_winner": false,
+          "missing_gate": "Matched aggregate cgroup peak median/max UNVERIFIED"
+        },
+        "fresh_dispatch_to_read": {
+          "unit": "seconds",
+          "A": {
+            "all7": [
+              1.802297173,
+              0.804469569,
+              0.568623324,
+              1.037287688,
+              0.632102768,
+              0.754411199,
+              0.773535424
+            ],
+            "min": 0.568623324,
+            "median": 0.773535424,
+            "max": 1.802297173
+          },
+          "B": {
+            "all7": [
+              0.49390075,
+              0.639377844,
+              0.477645664,
+              0.471878298,
+              0.495305075,
+              0.449234238,
+              0.443469774
+            ],
+            "min": 0.443469774,
+            "median": 0.477645664,
+            "max": 0.639377844
+          },
+          "paired_A_minus_B_seconds_all7": [
+            1.308396423,
+            0.16509172500000002,
+            0.09097766000000002,
+            0.5654093899999999,
+            0.136797693,
+            0.30517696099999997,
+            0.33006565
+          ],
+          "paired_comparator_faster_percent_all7": [
+            72.59604257283047,
+            20.521811061817804,
+            15.999635639286582,
+            54.50844510553951,
+            21.64168548618031,
+            40.45233705498054,
+            42.66975238098469
+          ],
+          "median_paired_delta_seconds": 0.30517696099999997,
+          "median_paired_comparator_faster_percent": 40.45233705498054,
+          "comparator_faster_pairs": 7,
+          "raw_unscaled_MAD_A_seconds": 0.141432656,
+          "raw_unscaled_MAD_B_seconds": 0.017659410999999958,
+          "predeclared_time_conditions_only": true,
+          "qualified_winner": false,
+          "missing_gate": "Matched aggregate cgroup peak median/max UNVERIFIED"
+        }
+      }
+    },
+    "warm": {
+      "workers_in_run_order": [
+        {
+          "pair": 1,
+          "arm": "A",
+          "read_ns_all_calls": [
+            678721633,
+            417234962,
+            286217673,
+            30539871,
+            25748312,
+            51927230
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 189136,
+          "controller_pre_spawn_highwater_RSS_KiB": 21404,
+          "whole_command_elapsed_seconds_diagnostic_scope": 3.1018850300024496
+        },
+        {
+          "pair": 1,
+          "arm": "B",
+          "read_ns_all_calls": [
+            375776860,
+            19114732,
+            3878647,
+            11593640,
+            3351941,
+            18179721
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135292,
+          "controller_pre_spawn_highwater_RSS_KiB": 23516,
+          "whole_command_elapsed_seconds_diagnostic_scope": 2.0330538710113615
+        },
+        {
+          "pair": 2,
+          "arm": "B",
+          "read_ns_all_calls": [
+            393992382,
+            3235939,
+            4612256,
+            13651366,
+            8552904,
+            3440242
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135536,
+          "controller_pre_spawn_highwater_RSS_KiB": 23524,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.8737208419915987
+        },
+        {
+          "pair": 2,
+          "arm": "A",
+          "read_ns_all_calls": [
+            543231294,
+            30285867,
+            41057098,
+            42645717,
+            29501058,
+            28400144
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 189108,
+          "controller_pre_spawn_highwater_RSS_KiB": 23532,
+          "whole_command_elapsed_seconds_diagnostic_scope": 2.350629435997689
+        },
+        {
+          "pair": 3,
+          "arm": "A",
+          "read_ns_all_calls": [
+            445919315,
+            65471995,
+            37069050,
+            42719718,
+            30653772,
+            41496104
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 189000,
+          "controller_pre_spawn_highwater_RSS_KiB": 23532,
+          "whole_command_elapsed_seconds_diagnostic_scope": 2.624914375002845
+        },
+        {
+          "pair": 3,
+          "arm": "B",
+          "read_ns_all_calls": [
+            408413460,
+            3286040,
+            3917548,
+            4168751,
+            14948382,
+            3907548
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135404,
+          "controller_pre_spawn_highwater_RSS_KiB": 23536,
+          "whole_command_elapsed_seconds_diagnostic_scope": 3.1228079319989774
+        },
+        {
+          "pair": 4,
+          "arm": "B",
+          "read_ns_all_calls": [
+            380257720,
+            14495676,
+            4063949,
+            19185233,
+            3951948,
+            14185872
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135432,
+          "controller_pre_spawn_highwater_RSS_KiB": 23540,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.9242232789983973
+        },
+        {
+          "pair": 4,
+          "arm": "A",
+          "read_ns_all_calls": [
+            515512364,
+            40505992,
+            31240180,
+            66473107,
+            36519444,
+            24617099
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 189112,
+          "controller_pre_spawn_highwater_RSS_KiB": 23544,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.2770041179901455
+        },
+        {
+          "pair": 5,
+          "arm": "A",
+          "read_ns_all_calls": [
+            445411813,
+            29205155,
+            28180043,
+            30463470,
+            27751438,
+            28439646
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 189092,
+          "controller_pre_spawn_highwater_RSS_KiB": 23548,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.1666166780050844
+        },
+        {
+          "pair": 5,
+          "arm": "B",
+          "read_ns_all_calls": [
+            395962513,
+            9578916,
+            3851247,
+            3587144,
+            6822583,
+            3456542
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135420,
+          "controller_pre_spawn_highwater_RSS_KiB": 23548,
+          "whole_command_elapsed_seconds_diagnostic_scope": 0.9653984350006795
+        },
+        {
+          "pair": 6,
+          "arm": "B",
+          "read_ns_all_calls": [
+            398886249,
+            3529443,
+            3826547,
+            3512842,
+            31574584,
+            3789746
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135232,
+          "controller_pre_spawn_highwater_RSS_KiB": 23548,
+          "whole_command_elapsed_seconds_diagnostic_scope": 0.9732997319952119
+        },
+        {
+          "pair": 6,
+          "arm": "A",
+          "read_ns_all_calls": [
+            519918220,
+            32250092,
+            28775150,
+            27144430,
+            27995241,
+            26094317
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 189292,
+          "controller_pre_spawn_highwater_RSS_KiB": 23548,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.2330324909999035
+        },
+        {
+          "pair": 7,
+          "arm": "A",
+          "read_ns_all_calls": [
+            464719551,
+            40567293,
+            28250543,
+            27168730,
+            27964040,
+            27070430
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 188992,
+          "controller_pre_spawn_highwater_RSS_KiB": 23548,
+          "whole_command_elapsed_seconds_diagnostic_scope": 1.1731377649994101
+        },
+        {
+          "pair": 7,
+          "arm": "B",
+          "read_ns_all_calls": [
+            386807904,
+            3425341,
+            3169938,
+            3451342,
+            2935635,
+            3843547
+          ],
+          "wait4_whole_worker_lifetime_RSS_KiB": 135316,
+          "controller_pre_spawn_highwater_RSS_KiB": 23556,
+          "whole_command_elapsed_seconds_diagnostic_scope": 0.9185255699994741
+        }
+      ],
+      "metrics": {
+        "first_use_reader": {
+          "unit": "seconds",
+          "A": {
+            "all7": [
+              0.678721633,
+              0.543231294,
+              0.445919315,
+              0.515512364,
+              0.445411813,
+              0.51991822,
+              0.464719551
+            ],
+            "min": 0.445411813,
+            "median": 0.515512364,
+            "max": 0.678721633
+          },
+          "B": {
+            "all7": [
+              0.37577686,
+              0.393992382,
+              0.40841346,
+              0.38025772,
+              0.395962513,
+              0.398886249,
+              0.386807904
+            ],
+            "min": 0.37577686,
+            "median": 0.393992382,
+            "max": 0.40841346
+          },
+          "paired_A_minus_B_seconds_all7": [
+            0.302944773,
+            0.14923891200000006,
+            0.03750585499999998,
+            0.13525464399999998,
+            0.049449299999999974,
+            0.12103197099999996,
+            0.07791164700000003
+          ],
+          "paired_comparator_faster_percent_all7": [
+            44.63461281777061,
+            27.472443809542394,
+            8.41090612995761,
+            26.236935027226615,
+            11.101928273285374,
+            23.279040115193492,
+            16.76530432867457
+          ],
+          "median_paired_delta_seconds": 0.12103197099999996,
+          "median_paired_comparator_faster_percent": 23.279040115193492,
+          "comparator_faster_pairs": 7,
+          "raw_unscaled_MAD_A_seconds": 0.05079281299999999,
+          "raw_unscaled_MAD_B_seconds": 0.007184477999999994,
+          "predeclared_time_conditions_only": true,
+          "qualified_winner": false,
+          "missing_gate": "Matched aggregate cgroup peak median/max UNVERIFIED"
+        },
+        "whole_worker_elapsed_descriptive": {
+          "unit": "seconds",
+          "A": {
+            "all7": [
+              3.1018850300024496,
+              2.350629435997689,
+              2.624914375002845,
+              1.2770041179901455,
+              1.1666166780050844,
+              1.2330324909999035,
+              1.1731377649994101
+            ],
+            "min": 1.1666166780050844,
+            "median": 1.2770041179901455,
+            "max": 3.1018850300024496
+          },
+          "B": {
+            "all7": [
+              2.0330538710113615,
+              1.8737208419915987,
+              3.1228079319989774,
+              1.9242232789983973,
+              0.9653984350006795,
+              0.9732997319952119,
+              0.9185255699994741
+            ],
+            "min": 0.9185255699994741,
+            "median": 1.8737208419915987,
+            "max": 3.1228079319989774
+          },
+          "paired_A_minus_B_seconds_all7": [
+            1.0688311589910882,
+            0.4769085940060904,
+            -0.49789355699613225,
+            -0.6472191610082518,
+            0.20121824300440494,
+            0.2597327590046916,
+            0.25461219499993604
+          ],
+          "paired_comparator_faster_percent_all7": [
+            34.45747178418937,
+            20.288548535242594,
+            -18.967992317676746,
+            -50.68262129231805,
+            17.248017004907588,
+            21.064551088517256,
+            21.70352047272675
+          ],
+          "median_paired_delta_seconds": 0.25461219499993604,
+          "median_paired_comparator_faster_percent": 20.288548535242594,
+          "comparator_faster_pairs": 5,
+          "raw_unscaled_MAD_A_seconds": 0.11038743998506106,
+          "raw_unscaled_MAD_B_seconds": 0.9004211099963868,
+          "predeclared_time_conditions_only": false,
+          "qualified_winner": false,
+          "missing_gate": "Matched aggregate cgroup peak median/max UNVERIFIED"
+        },
+        "later5_per_worker_median_reader": {
+          "unit": "seconds",
+          "A": {
+            "all7": [
+              0.05192723,
+              0.030285867,
+              0.041496104,
+              0.036519444,
+              0.028439646,
+              0.027995241,
+              0.02796404
+            ],
+            "min": 0.02796404,
+            "median": 0.030285867,
+            "max": 0.05192723
+          },
+          "B": {
+            "all7": [
+              0.01159364,
+              0.004612256,
+              0.003917548,
+              0.014185872,
+              0.003851247,
+              0.003789746,
+              0.003425341
+            ],
+            "min": 0.003425341,
+            "median": 0.003917548,
+            "max": 0.014185872
+          },
+          "paired_A_minus_B_seconds_all7": [
+            0.040333589999999996,
+            0.025673611,
+            0.037578556,
+            0.022333571999999996,
+            0.024588399,
+            0.024205495,
+            0.024538698999999997
+          ],
+          "paired_comparator_faster_percent_all7": [
+            77.67329395386582,
+            84.7709296220577,
+            90.55923900711258,
+            61.15529031602999,
+            86.45817532327935,
+            86.46289203225648,
+            87.75090795178379
+          ],
+          "median_paired_delta_seconds": 0.024588399,
+          "median_paired_comparator_faster_percent": 86.45817532327935,
+          "comparator_faster_pairs": 7,
+          "raw_unscaled_MAD_A_seconds": 0.002321827000000002,
+          "raw_unscaled_MAD_B_seconds": 0.0004922069999999997,
+          "predeclared_time_conditions_only": true,
+          "qualified_winner": false,
+          "missing_gate": "Matched aggregate cgroup peak median/max UNVERIFIED"
+        }
+      }
+    }
+  },
+  "source_evidence_sha256": {
+    "protocol_v2": "df0ac5c30f489a707aaf245f6c691801b9bc6593fded5cd527c25fdde2cbf1fe",
+    "actual_freeze": "65ede7f9f6b732a738d847a4e7a0acab5d3aab95c71535c699bf0c54154c4a92",
+    "descriptive_statistics": "8baa71a9836752068d6413bcb7c30fb677b0bf0d7f29ac289bf160cfa0d8836a",
+    "independent_review": "20ef547efd87a0e7a1ac35eae6dac5b59522a06bb31cdf3ef076f2f9edea0f41",
+    "untimed_qualification": "32754112979416879ea5547e3b0ab5d64bc0591f6471a5630e2bb3bbaece9b98",
+    "independent_science_qualification": "4d2da88dcb5b25930386a0d478f41f28b91ae55a650c2a3af1203fb367d7f8d5",
+    "measurement_harness": "2cd9088df93d04e9b7fc77029345c169872dc50b8bdb867cadabf17fedc438e1"
+  },
+  "audit_notes": [
+    "The first host summary expected read_started_ns. The recorded field was started_ns. The initial error and partial metadata were preserved. Correction used the original clocks without rerunning a trial.",
+    "A warm authorization summary retained a stale fresh label. Its bound manifest, core hash and original authorization specify warm.",
+    "Fresh host terminal status was not independently retained. Worker receipts, normal transport and post-run checks were retained. Warm host terminal status was recorded."
+  ]
+}
