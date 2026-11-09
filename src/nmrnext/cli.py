@@ -447,6 +447,41 @@ def _analysis_dispatch(args):
 
 
 def _dispatch(args):
+    if args.command in ("batch-plan", "batch-run"):
+        from .batch import plan_batch, run_batch
+        if args.command == "batch-plan":
+            return plan_batch(Path(args.manifest)), 0
+        return run_batch(Path(args.manifest), resume=args.resume,
+                         continue_on_error=args.continue_on_error), 0
+    if args.command == "import-pipe-script":
+        from .io import describe_dataset
+        from .pipe_script import parse_pipe_script, compile_pipe_script
+        positive_int(args.threads, "threads")
+        script_path = Path(args.script).resolve()
+        with script_path.open("rb") as stream:
+            raw = stream.read((1 << 20) + 1)
+        if len(raw) > (1 << 20):
+            raise NMRNextError("INVALID_SCRIPT", "Script exceeds 1 MiB")
+        parsed = parse_pipe_script(raw.decode("utf-8"), source_name=str(script_path))
+        source, target = Path(args.input).resolve(), Path(args.output).resolve()
+        compiled = compile_pipe_script(parsed, describe_dataset(source),
+                                       input_path=source, output_path=target)
+        if args.save_recipe is not None:
+            recipe_path = Path(args.save_recipe).resolve()
+            if recipe_path in (script_path, source, target):
+                raise NMRNextError("INVALID_OUTPUT", "Saved recipe must have a distinct path")
+            if recipe_path.suffix.lower() != ".json":
+                raise NMRNextError("UNSUPPORTED_RECIPE_FORMAT", "Saved recipe must be JSON")
+            recipe = {"schema_version": "1", "input": str(source), "output": str(target),
+                      "operations": compiled["operations"], "backend": args.backend,
+                      "threads": args.threads, "memory_bytes": _memory(args.memory) or 256*1024**2}
+            payload = _json_bytes(recipe)
+            def write_recipe(stage):
+                with stage.open("wb") as stream:
+                    stream.write(payload); stream.flush(); os.fsync(stream.fileno())
+            _save_new_files([(recipe_path, write_recipe)])
+            compiled["saved_recipe_path"] = str(recipe_path)
+        return compiled, 0
     if args.command == "first-spectrum":
         return _first_spectrum(args.output_dir), 0
     if args.command == "gui":
@@ -568,6 +603,16 @@ def _parser():
     demo.add_argument("--format")
     inspect=sub.add_parser("inspect",help="Inspect metadata and storage")
     inspect.add_argument("input");inspect.add_argument("--format");inspect.add_argument("--json",action="store_true");inspect.add_argument("--memory")
+    batch_plan=sub.add_parser("batch-plan",help="Preflight a saved batch manifest")
+    batch_plan.add_argument("manifest")
+    batch_run=sub.add_parser("batch-run",help="Run a saved batch manifest serially")
+    batch_run.add_argument("manifest");batch_run.add_argument("--resume",action="store_true")
+    batch_run.add_argument("--continue-on-error",action="store_true")
+    pipe=sub.add_parser("import-pipe-script",help="Compile a guarded NMRPipe script as data")
+    pipe.add_argument("script");pipe.add_argument("--input",required=True);pipe.add_argument("--output",required=True)
+    pipe.add_argument("--save-recipe",help="Exclusively save a strict schema-1 plan/run recipe JSON")
+    pipe.add_argument("--backend",choices=["native","numpy"],default="native")
+    pipe.add_argument("--threads",type=int,default=1);pipe.add_argument("--memory")
     for command in ("plan","run"):
         p=sub.add_parser(command,help="Validate" if command=="plan" else "Execute a JSON recipe")
         p.add_argument("recipe");p.add_argument("--backend",choices=["native","numpy"]);p.add_argument("--threads",type=int)
