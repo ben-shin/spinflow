@@ -47,7 +47,8 @@ def _fixture(tmp_path, *, count=2):
 
 def test_import_origin_and_manifest_roundtrip(tmp_path):
     import nmrnext.batch as batch
-    assert Path(batch.__file__).resolve().parent == Path(__file__).resolve().parents[1] / "src/nmrnext"
+    from import_origin_support import assert_package_origin
+    assert_package_origin(batch.__file__, __file__)
     manifest, path, _, _ = _fixture(tmp_path)
     assert batch.save_batch_manifest(manifest, path) == manifest
     assert batch.load_batch_manifest(path) == manifest

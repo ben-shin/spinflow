@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def api():
     import nmrnext
-    assert Path(nmrnext.__file__).resolve().is_relative_to(ROOT / "src")
+    from import_origin_support import assert_package_origin
+    assert_package_origin(nmrnext.__file__, __file__)
     from nmrnext.pipe_script import parse_pipe_script, compile_pipe_script
     return parse_pipe_script, compile_pipe_script
 

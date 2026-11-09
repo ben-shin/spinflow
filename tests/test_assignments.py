@@ -35,7 +35,8 @@ def template(d, *, unit="points", search=(1, 5), integration=(1, 5)):
 
 def test_import_origin_is_isolated_checkout():
     import nmrnext
-    assert Path(nmrnext.__file__).resolve().parent == Path(__file__).resolve().parents[1] / "src/nmrnext"
+    from import_origin_support import assert_package_origin
+    assert_package_origin(nmrnext.__file__, __file__)
 
 
 def test_valid_fixture_has_hand_expected_existing_python_math():
