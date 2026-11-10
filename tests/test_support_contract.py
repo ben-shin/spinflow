@@ -45,9 +45,9 @@ def test_canonical_registry_matches_runtime_and_profile_inventories():
     assert block["processing_v1_target"] is None
     distribution = declared["distribution"]
     assert distribution == {
-        "version": "0.3.0b3",
+        "version": "0.4.0b1",
         "release_status": "experimental beta",
-        "previous_release": "v0.3.0b2",
+        "previous_release": "v0.3.0b3",
         "qualification": "S19 scientific qualification FAIL (six of 18 fixed peak targets); broader profile qualification and independent researcher acceptance UNVERIFIED",
     }
     assert "unreleased" not in json.dumps(distribution).lower()

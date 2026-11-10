@@ -10,6 +10,8 @@ The earlier published [v0.3.0b2 beta](https://github.com/ben-shin/spinflow/relea
 
 ## Install on Linux
 
+To process a series of files, build the `codex/batch-workflows` source branch. The published 0.3.0b3 installer predates the Batch tab and CLI, and the 0.4.0b1 testing package is unpublished. Follow the [Linux setup and two-file walkthrough](docs/linux-user-testing.md) or the [batch workflow guide](docs/batch-workflows.md).
+
 For Ubuntu 24.04 x86-64 with CPython 3.12 or 3.13 and its `venv`/`ensurepip` support, use the published v0.3.0b3 versioned installer:
 
 ```bash
@@ -32,7 +34,7 @@ The published [v0.3.0b2](https://github.com/ben-shin/spinflow/releases/tag/v0.3.
 
 ## Install from source on Linux
 
-The header-only planning, GUI budget control, `discard_imaginary`, explicit spectral-width calibration, execution/cache improvements and bounded native-file processing described below are changes since the immutable v0.2.0 archive. Use a matching 0.3 beta source checkout for these features. The v0.2.0 release installer cannot supply them.
+The header-only planning, GUI budget control, `discard_imaginary`, explicit spectral-width calibration, execution/cache improvements and bounded native-file processing described below are changes since the immutable v0.2.0 archive. The current development checkout builds the native extension from source. The v0.2.0 release installer cannot supply them.
 
 Ubuntu 24.04 and Python 3.12 or 3.13 are the initial Linux build targets. From a checkout:
 

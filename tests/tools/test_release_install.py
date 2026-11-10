@@ -39,7 +39,7 @@ def test_version_validation_rejects_paths_and_accepts_explicit_tag(installer):
     assert installer.release_version("v0.2.0") == "0.2.0"
     assert installer.release_version("v0.3.0b1") == "0.3.0b1"
     assert installer.release_version("v0.3.0b2") == "0.3.0b2"
-    assert installer.DEFAULT_VERSION == "0.3.0b3"
+    assert installer.DEFAULT_VERSION == "0.4.0b1"
     for value in ("latest", "../../other", "0.2.0/thing", "0.2.0;touch x", "0.2"):
         with pytest.raises(installer.InstallError):
             installer.release_version(value)

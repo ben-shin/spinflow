@@ -2,9 +2,9 @@
   "schema_version": "1",
   "status_date": "2026-11-07",
   "distribution": {
-    "version": "0.3.0b3",
+    "version": "0.4.0b1",
     "release_status": "experimental beta",
-    "previous_release": "v0.3.0b2",
+    "previous_release": "v0.3.0b3",
     "qualification": "S19 scientific qualification FAIL (six of 18 fixed peak targets); broader profile qualification and independent researcher acceptance UNVERIFIED"
   },
   "platform_target": {

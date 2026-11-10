@@ -2,5 +2,5 @@
 from .model import Axis, Dataset
 from .errors import NMRNextError
 
-__version__ = "0.3.0b3"
+__version__ = "0.4.0b1"
 __all__ = ["Axis", "Dataset", "NMRNextError"]

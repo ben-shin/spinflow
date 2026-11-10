@@ -4,9 +4,11 @@ This walkthrough starts with an **experimental synthetic 1D/2D session** on an U
 
 ## Install and launch
 
-Install `python3-venv`, `python3-dev`, and `build-essential` with your system package manager if needed. A minimal X11 desktop may need additional [Qt system libraries](linux-build.md#requirements). From a fresh [repository checkout](https://github.com/ben-shin/spinflow), run:
+Install `python3-venv`, `python3-dev`, and `build-essential` with your system package manager if needed. A minimal X11 desktop may need additional [Qt system libraries](linux-build.md#requirements). For the batch controls, test the development branch in a fresh checkout. The published 0.3.0b3 installer predates batch support. The 0.4.0b1 package is a testing candidate. Use these source-build commands for this walkthrough.
 
 ```bash
+git clone --branch codex/batch-workflows https://github.com/ben-shin/spinflow.git spinflow-user-test
+cd spinflow-user-test
 bash tools/bootstrap.sh --gui
 .venv/bin/spinflow doctor
 .venv/bin/spinflow gui
@@ -26,6 +28,15 @@ Use a new empty folder for saved outputs. Do not select an existing file: the wo
 
 The GUI processes complete data even if the plot says it sampled the display. A preview is never the file exported by **Save current result…**; click **Process** first. Processing starts again from the original dataset rather than stacking on a prior result.
 
+## Try the Batch tab with two files
+
+1. Prepare two native files with compatible axes and a fresh output directory. Select **Files…** in **Batch**, add both files and choose that output directory. Keep **Measure these labels for each input** unchecked. Choose **No processing · copy input** for a first all-component copy. Save a new manifest, select **Plan**, inspect each item, then **Apply to files**. Check that two distinct outputs exist. A processing-only run has no assignment rows.
+2. To repeat a recipe, apply it to a compatible source in **Processing** first. Select **Use applied processing** in **Batch** and inspect the operation count, backend and memory setting. Unapplied edits and previews are excluded. Save to another manifest with fresh outputs. Open that manifest again, change an input or output and save with a new name. Check that the saved operations and resource settings still match the reopened manifest.
+3. For relative measurements, open a processed 1D or 2D reference. In **Optional labels and fixed regions**, choose **New**, select an analysis component, then **Label**. SpinFlow generates a stable ID for each assignment. Edit the label and set the sign, cutoff, units and fixed search and integration bounds. Save the template, enable **Measure these labels for each input** and use **Map axes…** to map every reference axis to a processed target axis. Points require identical grids; Hz requires a matching reference frame; ppm requires calibration. Use an empty processing list to analyze spectra that are already processed.
+4. Save, plan and apply. In **Export CSV…**, follow each item and assignment ID to its status, height, signed volume, units and warnings. Blank measurements with `not_found` or `ambiguous` deserve review; SpinFlow does not choose the strongest candidate automatically. On a separate run try **Stop after file**. Keep outputs and journal generations together, select **Resume exact matching items** under **Advanced run options**, and resume the same manifest.
+
+Guarded command import supports declared forms of EM, SP, explicit-size ZF and PS with both phase parameters zero. FT, nonzero PS, TP, `-di` and arbitrary shell scripts remain outside this importer. For manifest examples and the scope of previous one-input scale testing, see the [batch walkthrough](batch-workflows.md) and [100-item Linux validation](validation/batch-scale-100-2026-11-09.md).
+
 ## Reproduce a processed session
 
 After processing, choose **Save runnable workflow…** and enter a directory name that does **not** exist. The new folder contains `source.nmrh5`, a native copy of the original source, and `workflow.json`, a strict CLI recipe referencing that source and `result.nmrh5` with relative paths. It records the last **applied** operations and backend; a preview or unprocessed control change is not part of that recipe. From the checkout, replace the folder path below with your new directory:
@@ -44,7 +55,7 @@ If you have a permitted processed real NMRPipe 1D/2D or UCSF 2D test file, **Ope
 
 For a reproducible raw 1D trial, follow the [hash-pinned BMRB Bruker walkthrough](real-bruker-and-analysis.md); the separate [public 2D guide](real-bruker-2d.md) supplies HSQC/TOCSY acquisitions and fixed both-axis recipes. In the GUI, **Correct Bruker digital filter** is an explicit opt-in for a recorded positive `GRPDLY`; **Apply explicit frequency reference** requires your chosen anchor. Run Preview and Process, then inspect the axis and signed spectrum before saving a new native result. The **Analysis / figures** tab can apply bounded complex 1D or full-hypercomplex 2D phase, find signed peaks, integrate entered regions and save a report. Install `bash tools/bootstrap.sh --gui --plot` if you also want SVG/PDF/PNG export. Keep the analysis JSON with the figure; the figure displays only a readable subset of labels. Unknown/zero delay, implicit DSP lookup, unsupported 2D modes, NUS and absolute concentrations remain outside these paths. The bounded public comparisons do not establish general phase, amplitude or volume accuracy for your acquisition.
 
-For a useful report, include the commit SHA (`git rev-parse HEAD`), Linux release, Python version (`.venv/bin/python --version`), X11/Wayland session, 1D or 2D input type, steps, expected versus observed result, command output or screenshot, and whether any existing file changed. Do not attach private acquisition data without permission. Open an [issue](https://github.com/ben-shin/spinflow/issues) with a synthetic reproducer when possible. The workbench has reset-to-original, but no complete undo/redo history, batch processing or overlay comparison; use the CLI for its declared comparison command. The [current scope](scope.md) and [roadmap](../ROADMAP.md) list unsupported scientific workflows.
+For a useful report, include the commit SHA (`git rev-parse HEAD`), Linux release, Python version (`.venv/bin/python --version`), X11/Wayland session, 1D or 2D input type, steps, expected versus observed result, command output or screenshot, and whether any existing file changed. Do not attach private acquisition data without permission. Open an [issue](https://github.com/ben-shin/spinflow/issues) with a synthetic reproducer when possible. The workbench has reset-to-original, but no complete undo/redo history or overlay comparison; use the CLI for its declared comparison command. The [current scope](scope.md) and [roadmap](../ROADMAP.md) list unsupported scientific workflows.
 
 
 The frozen Stage 12 Linux installed-wheel check also exercised both acquired 2D pipelines and nine automated virtual-X11 groups, including both-axis automatic phase, diagnostics retention, native workflow replay and normal installed-console window closure. The full copied suite passed 438 tests and 101 subtests with zero skips/failures. These are automated virtual-display results; they do not replace a human usability session or establish Wayland/GPU behavior. See the [validation record](public-validation.md) for the exact source/package artifacts, fresh-core versus reused-GUI environments and QEMU startup allowance.
