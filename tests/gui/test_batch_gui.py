@@ -7,7 +7,8 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import numpy as np
 import pytest
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
+import pyqtgraph as pg
 from unittest.mock import patch
 
 from nmrnext.assignments import load_assignment_template
@@ -114,7 +115,7 @@ class _StopAfterCompleted(QtCore.QObject):
 
 def test_batch_tab_has_small_native_actions_and_editable_assignment_fields(workbench):
     assert workbench.batch_tab_index >= 0
-    assert workbench.styleSheet() == ""
+    assert "QFrame#topbar" in workbench.styleSheet()
     assert workbench.batch_open_manifest_button.text().startswith("Open")
     assert workbench.batch_label_button.text() == "Label"
     assert workbench.batch_apply_button.text() == "Apply to files"
@@ -259,6 +260,284 @@ def test_reopened_manifest_save_does_not_replace_recipe_with_current_applied(tmp
         window.deleteLater()
         QtCore.QCoreApplication.sendPostedEvents(None, QtCore.QEvent.Type.DeferredDelete)
         app.processEvents()
+
+
+def _display_2d(values, *, domains=("frequency", "frequency")):
+    rows, columns = values.shape
+    axes = (
+        Axis("y", rows, domain=domains[0], unit="Hz" if domains[0] == "frequency" else "s",
+             start=rows - 1., step=-1., observation_mhz=500. if domains[0] == "frequency" else None,
+             reference_ppm=4.7 if domains[0] == "frequency" else None, encoding="real"),
+        Axis("x", columns, domain=domains[1], unit="Hz" if domains[1] == "frequency" else "s",
+             start=columns - 1., step=-1., observation_mhz=500. if domains[1] == "frequency" else None,
+             reference_ppm=4.7 if domains[1] == "frequency" else None, encoding="real"),
+    )
+    return Dataset(np.asarray(values, dtype=np.float32)[None, ...], axes, ())
+
+
+def test_two_dimensional_display_defaults_to_bounded_signed_contours(workbench):
+    rows, columns = np.mgrid[-12:13, -12:13]
+    values = 10 * np.exp(-(rows**2 + columns**2) / 20) - 6 * np.exp(-((rows - 6)**2 + (columns + 5)**2) / 10)
+    workbench.load_dataset_now(_display_2d(values), "synthetic 2D")
+
+    assert workbench.plot_mode_combo.currentData() == "contours"
+    assert workbench.contour_level_count.value() == 2
+    assert workbench.contour_sign_combo.currentData() == "both"
+    items = workbench._viewport_contours
+    assert len(items) == 4
+    assert {item.level > 0 for item in items} == {True, False}
+    assert all(item.data.shape == (25, 25) for item in items)
+    assert all(item.axisOrder == "row-major" for item in items)
+    np.testing.assert_array_equal(workbench.current.data[0], values.astype(np.float32))
+    frame = workbench._viewport_frame
+    pixel_origin = workbench._viewport_item.transform().map(QtCore.QPointF(0, 0))
+    assert pixel_origin.x() == pytest.approx(frame.rect[0])
+    assert pixel_origin.y() == pytest.approx(frame.rect[1])
+    for item in items:
+        assert item.path().elementCount() > 0
+    assert "Frequency domain" in workbench.plot_caption.text()
+    assert workbench.plot.getPlotItem().getAxis("bottom").labelText == "x (ppm)"
+
+
+@pytest.mark.parametrize('step,expected', [(1., 191.25), (-1., -191.25)])
+def test_rendered_partial_tail_contour_uses_source_physical_centers(workbench, step, expected):
+    values = np.zeros((5, 193), dtype=np.float32)
+    values[:, -1] = 100.
+    source = Dataset(values[None], (
+        Axis('y', 5, domain='frequency', unit='Hz', start=0., step=1.),
+        Axis('x', 193, domain='frequency', unit='Hz', start=0., step=step),
+    ), ())
+    workbench.contour_level_count.setValue(1)
+    workbench.contour_sign_combo.setCurrentIndex(workbench.contour_sign_combo.findData('positive'))
+    workbench.load_dataset_now(source, 'ragged tail coordinate check')
+    items = workbench._viewport_contours
+    assert len(items) == 1
+    local_width = items[0].data.shape[1]
+    left = workbench._viewport_item.mapToParent(QtCore.QPointF(0, 0)).x()
+    right = workbench._viewport_item.mapToParent(QtCore.QPointF(local_width, 0)).x()
+    assert (left, right) == pytest.approx(
+        (min(-.5 * step, 192.5 * step), max(-.5 * step, 192.5 * step)))
+    path = items[0].path()
+    assert path.elementCount() > 0
+    rendered_x = [path.elementAt(i).x for i in range(path.elementCount())]
+    assert rendered_x and all(x == pytest.approx(expected, abs=1e-10) for x in rendered_x)
+
+
+def test_contour_toggle_uses_bounded_frames_and_preserves_time_domain_labels(workbench):
+    rows, columns = np.mgrid[0:17, 0:19]
+    values = np.sin(rows / 2) * np.cos(columns / 3)
+    workbench.load_dataset_now(_display_2d(values, domains=("time", "time")), "raw FID")
+    assert "Time domain" in workbench.plot_caption.text()
+    assert workbench.plot.getPlotItem().getAxis("bottom").labelText == "x (ms)"
+    assert workbench.plot.getPlotItem().getAxis("left").labelText == "y (ms)"
+    assert "Right-drag a box to zoom" in workbench.plot_note.text()
+    assert "left-drag to pan" in workbench.plot_note.text()
+
+    workbench.plot_mode_combo.setCurrentIndex(workbench.plot_mode_combo.findData("raster"))
+    assert "Right-drag a box to zoom" in workbench.plot_note.text()
+    assert any(isinstance(item, pg.ImageItem) for item in workbench.plot.getPlotItem().items)
+    assert not any(isinstance(item, pg.IsocurveItem) for item in workbench.plot.getPlotItem().items)
+    workbench.plot_mode_combo.setCurrentIndex(workbench.plot_mode_combo.findData("contours"))
+    assert len(workbench._viewport_contours) == 4
+    workbench._draw_viewport(workbench._viewport_frame)
+    assert len([item for item in workbench.plot.getPlotItem().items if isinstance(item, pg.ImageItem)]) == 1
+    viewbox = workbench.plot.getPlotItem().getViewBox()
+    viewbox.setRange(xRange=(1e6, 2e6), yRange=(1e6, 2e6), padding=0)
+    workbench._queue_viewport()
+    workbench._refresh_viewport()
+    assert "No sample centers" in workbench.plot_note.text()
+    assert "Right-drag a box to zoom" in workbench.plot_note.text()
+
+
+def test_contour_display_controls_remain_small_and_theme_is_dark(workbench):
+    assert workbench.plot_mode_combo.findData("raster") >= 0
+    assert workbench.contour_sign_combo.count() == 3
+    assert workbench.contour_level_count.minimum() == 1
+    assert workbench.contour_level_count.maximum() <= 3
+    assert workbench.plot.backgroundBrush().color().lightness() < 50
+    assert "background: #17191c" in workbench.styleSheet()
+    assert workbench.bruker_button.text() == "Open FID folder…"
+    assert "supported raw FID/acquisition folder" in workbench.bruker_button.toolTip()
+    assert "QTabBar::tab:selected" in workbench.styleSheet()
+    workbench.resize(1320, 900)
+    workbench.show()
+    QtWidgets.QApplication.processEvents()
+    text_width = workbench.bruker_button.fontMetrics().horizontalAdvance(workbench.bruker_button.text())
+    assert workbench.bruker_button.width() >= text_width + 16
+    tabs = workbench.findChildren(QtWidgets.QTabWidget)
+    assert tabs and tabs[0].tabBar().height() > 0
+
+
+def test_contour_sign_filter_and_zero_data_are_safe(workbench):
+    rows, columns = np.mgrid[-8:9, -8:9]
+    positive = np.exp(-(rows**2 + columns**2) / 12)
+    workbench.load_dataset_now(_display_2d(positive), "positive-only")
+    assert len(workbench._viewport_contours) == 2
+    assert all(item.level > 0 for item in workbench._viewport_contours)
+
+    workbench.contour_sign_combo.setCurrentIndex(workbench.contour_sign_combo.findData("negative"))
+    assert workbench._viewport_contours == []
+    workbench.load_dataset_now(_display_2d(np.zeros((17, 17))), "zero spectrum")
+    assert workbench._viewport_contours == []
+    assert "visible source blocks" in workbench.plot_note.text()
+
+
+def test_contour_block_preview_keeps_both_signs_with_a_hard_grid_cap(workbench):
+    rows, columns = np.indices((384, 384))
+    checkerboard = np.where((rows + columns) % 2, 1., -1.)
+    envelope = 0.1 + np.exp(-((rows - 190.) ** 2 + (columns - 200.) ** 2) / 12000.)
+    checkerboard = (checkerboard * envelope).astype(np.float32)
+    source = _display_2d(checkerboard)
+    original = source.data.copy()
+    workbench.load_dataset_now(source, "signed high-frequency pattern")
+    assert len(workbench._viewport_contours) == 4
+    assert {item.level > 0 for item in workbench._viewport_contours} == {True, False}
+    assert all(item.data.shape == (192, 192) for item in workbench._viewport_contours)
+    for item in workbench._viewport_contours:
+        assert item.path().elementCount() > 0
+    np.testing.assert_array_equal(source.data, original)
+    assert "visible source blocks" in workbench.plot_note.text()
+    viewbox = workbench.plot.getPlotItem().getViewBox()
+    viewbox.setRange(xRange=(5.34, 5.38), yRange=(5.34, 5.38), padding=0)
+    workbench._queue_viewport()
+    workbench._refresh_viewport()
+    zoomed = workbench._viewport_frame
+    assert zoomed.values.shape[0] < 192 and zoomed.values.shape[1] < 192
+    assert float(zoomed.values.min()) < 0 < float(zoomed.values.max())
+    assert min(zoomed.coordinates[0]) >= 5.34 and max(zoomed.coordinates[0]) <= 5.38
+
+
+def test_time_domain_fid_label_changes_only_after_existing_fft_recipe(workbench):
+    axes = (
+        Axis("y", 16, domain="time", unit="s", step=0.001, encoding="complex"),
+        Axis("x", 16, domain="time", unit="s", step=0.0001, encoding="complex"),
+    )
+    values = np.zeros((4, 16, 16), dtype=np.float32)
+    values[:, 3, 4] = (1, -1, 0.5, -0.5)
+    source = Dataset(values, axes, ("y", "x"))
+    workbench.load_dataset_now(source, "raw FID")
+    assert "Time domain" in workbench.plot_caption.text()
+    assert "(ms)" in workbench.plot.getPlotItem().getAxis("bottom").labelText
+
+    workbench.backend_combo.setCurrentIndex(workbench.backend_combo.findData("numpy"))
+    workbench.set_ordered_recipe_now([{"op": "fft", "axis": "y"}, {"op": "fft", "axis": "x"}])
+    workbench.process_now()
+    assert all(axis.domain == "frequency" for axis in workbench.current.axes)
+    assert "Frequency domain" in workbench.plot_caption.text()
+    assert workbench.current.complex_axes == ("y", "x")
+
+
+class _ZoomDrag:
+    def __init__(self, start, end, *, button=QtCore.Qt.MouseButton.RightButton,
+                 start_drag=False, finish=False, start_screen=None, end_screen=None):
+        self._button = button
+        self._start = start
+        self._end = end
+        self._start_drag = start_drag
+        self._finish = finish
+        self._start_screen = start_screen or QtCore.QPointF(10, 10)
+        self._end_screen = end_screen or QtCore.QPointF(110, 110)
+        self.accepted = False
+
+    def button(self): return self._button
+    def isStart(self): return self._start_drag
+    def isFinish(self): return self._finish
+    def buttonDownScenePos(self, *_): return self._start
+    def buttonDownScreenPos(self, *_): return self._start_screen
+    def scenePos(self): return self._end
+    def screenPos(self): return self._end_screen
+    def accept(self): self.accepted = True
+
+
+def test_right_drag_shows_high_contrast_box_then_zooms_in_inverted_physical_axes(workbench):
+    workbench.load_dataset_now(_display_2d(np.arange(400, dtype=np.float32).reshape(20, 20)), "frequency")
+    workbench.show()
+    QtWidgets.QApplication.processEvents()
+    viewbox = workbench.plot.getPlotItem().getViewBox()
+    viewbox.setRange(xRange=(0, 20), yRange=(0, 20), padding=0)
+    viewbox.invertX(True)
+    start = viewbox.mapViewToScene(QtCore.QPointF(3, 4))
+    finish = viewbox.mapViewToScene(QtCore.QPointF(15, 16))
+
+    viewbox.mouseDragEvent(_ZoomDrag(start, start, start_drag=True))
+    viewbox.mouseDragEvent(_ZoomDrag(start, finish))
+    assert viewbox._zoom_box is not None and viewbox._zoom_box.isVisible()
+    assert viewbox._zoom_box.pen().color().lightness() > 180
+    viewbox.mouseDragEvent(_ZoomDrag(start, finish, finish=True))
+    assert viewbox._zoom_box is None
+    ranges = viewbox.viewRange()
+    assert ranges[0][0] == pytest.approx(3, abs=0.05)
+    assert ranges[0][1] == pytest.approx(15, abs=0.05)
+    assert ranges[1][0] == pytest.approx(4, abs=0.05)
+    assert ranges[1][1] == pytest.approx(16, abs=0.05)
+    assert viewbox.menuEnabled()  # Right-click remains available through ViewBox.mouseClickEvent.
+    assert type(viewbox).mouseClickEvent is pg.ViewBox.mouseClickEvent
+
+
+def test_zoom_box_ignores_tiny_drags_escape_cancels_and_left_pan_is_unchanged(workbench):
+    workbench.load_dataset_now(_display_2d(np.arange(400, dtype=np.float32).reshape(20, 20)), "frequency")
+    workbench.show()
+    QtWidgets.QApplication.processEvents()
+    viewbox = workbench.plot.getPlotItem().getViewBox()
+    viewbox.setRange(xRange=(0, 20), yRange=(0, 20), padding=0)
+    original = viewbox.viewRange()
+    start = viewbox.mapViewToScene(QtCore.QPointF(8, 8))
+    tiny = viewbox.mapViewToScene(QtCore.QPointF(8.01, 8.01))
+    viewbox.mouseDragEvent(_ZoomDrag(start, start, start_drag=True))
+    viewbox.mouseDragEvent(_ZoomDrag(start, tiny, finish=True,
+                                     end_screen=QtCore.QPointF(12, 12)))
+    after_tiny = viewbox.viewRange()
+    assert after_tiny[0] == pytest.approx(original[0])
+    assert after_tiny[1] == pytest.approx(original[1])
+
+    viewbox.mouseDragEvent(_ZoomDrag(start, start, start_drag=True))
+    class _Escape:
+        def key(self): return QtCore.Qt.Key.Key_Escape
+        def accept(self): self.accepted = True
+    viewbox.keyPressEvent(_Escape())
+    assert viewbox._zoom_box is None
+    after_escape = viewbox.viewRange()
+    assert after_escape[0] == pytest.approx(original[0])
+    assert after_escape[1] == pytest.approx(original[1])
+
+    class _LeftPan:
+        def button(self): return QtCore.Qt.MouseButton.LeftButton
+        def accept(self): self.accepted = True
+        def pos(self): return pg.Point(90, 70)
+        def lastPos(self): return pg.Point(100, 70)
+        def screenPos(self): return pg.Point(90, 70)
+        def lastScreenPos(self): return pg.Point(100, 70)
+    viewbox.mouseDragEvent(_LeftPan())
+    after_pan = viewbox.viewRange()
+    assert after_pan != original
+    assert viewbox._zoom_box is None
+
+
+@pytest.mark.parametrize("enabled", [(False, True), (True, False), (False, False)])
+def test_right_drag_zoom_respects_disabled_axes(workbench, enabled):
+    workbench.load_dataset_now(_display_2d(np.arange(400, dtype=np.float32).reshape(20, 20)), "frequency")
+    workbench.show()
+    QtWidgets.QApplication.processEvents()
+    viewbox = workbench.plot.getPlotItem().getViewBox()
+    viewbox.setRange(xRange=(0, 20), yRange=(0, 20), padding=0)
+    viewbox.setMouseEnabled(x=enabled[0], y=enabled[1])
+    before = viewbox.viewRange()
+    start = viewbox.mapViewToScene(QtCore.QPointF(3, 4))
+    finish = viewbox.mapViewToScene(QtCore.QPointF(15, 16))
+    viewbox.mouseDragEvent(_ZoomDrag(start, start, start_drag=True))
+    viewbox.mouseDragEvent(_ZoomDrag(start, finish))
+    assert viewbox._zoom_box is not None and viewbox._zoom_box.isVisible()
+    viewbox.mouseDragEvent(_ZoomDrag(start, finish, finish=True))
+    after = viewbox.viewRange()
+    if enabled[0]:
+        assert after[0] != pytest.approx(before[0])
+    else:
+        assert after[0] == pytest.approx(before[0])
+    if enabled[1]:
+        assert after[1] != pytest.approx(before[1])
+    else:
+        assert after[1] == pytest.approx(before[1])
+    assert viewbox._zoom_box is None
 
 
 def test_input_list_keeps_duplicate_basenames_as_distinct_items(workbench, tmp_path):

@@ -30,6 +30,18 @@ class DisplayFrame:
     rect: tuple | None
 
 
+@dataclass(frozen=True)
+class ContourFrame:
+    positive: np.ndarray
+    negative: np.ndarray
+    coordinates: tuple
+    edges: tuple
+    units: tuple
+    strides: tuple
+    sampled: bool
+    rect: tuple | None
+
+
 def axis_coordinates(axis, indices):
     """Evaluate only requested indices, using Dataset.coordinates' operation order."""
     with np.errstate(over='ignore', invalid='ignore'):
@@ -148,3 +160,79 @@ def display_frame(dataset, component, ranges=None, *, memory_bytes=DISPLAY_LIMIT
         rect = (edges[1][0], edges[0][0], edges[1][1], edges[0][1])
     return DisplayFrame(values, tuple(coordinates), tuple(units), slices, tuple(strides),
                         any(stride > 1 for stride in strides), _estimate(shape), limit, rect)
+
+
+def contour_frame(dataset, component, frame, *, max_samples=192):
+    """Aggregate signed extrema from visible source blocks without copying the plane."""
+    ndim = len(dataset.axes)
+    if ndim != 2:
+        raise NMRNextError('DISPLAY_DIMENSIONS', 'Contour frames require two physical axes')
+    if isinstance(component, bool) or not isinstance(component, int) or not 0 <= component < dataset.data.shape[0]:
+        raise NMRNextError('DISPLAY_COMPONENT', 'Choose a valid signed component')
+    if (isinstance(max_samples, bool) or not isinstance(max_samples, int) or max_samples < 1):
+        raise NMRNextError('DISPLAY_CONTOUR_LIMIT', 'Contour grid limit must be a positive integer')
+    if not isinstance(frame, DisplayFrame) or len(frame.slices) != 2:
+        raise NMRNextError('DISPLAY_CONTOUR_FRAME', 'Contour aggregation requires a 2D display frame')
+
+    bounds = tuple((part.start, part.stop) for part in frame.slices)
+    lengths = tuple(max(0, stop - start) for start, stop in bounds)
+    strides = tuple(max(1, math.ceil(length / max_samples)) for length in lengths)
+    shape = tuple(math.ceil(length / stride) for length, stride in zip(lengths, strides))
+    y_start, x_start = (bound[0] for bound in bounds)
+    y_stride, x_stride = strides
+    if not math.prod(shape):
+        positive = np.empty(shape, dtype=dataset.data.dtype)
+        negative = np.empty(shape, dtype=dataset.data.dtype)
+    else:
+        y_stop, x_stop = (bound[1] for bound in bounds)
+        region = dataset.data[component, y_start:y_stop, x_start:x_stop]
+        if (region.flags.c_contiguous and lengths[0] % y_stride == 0
+                and lengths[1] % x_stride == 0):
+            blocks = region.reshape(shape[0], y_stride, shape[1], x_stride)
+            positive = np.maximum(blocks.max(axis=(1, 3)), 0)
+            negative = np.minimum(blocks.min(axis=(1, 3)), 0)
+        else:
+            positive = np.zeros(shape, dtype=dataset.data.dtype)
+            negative = np.zeros(shape, dtype=dataset.data.dtype)
+            for out_y in range(shape[0]):
+                y0 = y_start + out_y * y_stride
+                for out_x in range(shape[1]):
+                    x0 = x_start + out_x * x_stride
+                    block = dataset.data[component, y0:min(y0 + y_stride, y_stop),
+                                         x0:min(x0 + x_stride, x_stop)]
+                    positive[out_y, out_x] = max(0., float(np.max(block)))
+                    negative[out_y, out_x] = min(0., float(np.min(block)))
+
+    coordinates, edges, units = [], [], []
+    for axis, (start, stop), stride, count in zip(dataset.axes, bounds, strides, shape):
+        indices = np.empty(count, dtype=np.float64)
+        for index in range(count):
+            first = start + index * stride
+            last = min(first + stride, stop)
+            indices[index] = (first + last - 1) / 2
+        coordinate, unit = axis_coordinates(axis, indices)
+        boundaries = list(range(start, stop, stride))
+        if not boundaries or boundaries[-1] != stop:
+            boundaries.append(stop)
+        edge_indices = np.asarray(boundaries, dtype=np.float64) - 0.5
+        edge_coordinate, _ = axis_coordinates(axis, edge_indices)
+        coordinate.setflags(write=False)
+        edge_coordinate.setflags(write=False)
+        coordinates.append(coordinate)
+        edges.append(edge_coordinate)
+        units.append(unit)
+    positive.setflags(write=False)
+    negative.setflags(write=False)
+
+    rect = None
+    if positive.size:
+        axis_edges = []
+        for edge_coordinate in edges:
+            edge = float(min(edge_coordinate[0], edge_coordinate[-1]))
+            length = float(max(edge_coordinate[0], edge_coordinate[-1]) - edge)
+            if not math.isfinite(edge) or not math.isfinite(length):
+                raise NMRNextError('DISPLAY_COORDINATES', 'Contour extent is not representable')
+            axis_edges.append((edge, length))
+        rect = (axis_edges[1][0], axis_edges[0][0], axis_edges[1][1], axis_edges[0][1])
+    return ContourFrame(positive, negative, tuple(coordinates), tuple(edges), tuple(units), strides,
+                        any(length > count for length, count in zip(lengths, shape)), rect)

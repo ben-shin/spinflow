@@ -24,17 +24,19 @@ from .demo import generate_demo
 from .errors import NMRNextError
 from .io import export_preflight, read_dataset, write_dataset
 from ._execution_cache import RecipeCache
-from ._viewport import display_frame, full_extent
+from ._viewport import display_frame, full_extent, contour_frame
 from .planning import plan_operations
 from .workflow_bundle import export_workflow_bundle
 
 
-INK = "#14263a"
-MUTED = "#596b7d"
-ACCENT = "#1769a3"
-SURFACE = "#f4f8fb"
-PAPER = "#ffffff"
-BORDER = "#d6e1e9"
+INK = "#e6e7e9"
+MUTED = "#a8abb0"
+ACCENT = "#b7bcc3"
+SURFACE = "#202225"
+PAPER = "#111315"
+BORDER = "#393c40"
+PLOT_POSITIVE = "#f4f0df"
+PLOT_NEGATIVE = "#dc777d"
 _font_loaded = False
 
 
@@ -42,6 +44,94 @@ class _BatchProgressBridge(QtCore.QObject):
     """Deliver immutable worker progress snapshots on the GUI thread."""
 
     progressed = QtCore.Signal(object)
+
+
+class _ZoomBoxViewBox(pg.ViewBox):
+    """Right-drag selects data-coordinate bounds; click menus and left pan remain native."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._zoom_start = None
+        self._zoom_start_screen = None
+        self._zoom_box = None
+
+    def _clear_zoom_box(self):
+        if self._zoom_box is not None:
+            self.removeItem(self._zoom_box)
+            self._zoom_box = None
+        self._zoom_start = None
+        self._zoom_start_screen = None
+
+    def mouseDragEvent(self, ev, axis=None):
+        if ev.button() != QtCore.Qt.MouseButton.RightButton or axis is not None:
+            return super().mouseDragEvent(ev, axis=axis)
+        ev.accept()
+        if ev.isStart():
+            self._clear_zoom_box()
+            self._zoom_start = self.mapSceneToView(ev.buttonDownScenePos())
+            self._zoom_start_screen = ev.buttonDownScreenPos()
+            pen = QtGui.QPen(QtGui.QColor("#fff4d6"))
+            pen.setWidth(2)
+            pen.setCosmetic(True)
+            self._zoom_box = QtWidgets.QGraphicsRectItem()
+            self._zoom_box.setPen(pen)
+            self._zoom_box.setBrush(QtGui.QBrush(QtGui.QColor(255, 244, 214, 38)))
+            self._zoom_box.setZValue(1e6)
+            self.addItem(self._zoom_box, ignoreBounds=True)
+
+        if self._zoom_start is None or self._zoom_box is None:
+            return
+        current = self.mapSceneToView(ev.scenePos())
+        rect = QtCore.QRectF(self._zoom_start, current).normalized()
+        self._zoom_box.setRect(rect)
+        if ev.isFinish():
+            start_screen = self._zoom_start_screen
+            end_screen = ev.screenPos()
+            enough_x = abs(end_screen.x() - start_screen.x()) >= 4
+            enough_y = abs(end_screen.y() - start_screen.y()) >= 4
+            self._clear_zoom_box()
+            if enough_x and enough_y and rect.width() > 0 and rect.height() > 0:
+                ranges = {}
+                if self.state['mouseEnabled'][0]:
+                    ranges['xRange'] = (rect.left(), rect.right())
+                if self.state['mouseEnabled'][1]:
+                    ranges['yRange'] = (rect.top(), rect.bottom())
+                if ranges:
+                    self.setRange(padding=0, **ranges)
+
+    def keyPressEvent(self, ev):
+        if ev.key() == QtCore.Qt.Key.Key_Escape and self._zoom_box is not None:
+            self._clear_zoom_box()
+            ev.accept()
+            return
+        return super().keyPressEvent(ev)
+
+
+class _PhysicalContourPathItem(QtWidgets.QGraphicsPathItem):
+    """Bounded display contour mapped through the true source block centers."""
+
+    def __init__(self, data, level, color, x_centers, x_edges, y_centers, y_edges):
+        self.data = data
+        self.level = float(level)
+        self.axisOrder = "row-major"
+        path = QtGui.QPainterPath()
+        x_knots = np.concatenate(([0.], np.arange(len(x_centers), dtype=np.float64) + .5,
+                                  [float(len(x_centers))]))
+        y_knots = np.concatenate(([0.], np.arange(len(y_centers), dtype=np.float64) + .5,
+                                  [float(len(y_centers))]))
+        x_values = np.concatenate(([x_edges[0]], x_centers, [x_edges[-1]]))
+        y_values = np.concatenate(([y_edges[0]], y_centers, [y_edges[-1]]))
+        for line in pg.functions.isocurve(data.T, self.level, connected=True, extendToEdge=True):
+            if not line:
+                continue
+            x, y = line[0]
+            path.moveTo(float(np.interp(x, x_knots, x_values)),
+                        float(np.interp(y, y_knots, y_values)))
+            for x, y in line[1:]:
+                path.lineTo(float(np.interp(x, x_knots, x_values)),
+                            float(np.interp(y, y_knots, y_values)))
+        super().__init__(path)
+        self.setPen(pg.mkPen(color, width=1.25))
 
 
 def _save_json_report(path, report):
@@ -300,6 +390,7 @@ class Workbench(QtWidgets.QMainWindow):
         self._viewport_generation = 0
         self._viewport_pending = None
         self._viewport_item = None
+        self._viewport_contours = []
         self._viewport_frame = None
         self._viewport_levels = None
         self._viewport_drawing = False
@@ -333,6 +424,7 @@ class Workbench(QtWidgets.QMainWindow):
         self._batch_next_item_number = 1
         self._batch_progress_bridge = _BatchProgressBridge(self)
         self._build_ui()
+        self._style()
         self._batch_progress_bridge.progressed.connect(
             self._on_batch_progress, QtCore.Qt.ConnectionType.QueuedConnection)
         self._batch_processing_mode_changed()
@@ -390,9 +482,9 @@ class Workbench(QtWidgets.QMainWindow):
         self.open_button = QtWidgets.QPushButton("Open spectrum…")
         self.open_button.clicked.connect(self._open_file)
         layout.addWidget(self.open_button)
-        self.bruker_button = QtWidgets.QPushButton("Open acquisition folder…")
+        self.bruker_button = QtWidgets.QPushButton("Open FID folder…")
         self.bruker_button.clicked.connect(self._open_bruker)
-        self.bruker_button.setToolTip("Open a supported acquisition folder; the format is detected from its contents.")
+        self.bruker_button.setToolTip("Open a supported raw FID/acquisition folder. Format is detected from its contents; accepted profiles open in the time domain.")
         layout.addWidget(self.bruker_button)
         self.open_session_button = QtWidgets.QPushButton("Open saved session…")
         self.open_session_button.clicked.connect(self._open_session_dialog)
@@ -440,14 +532,50 @@ class Workbench(QtWidgets.QMainWindow):
         self.component_combo.currentIndexChanged.connect(self._component_changed)
         sub.addWidget(self.component_combo)
         layout.addLayout(sub)
+        self.plot_controls_widget = QtWidgets.QWidget()
+        display_controls = QtWidgets.QGridLayout(self.plot_controls_widget)
+        display_controls.setContentsMargins(0, 0, 0, 0)
+        display_controls.addWidget(QtWidgets.QLabel("2D display"), 0, 0)
+        self.plot_mode_combo = QtWidgets.QComboBox()
+        self.plot_mode_combo.addItem("Contours", "contours")
+        self.plot_mode_combo.addItem("Raster", "raster")
+        self.plot_mode_combo.setToolTip("Display only; never changes spectrum samples")
+        self.plot_mode_combo.currentIndexChanged.connect(self._render)
+        display_controls.addWidget(self.plot_mode_combo, 0, 1)
+        display_controls.addWidget(QtWidgets.QLabel("Levels"), 0, 2)
+        self.contour_level_count = QtWidgets.QSpinBox()
+        self.contour_level_count.setRange(1, 3)
+        self.contour_level_count.setValue(2)
+        self.contour_level_count.setToolTip("Number of display-only contour levels per selected sign")
+        self.contour_level_count.valueChanged.connect(self._render)
+        display_controls.addWidget(self.contour_level_count, 0, 3)
+        display_controls.addWidget(QtWidgets.QLabel("Spacing"), 1, 0)
+        self.contour_spacing_combo = QtWidgets.QComboBox()
+        self.contour_spacing_combo.addItem("Linear", "linear")
+        self.contour_spacing_combo.addItem("Geometric", "geometric")
+        self.contour_spacing_combo.currentIndexChanged.connect(self._render)
+        display_controls.addWidget(self.contour_spacing_combo, 1, 1)
+        display_controls.addWidget(QtWidgets.QLabel("Sign"), 1, 2)
+        self.contour_sign_combo = QtWidgets.QComboBox()
+        self.contour_sign_combo.addItem("Both", "both")
+        self.contour_sign_combo.addItem("Positive", "positive")
+        self.contour_sign_combo.addItem("Negative", "negative")
+        self.contour_sign_combo.currentIndexChanged.connect(self._render)
+        display_controls.addWidget(self.contour_sign_combo, 1, 3)
+        display_controls.setColumnStretch(4, 1)
+        layout.addWidget(self.plot_controls_widget)
         pg.setConfigOptions(antialias=True, background=PAPER, foreground=INK)
-        self.plot = pg.PlotWidget()
+        self.plot = pg.PlotWidget(viewBox=_ZoomBoxViewBox())
         self.plot.setObjectName("plot")
+        for axis_name in ("left", "bottom", "right", "top"):
+            axis = self.plot.getPlotItem().getAxis(axis_name)
+            axis.setPen("#62666c")
+            axis.setTextPen(INK)
         self.plot.showGrid(x=True, y=True, alpha=0.16)
         self.plot.getPlotItem().getViewBox().setMouseEnabled(x=True, y=True)
         self.plot.getPlotItem().getViewBox().sigRangeChanged.connect(self._queue_viewport)
         layout.addWidget(self.plot, 1)
-        self.plot_note = QtWidgets.QLabel("Wheel to zoom; drag to pan. Intensities retain their sign.")
+        self.plot_note = QtWidgets.QLabel("Right-drag a box to zoom; left-drag to pan; wheel to zoom. Contours are a display-only block min/max preview capped at 192 × 192; zoom to recalculate from source samples.")
         self.plot_note.setObjectName("caption")
         self.plot_note.setWordWrap(True)
         layout.addWidget(self.plot_note)
@@ -466,7 +594,7 @@ class Workbench(QtWidgets.QMainWindow):
         layout.setContentsMargins(19, 20, 19, 18)
         layout.setSpacing(10)
         layout.addWidget(self._heading("Process"))
-        tip = QtWidgets.QLabel("Every run starts from the original data. The recipe never accumulates on a previous result.")
+        tip = QtWidgets.QLabel("Raw FID: set Window and Zero fill, then Fourier transform. Process applies the recipe; Phase is available on complex frequency data. Save runnable workflow keeps the applied recipe and source.")
         tip.setObjectName("caption")
         tip.setWordWrap(True)
         layout.addWidget(tip)
@@ -2273,28 +2401,33 @@ class Workbench(QtWidgets.QMainWindow):
         self.setStyleSheet(f"""
             QWidget {{ color: {INK}; font-family: 'Segoe UI', 'Arial'; font-size: 10pt; }}
             QMainWindow, QFrame#sidepanel, QFrame#controlpanel, QScrollArea#controlscroll {{ background: {SURFACE}; }}
-            QFrame#topbar {{ background: {INK}; border-bottom: 2px solid {ACCENT}; }}
+            QFrame#topbar {{ background: #17191c; border-bottom: 2px solid {ACCENT}; }}
             QLabel#brand {{ color: white; font-size: 19pt; font-weight: 700; }}
             QLabel#descriptor {{ color: #b9cfdf; font-size: 10pt; padding-left: 15px; }}
             QLabel#datasetTitle {{ color: #d9e9f2; font-size: 10pt; }}
             QFrame#plotpanel {{ background: {PAPER}; border-left: 1px solid {BORDER}; border-right: 1px solid {BORDER}; }}
             QLabel#heading {{ font-size: 13pt; font-weight: 650; }}
             QLabel#caption {{ color: {MUTED}; font-size: 9pt; }}
-            QLabel#recipe {{ color: {INK}; background: #e8f0f6; border-left: 3px solid {ACCENT}; padding: 9px; }}
-            QLabel#status {{ background: #e8f0f6; border-top: 1px solid {BORDER}; padding: 7px 18px; }}
+            QLabel#recipe {{ color: {INK}; background: #2a2d31; border-left: 3px solid {ACCENT}; padding: 9px; }}
+            QLabel#status {{ background: #25282c; border-top: 1px solid {BORDER}; padding: 7px 18px; }}
             QTextBrowser#details {{ background: transparent; color: {INK}; }}
-            QPushButton, QComboBox, QDoubleSpinBox, QSpinBox {{ background: white; border: 1px solid #bacbd7; border-radius: 4px; min-height: 30px; padding: 2px 8px; }}
-            QPushButton:hover {{ border-color: {ACCENT}; background: #eef7fd; }}
-            QPushButton#primary {{ background: {ACCENT}; color: white; border-color: {ACCENT}; font-weight: 650; }}
-            QPushButton#primary:hover {{ background: #0e568a; }}
-            QPushButton:disabled {{ color: #8899a5; background: #edf1f4; }}
-            QComboBox:focus, QDoubleSpinBox:focus, QSpinBox:focus, QPushButton:focus, QCheckBox:focus {{ border: 2px solid {ACCENT}; }}
+            QPushButton, QComboBox, QDoubleSpinBox, QSpinBox, QListWidget, QTableWidget, QLineEdit {{ background: #2a2d31; color: {INK}; border: 1px solid #4a4e54; border-radius: 4px; min-height: 30px; padding: 2px 8px; selection-background-color: #51565d; }}
+            QPushButton:hover {{ border-color: #aeb3b9; background: #35393e; }}
+            QPushButton#primary {{ background: #555a61; color: {INK}; border-color: #777c83; font-weight: 650; }}
+            QPushButton#primary:hover {{ background: #676c73; }}
+            QPushButton:disabled {{ color: #777c82; background: #25282c; }}
+            QComboBox:focus, QDoubleSpinBox:focus, QSpinBox:focus, QPushButton:focus, QCheckBox:focus, QLineEdit:focus, QListWidget:focus, QTableWidget:focus {{ border: 2px solid #d5d8dc; }}
+            QToolTip {{ color: {INK}; background: #2a2d31; border: 1px solid #62666c; }}
             QSplitter::handle {{ background: {BORDER}; width: 2px; }}
+            QTabWidget::pane {{ background: {SURFACE}; border: 1px solid {BORDER}; }}
+            QTabBar::tab {{ background: #292c30; color: #c3c6ca; border: 1px solid {BORDER}; padding: 6px 10px; }}
+            QTabBar::tab:selected {{ background: #3a3e43; color: #f0f1f2; border-bottom: 2px solid #e0e2e5; }}
+            QTabBar::tab:disabled {{ color: #8c9095; background: #24272a; }}
         """)
 
     def _set_status(self, text, *, error=False):
         self.status.setText(text)
-        self.status.setStyleSheet("color: #92353b;" if error else "")
+        self.status.setStyleSheet("color: #ff9b9e;" if error else "")
 
     @QtCore.Slot(object)
     def _show_error(self, exc):
@@ -3023,6 +3156,7 @@ class Workbench(QtWidgets.QMainWindow):
         self._viewport_pending = None
         self._viewport_generation += 1
         self._viewport_item = None
+        self._viewport_contours = []
         self._viewport_frame = None
         self._viewport_levels = None
         dataset = self._display_dataset()
@@ -3030,6 +3164,7 @@ class Workbench(QtWidgets.QMainWindow):
         self._rendered_axis_units = {}
         self.plot.clear()
         if dataset is None:
+            self.plot_controls_widget.setEnabled(False)
             self.plot_caption.setText("No spectrum loaded")
             self.plot_note.setText("Open a spectrum or create a synthetic example.")
             self._refresh_visible_region_button()
@@ -3044,7 +3179,10 @@ class Workbench(QtWidgets.QMainWindow):
         index = self.component_combo.currentData()
         data = dataset.data[index]
         label = "Original" if self.view_combo.currentIndex() == 1 else ("Preview" if self.preview is not None else "Current")
-        self.plot_caption.setText(f"{label} · {component_name(index, dataset.complex_axes)} · {data.shape}")
+        domains = {axis.domain for axis in dataset.axes}
+        domain_label = "Time domain" if domains == {"time"} else ("Frequency domain" if domains == {"frequency"} else "Mixed domains")
+        self.plot_caption.setText(f"{label} · {domain_label} · {component_name(index, dataset.complex_axes)} · {data.shape}")
+        self.plot_controls_widget.setEnabled(data.ndim == 2)
         self.plot.getPlotItem().invertX(False)
         self.plot.getPlotItem().invertY(False)
         if data.ndim == 1:
@@ -3062,16 +3200,17 @@ class Workbench(QtWidgets.QMainWindow):
             frame = display_frame(dataset, index, memory_bytes=self.memory_spin.value() * 1024**2)
             yu, xu = frame.units
             self._rendered_axis_units = {xa.id: xu, ya.id: yu}
-            vmax = float(np.percentile(np.abs(frame.values), 99.5))
-            vmax = vmax if vmax > 0 else 1.0
-            self._viewport_levels = (-vmax, vmax)
-            colors = np.array([[34, 76, 144, 255], [136, 177, 220, 255],
-                               [255, 255, 255, 255], [241, 159, 135, 255],
-                               [159, 46, 55, 255]], dtype=np.uint8)
-            lut = pg.ColorMap(np.linspace(0, 1, 5), colors).getLookupTable(nPts=256)
             item = pg.ImageItem(axisOrder="row-major")
-            item.setLookupTable(lut)
-            item.setLevels(self._viewport_levels)
+            if self.plot_mode_combo.currentData() == "raster":
+                vmax = float(np.percentile(np.abs(frame.values), 99.5)) if frame.values.size else 0.
+                vmax = vmax if vmax > 0 else 1.0
+                self._viewport_levels = (-vmax, vmax)
+                colors = np.array([[30, 33, 37, 255], [115, 119, 124, 255],
+                                   [190, 190, 186, 255], [220, 135, 139, 255],
+                                   [245, 225, 219, 255]], dtype=np.uint8)
+                lut = pg.ColorMap(np.linspace(0, 1, 5), colors).getLookupTable(nPts=256)
+                item.setLookupTable(lut)
+                item.setLevels(self._viewport_levels)
             self.plot.addItem(item)
             self._viewport_item = item
             self.plot.setLabel("bottom", f"{xa.nucleus or xa.label or xa.id} ({xu})")
@@ -3133,7 +3272,12 @@ class Workbench(QtWidgets.QMainWindow):
         if len(frame.coordinates) == 1:
             self._viewport_item.setData(frame.coordinates[0], frame.values)
         elif not frame.values.size:
+            for item in self._viewport_contours:
+                self.plot.removeItem(item)
+            self._viewport_contours = []
             self._viewport_item.clear()
+        elif self.plot_mode_combo.currentData() == "contours":
+            self._draw_contours(frame)
         else:
             image = frame.values
             if len(frame.coordinates[1]) > 1 and frame.coordinates[1][0] > frame.coordinates[1][-1]:
@@ -3146,6 +3290,9 @@ class Workbench(QtWidgets.QMainWindow):
         self._viewport_frame = frame
         if not frame.values.size:
             note = 'No sample centers in the visible area.'
+        elif len(frame.coordinates) == 2 and self.plot_mode_combo.currentData() == "contours":
+            note = ('Contours aggregate signed min/max over visible source blocks, capped at 192 × 192. '
+                    'Nearby features may merge; display only.')
         elif frame.sampled:
             note = 'Display sampled within visible area; zoom for complete samples. Narrow peaks may be omitted.'
         else:
@@ -3154,7 +3301,61 @@ class Workbench(QtWidgets.QMainWindow):
         unreferenced = dataset and any(a.domain == 'frequency' and a.reference_ppm is None for a in dataset.axes)
         reference_note = (' Chemical-shift reference is unknown: axes show mathematical frequency offsets in Hz. '
                           'Confirm the orientation and enter a known anchor for ppm.' if unreferenced else '')
-        self.plot_note.setText(f'{note} Wheel to zoom; drag to pan. Intensities retain their sign.{reference_note}')
+        self.plot_note.setText(f'{note} Right-drag a box to zoom; left-drag to pan; wheel to zoom. Intensities retain their sign.{reference_note}')
+
+    def _draw_contours(self, frame):
+        """Draw a small signed contour set on a bounded display-only frame."""
+        dataset = self._display_dataset()
+        contours = contour_frame(dataset, self.component_combo.currentData(), frame, max_samples=192)
+        positive_values, negative_values = contours.positive, contours.negative
+        y_coordinates, x_coordinates = contours.coordinates
+        y_edges, x_edges = contours.edges
+        if len(x_coordinates) > 1 and x_coordinates[0] > x_coordinates[-1]:
+            positive_values = positive_values[:, ::-1]
+            negative_values = negative_values[:, ::-1]
+            x_coordinates = x_coordinates[::-1]
+            x_edges = x_edges[::-1]
+        if len(y_coordinates) > 1 and y_coordinates[0] > y_coordinates[-1]:
+            positive_values = positive_values[::-1, :]
+            negative_values = negative_values[::-1, :]
+            y_coordinates = y_coordinates[::-1]
+            y_edges = y_edges[::-1]
+
+        rect = contours.rect
+
+        for item in self._viewport_contours:
+            self.plot.removeItem(item)
+        self._viewport_contours = []
+        if self._viewport_item is not None:
+            self.plot.removeItem(self._viewport_item)
+            self._viewport_item.deleteLater()
+
+        # Transparent image supplies ImageItem's pixel-to-axis transform.
+        # Extrema come from bounded visible source blocks, never a full copy.
+        anchor = pg.ImageItem(axisOrder="row-major")
+        anchor.setImage(np.zeros((*positive_values.shape, 4), dtype=np.uint8), autoLevels=False)
+        anchor.setRect(QtCore.QRectF(*rect))
+        self.plot.addItem(anchor)
+        self._viewport_item = anchor
+
+        count = self.contour_level_count.value()
+        if self.contour_spacing_combo.currentData() == "geometric":
+            fractions = np.geomspace(0.15, 0.85, count)
+        else:
+            fractions = np.linspace(1 / (count + 1), count / (count + 1), count)
+        signs = self.contour_sign_combo.currentData()
+        levels = []
+        maximum = float(np.max(positive_values)) if positive_values.size else 0.
+        minimum = float(np.min(negative_values)) if negative_values.size else 0.
+        if signs in {"both", "positive"} and maximum > 0:
+            levels.extend((positive_values, maximum * fraction, PLOT_POSITIVE) for fraction in fractions)
+        if signs in {"both", "negative"} and minimum < 0:
+            levels.extend((negative_values, minimum * fraction, PLOT_NEGATIVE) for fraction in fractions)
+        for level_data, level, color in levels:
+            contour = _PhysicalContourPathItem(level_data, level, color,
+                                               x_coordinates, x_edges, y_coordinates, y_edges)
+            self.plot.addItem(contour)
+            self._viewport_contours.append(contour)
 
     def preflight_export(self, fmt):
         if self.current is None:

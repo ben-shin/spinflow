@@ -4,7 +4,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from nmrnext._viewport import display_frame, axis_coordinates, full_extent
+from nmrnext._viewport import display_frame, axis_coordinates, full_extent, contour_frame
 from nmrnext.errors import NMRNextError
 from nmrnext.model import Axis, Dataset
 
@@ -55,6 +55,55 @@ def test_overview_and_small_memory_frame_respect_caps_and_declared_estimate():
     x, y, width, height = full.rect
     assert width / full.values.shape[1] == pytest.approx(full.strides[1] * 1000.)
     assert height / full.values.shape[0] == pytest.approx(full.strides[0] * 1000.)
+
+
+def test_contour_blocks_keep_both_signs_and_off_stride_peaks_before_display_decimation():
+    rows, columns = np.indices((1025, 1025))
+    data = np.where((rows + columns) % 2, 1., -1.).astype(np.float32)[None]
+    data[0, 513, 513] = 100.
+    data[0, 517, 519] = -80.
+    axes = (Axis('y', 1025, domain='frequency', unit='Hz', start=100., step=-2.,
+                 observation_mhz=100., reference_ppm=7.),
+            Axis('x', 1025, domain='frequency', unit='Hz', start=400., step=3.,
+                 observation_mhz=500., reference_ppm=8.))
+    source = Dataset(data, axes, ())
+    original = source.data.copy()
+    overview = display_frame(source, 0)
+    assert overview.sampled and overview.strides == (2, 2)
+    with patch.object(Dataset, 'coordinates', side_effect=AssertionError('full-axis allocation')):
+        blocks = contour_frame(source, 0, overview)
+    assert max(blocks.positive.shape) <= 192
+    assert max(blocks.negative.shape) <= 192
+    assert blocks.positive.max() == 100.
+    assert blocks.negative.min() == -80.
+    assert blocks.positive.min() == 1.
+    assert blocks.negative.max() == -1.
+    assert blocks.strides == (6, 6)
+    assert len(blocks.edges[0]) == blocks.positive.shape[0] + 1
+    assert len(blocks.edges[1]) == blocks.positive.shape[1] + 1
+    assert blocks.edges[0][0] == pytest.approx(8.01)
+    assert blocks.edges[0][-1] == pytest.approx(-12.49)
+    assert blocks.edges[1][0] == pytest.approx(8.797)
+    assert blocks.edges[1][-1] == pytest.approx(14.947)
+    y_center = (510 + 515) / 2
+    expected_y = 7. + (100. - 2. * y_center) / 100.
+    assert blocks.coordinates[0][85] == pytest.approx(expected_y)
+    np.testing.assert_array_equal(source.data, original)
+
+
+@pytest.mark.parametrize('step', [1., -1.])
+def test_contour_partial_block_edges_match_source_cell_extent(step):
+    data = np.zeros((1, 4, 193), dtype=np.float32)
+    axis = Axis('x', 193, domain='frequency', unit='Hz', start=10., step=step)
+    source = Dataset(data, (Axis('y', 4), axis))
+    frame = display_frame(source, 0)
+    blocks = contour_frame(source, 0, frame, max_samples=192)
+    assert len(blocks.coordinates[1]) == 97
+    assert len(blocks.edges[1]) == 98
+    assert blocks.coordinates[1][0] == pytest.approx(10. + step * 0.5)
+    assert blocks.coordinates[1][-1] == pytest.approx(10. + step * 192.)
+    assert blocks.edges[1][0] == pytest.approx(10. - step * 0.5)
+    assert blocks.edges[1][-1] == pytest.approx(10. + step * 192.5)
 
 
 def test_curve_zoom_recovers_signed_impulses_lost_by_overview_striding():

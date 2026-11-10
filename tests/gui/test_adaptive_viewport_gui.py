@@ -16,6 +16,8 @@ from nmrnext.model import Axis, Dataset
 def window():
     app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
     workbench = Workbench()
+    # These tests assert ImageItem raster sampling and coordinate transforms.
+    workbench.plot_mode_combo.setCurrentIndex(workbench.plot_mode_combo.findData('raster'))
     yield workbench
     workbench.close()
     workbench.deleteLater()
