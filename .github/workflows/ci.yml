@@ -86,6 +86,14 @@ jobs:
         run: |
           .venv/bin/python -I -c "import importlib.metadata as m; import PySide6; assert m.version('PySide6-Essentials') == m.version('shiboken6') == PySide6.__version__ == '6.12.0'; installed={d.metadata['Name'].lower().replace('-','_') for d in m.distributions()}; assert not installed.intersection({'pyside6','pyside6_addons','pyside6_webengine','pyside6_pdf'})"
           .venv/bin/python -I -m pip check
+      - name: Build in-place extension for source-path tests
+        run: .venv/bin/python tools/build_native.py
+      - name: Fetch public Agilent acquisitions for GUI workflows
+        run: .venv/bin/python tests/fixtures/fetch_varian_public.py --root .artifacts/coverage-formats
+      - name: Test complete source suite with Qt
+        env:
+          SPINFLOW_VARIAN_ROOT: ${{ github.workspace }}/.artifacts/coverage-formats
+        run: .venv/bin/python -m pytest -q
       - name: Capture the installed synthetic Workbench on X11
         timeout-minutes: 10
         env:
@@ -149,14 +157,6 @@ jobs:
             ${{ runner.temp }}/synthetic-workbench/batch-results.csv
             ${{ runner.temp }}/synthetic-workbench/batch-results.json
             ${{ runner.temp }}/synthetic-workbench/receipt.json
-      - name: Build in-place extension for source-path tests
-        run: .venv/bin/python tools/build_native.py
-      - name: Fetch public Agilent acquisitions for GUI workflows
-        run: .venv/bin/python tests/fixtures/fetch_varian_public.py --root .artifacts/coverage-formats
-      - name: Test complete source suite with Qt
-        env:
-          SPINFLOW_VARIAN_ROOT: ${{ github.workspace }}/.artifacts/coverage-formats
-        run: .venv/bin/python -m pytest -q
 
   public-bruker:
     name: Ubuntu 24.04 / public Bruker 1D and 2D

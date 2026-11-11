@@ -21,6 +21,18 @@ def sha(p):
     return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 
+
+def check_provenance(actual, source_prefix):
+    expected_operations = [
+        {"op": "fft", "axis": "n", "inverse": False, "version": "1"},
+        {"op": "phase", "axis": "n", "p0": 90.0, "p1": 0.0, "pivot": 0.0, "version": "1"},
+    ]
+    prefix_size = len(source_prefix)
+    assert len(actual) == prefix_size + len(expected_operations)
+    assert actual[:prefix_size] == source_prefix
+    assert [entry["operation"] for entry in actual[prefix_size:]] == expected_operations
+
+
 def main(checkout, wheel, root):
     checkout, wheel, root = map(Path, (checkout, wheel, root))
     assert __debug__ and sys.flags.isolated and sys.dont_write_bytecode
@@ -173,7 +185,7 @@ def main(checkout, wheel, root):
         assert tuple(applied.complex_axes)==("h","n")
         assert applied.axes[0]==axes[0] and applied.axes[1].domain=="frequency"
         assert (applied.axes[1].unit,applied.axes[1].size,applied.axes[1].start,applied.axes[1].step)==("Hz",64,-96,3)
-        assert [entry["operation"] for entry in applied.provenance]==ops
+        check_provenance(applied.provenance, source.provenance)
         for actual,expected in zip(applied.data,raw):
             assert np.max(abs(actual-expected))/np.max(abs(expected))<=2e-6
         write_dataset(applied,root/"applied-reference.nmrh5",format="native")
