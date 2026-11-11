@@ -102,7 +102,7 @@ class WorkbenchTests(unittest.TestCase):
         self.assertEqual(w.last_plan['memory_bytes'], 16 * 1024**2)
 
     def test_acquisition_folder_uses_shared_reader(self):
-        self.assertIn("acquisition folder", self.window.bruker_button.text().lower())
+        self.assertEqual(self.window.bruker_button.text(), "Open FID folder…")
         with patch("nmrnext.gui.QtWidgets.QFileDialog.getExistingDirectory", return_value="sample.fid") as choose, \
              patch.object(self.window, "_read_with_budget") as reader, \
              patch.object(self.window, "_start_job") as start:
