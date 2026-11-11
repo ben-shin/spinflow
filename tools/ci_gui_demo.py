@@ -13,7 +13,7 @@ import shutil
 from zipfile import ZipFile
 
 
-REVIEWED_GUI_SHA256 = "aaacce7592058c982ba9e92179763f15b62f17b5889a65666a43575aa48e372e"
+REVIEWED_GUI_SHA256 = "c5dde2dddbd5543257cc33418bed582056db68433be865b4f63525ac7b740b2f"
 REVIEWED_VIEWPORT_SHA256 = "0dfc4a63c634c2b5d72521bd8a21ccc3631081def5368ee4692322c0dc5f5d8e"
 
 
@@ -34,6 +34,7 @@ def check_provenance(actual, source_prefix):
 
 
 def main(checkout, wheel, root):
+    assert re.fullmatch(r"[0-9a-f]{64}", REVIEWED_GUI_SHA256), "Bind the reviewed Batch presentation source first"
     checkout, wheel, root = map(Path, (checkout, wheel, root))
     assert __debug__ and sys.flags.isolated and sys.dont_write_bytecode
     assert checkout.is_absolute() and not Path.cwd().resolve().is_relative_to(checkout)
@@ -131,6 +132,7 @@ def main(checkout, wheel, root):
     def idle():
         return not win._busy and win._thread is None
     def capture(name):
+        wait(lambda: idle() and win._viewport_pending is None)
         app.processEvents();win.repaint();app.sync()
         frame=win.frameGeometry()
         assert screen.geometry().contains(frame) and win.isActiveWindow() and win.windowHandle().isExposed()
@@ -231,14 +233,14 @@ def main(checkout, wheel, root):
                   "assignments":[{"assignment_id":"center","label":"Center signal","sign":"positive",
                                   "unit":"points","threshold":1.0,"search_bounds":bounds,"integration_bounds":bounds}]}
         save_assignment_template(template,template_path)
-        planpath=root/"Synthetic series.json"
+        planpath=Path("Synthetic series.json")
         save_batch_manifest({"schema_version":"1","kind":"batch_manifest","operations":recipe["operations"],"backend":recipe["backend"],
                              "threads":1,"memory_bytes":recipe["memory_bytes"],"assignment_template":str(template_path),"items":items},planpath)
         tabs.setCurrentIndex(win.batch_tab_index)
         # Use the installed Open manifest loader's acceptance callback and service
         # readers. File chooser interaction is outside this smoke's scope.
         win._batch_accept_manifest(planpath,load_batch_manifest(planpath),
-                                   load_assignment_template(template_path),template_path.resolve())
+                                   load_assignment_template(template_path),template_path)
         click(win.batch_plan_button)
         wait(lambda: idle() and win._batch_plan_result is not None)
         assert not win._batch_plan_result["refusals"]
@@ -269,6 +271,10 @@ def main(checkout, wheel, root):
             with origin.open("rb") as inp, (root/name).open("xb") as out:
                 shutil.copyfileobj(inp,out)
             assert sha(origin)==sha(root/name)
+        wait(lambda: idle() and not win._batch_running
+             and win._viewport_pending is None
+             and win.batch_progress_label.text().startswith("Batch finished")
+             and win.status.text()==win.batch_progress_label.text())
         capture("03-batch-results.png")
         actual=origins();verify()
         assert win.close()

@@ -1911,10 +1911,12 @@ class Workbench(QtWidgets.QMainWindow):
                 details = ", ".join(f"{key}={counts[key]}" for key in sorted(counts))
                 label = status + (f" · {details}" if details else "")
                 self._batch_set_item_status(row, label, summary.get("error"))
-            self.batch_progress_label.setText(
+            completion = (
                 f"Batch finished · completed {result['completed']} · skipped {result['skipped']} · "
                 f"failed {result['failed']} · not run {result['not_run']}"
                 + (f" · {result['stop_reason']}" if result.get("stop_reason") else ""))
+            self.batch_progress_label.setText(completion)
+            self._set_status(completion)
             self._refresh_buttons()
 
         self._start_job(work, done, "Applying batch sequentially…")
@@ -2423,6 +2425,14 @@ class Workbench(QtWidgets.QMainWindow):
             QTabBar::tab {{ background: #292c30; color: #c3c6ca; border: 1px solid {BORDER}; padding: 6px 10px; }}
             QTabBar::tab:selected {{ background: #3a3e43; color: #f0f1f2; border-bottom: 2px solid #e0e2e5; }}
             QTabBar::tab:disabled {{ color: #8c9095; background: #24272a; }}
+            QGroupBox {{ background: {SURFACE}; color: {INK}; border: 1px solid {BORDER}; border-radius: 4px; margin-top: 10px; padding-top: 8px; }}
+            QGroupBox::title {{ subcontrol-origin: margin; left: 8px; padding: 0 4px; color: {INK}; }}
+            QGroupBox:disabled {{ background: {SURFACE}; color: {MUTED}; }}
+            QGroupBox QLabel:disabled {{ color: {MUTED}; }}
+            QHeaderView::section {{ background: #363a3f; color: {INK}; border: 1px solid {BORDER}; padding: 3px 5px; }}
+            QTableCornerButton::section {{ background: #363a3f; border: 1px solid {BORDER}; }}
+            QTableWidget:disabled {{ background: #24272a; color: {MUTED}; }}
+            QLineEdit:disabled, QComboBox:disabled, QDoubleSpinBox:disabled, QSpinBox:disabled {{ background: #24272a; color: {MUTED}; border-color: {BORDER}; }}
         """)
 
     def _set_status(self, text, *, error=False):

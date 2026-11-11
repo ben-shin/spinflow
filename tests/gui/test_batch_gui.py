@@ -359,6 +359,10 @@ def test_contour_display_controls_remain_small_and_theme_is_dark(workbench):
     assert workbench.bruker_button.text() == "Open FID folder…"
     assert "supported raw FID/acquisition folder" in workbench.bruker_button.toolTip()
     assert "QTabBar::tab:selected" in workbench.styleSheet()
+    assert "QGroupBox::title" in workbench.styleSheet()
+    assert "QGroupBox:disabled" in workbench.styleSheet()
+    assert "QHeaderView::section" in workbench.styleSheet()
+    assert "QTableWidget:disabled" in workbench.styleSheet()
     workbench.resize(1320, 900)
     workbench.show()
     QtWidgets.QApplication.processEvents()
@@ -750,6 +754,8 @@ def test_processing_only_manifest_copies_all_quadratures_with_real_service(workb
     np.testing.assert_array_equal(result.data, samples)
     assert result.complex_axes == ("h", "n")
     assert workbench.batch_items_table.item(0, 4).text().startswith("completed")
+    assert workbench.batch_progress_label.text().startswith("Batch finished")
+    assert workbench.status.text() == workbench.batch_progress_label.text()
     with workbench._batch_csv_path.open("r", encoding="utf-8-sig", newline="") as stream:
         assert list(csv.DictReader(stream)) == []
 
