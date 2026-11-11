@@ -808,6 +808,7 @@ class Workbench(QtWidgets.QMainWindow):
 
     def _batch_panel(self):
         panel = QtWidgets.QWidget()
+        panel.setObjectName("batchPanel")
         self.batch_panel = panel
         layout = QtWidgets.QVBoxLayout(panel)
         intro = QtWidgets.QLabel(
@@ -966,6 +967,7 @@ class Workbench(QtWidgets.QMainWindow):
         layout.addWidget(recipe_box)
 
         self.batch_advanced_toggle = QtWidgets.QToolButton()
+        self.batch_advanced_toggle.setObjectName("batchAdvancedToggle")
         self.batch_advanced_toggle.setText("Advanced run options")
         self.batch_advanced_toggle.setCheckable(True)
         self.batch_advanced_toggle.setChecked(False)
@@ -985,6 +987,8 @@ class Workbench(QtWidgets.QMainWindow):
         layout.addWidget(self.batch_advanced_widget)
         layout.addStretch(1)
         scroll = QtWidgets.QScrollArea()
+        scroll.setObjectName("batchScroll")
+        scroll.viewport().setObjectName("batchViewport")
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         scroll.setWidget(panel)
@@ -1389,7 +1393,8 @@ class Workbench(QtWidgets.QMainWindow):
             self.assignment_table.blockSignals(False)
             self.assignment_channel_combo.blockSignals(False)
         self.batch_template_label.setText(
-            f"Reference: {self._batch_template_path} · {len(template['assignments'])} labels · component {template['analysis_channel']}")
+            f"Reference: {self._batch_template_path.name} · {len(template['assignments'])} labels · component {template['analysis_channel']}")
+        self.batch_template_label.setToolTip(str(self._batch_template_path))
         self._batch_manifest_dirty = True
         self._batch_plan_result = None
         self._batch_csv_path = None
@@ -1720,7 +1725,8 @@ class Workbench(QtWidgets.QMainWindow):
         self._batch_manifest_dirty = False
         self._batch_plan_result = None
         self._batch_csv_path = None
-        self.batch_manifest_label.setText(str(target))
+        self.batch_manifest_label.setText(target.name)
+        self.batch_manifest_label.setToolTip(str(target))
         self._refresh_buttons()
 
     def _batch_open_manifest_dialog(self):
@@ -1813,13 +1819,16 @@ class Workbench(QtWidgets.QMainWindow):
                 script = Path(path).parent / script
             self._batch_pipe_script = script.resolve()
             self._batch_operations = None
-            self.batch_recipe_label.setText(f"NMRPipe command text: {self._batch_pipe_script}")
+            self.batch_recipe_label.setText(f"NMRPipe command text: {self._batch_pipe_script.name}")
+            self.batch_recipe_label.setToolTip(str(self._batch_pipe_script))
         else:
             count = len(manifest["operations"])
             self.batch_recipe_label.setText(
                 ("No processing · all input quadratures are copied. " if not count else "Saved processing · ")
                 + f"{count} operation(s) · {self._batch_backend} · {self._batch_memory_bytes / 1024**2:g} MiB")
         self.batch_manifest_label.setText(str(path))
+        self.batch_manifest_label.setText(Path(path).name)
+        self.batch_manifest_label.setToolTip(str(Path(path).resolve()))
         self._batch_preserve_loaded_settings = True
         self._refresh_buttons()
 
@@ -2433,6 +2442,9 @@ class Workbench(QtWidgets.QMainWindow):
             QTableCornerButton::section {{ background: #363a3f; border: 1px solid {BORDER}; }}
             QTableWidget:disabled {{ background: #24272a; color: {MUTED}; }}
             QLineEdit:disabled, QComboBox:disabled, QDoubleSpinBox:disabled, QSpinBox:disabled {{ background: #24272a; color: {MUTED}; border-color: {BORDER}; }}
+            QScrollArea#batchScroll, QWidget#batchPanel, QWidget#batchViewport {{ background: {SURFACE}; color: {INK}; }}
+            QToolButton#batchAdvancedToggle {{ background: #292c30; color: {INK}; border: 1px solid {BORDER}; padding: 4px 8px; }}
+            QToolButton#batchAdvancedToggle:hover {{ background: #35393e; }}
         """)
 
     def _set_status(self, text, *, error=False):

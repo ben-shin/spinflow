@@ -147,6 +147,10 @@ def test_assignment_template_editor_saves_and_reopens_real_sidecar(workbench, tm
     assert saved["reference"]["axes"][0]["id"] == "h"
     assert saved["assignments"][0]["assignment_id"] == "assignment-001"
     assert saved["assignments"][0]["integration_bounds"]["h"][0] < saved["assignments"][0]["integration_bounds"]["h"][1]
+    assert path.name in workbench.batch_template_label.text()
+    assert str(path.resolve()) == workbench.batch_template_label.toolTip()
+    assert str(path.parent) not in workbench.batch_template_label.text()
+    assert workbench._batch_template_path == path.resolve()
 
     def set_regions(dialog):
         boxes = dialog.findChildren(QtWidgets.QDoubleSpinBox)
@@ -363,6 +367,9 @@ def test_contour_display_controls_remain_small_and_theme_is_dark(workbench):
     assert "QGroupBox:disabled" in workbench.styleSheet()
     assert "QHeaderView::section" in workbench.styleSheet()
     assert "QTableWidget:disabled" in workbench.styleSheet()
+    assert "QWidget#batchViewport" in workbench.styleSheet()
+    assert "QWidget#batchPanel" in workbench.styleSheet()
+    assert "QToolButton#batchAdvancedToggle" in workbench.styleSheet()
     workbench.resize(1320, 900)
     workbench.show()
     QtWidgets.QApplication.processEvents()
