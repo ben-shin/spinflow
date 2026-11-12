@@ -7,14 +7,18 @@
 | Field | Record |
 |---|---|
 | Candidate source commit | `0e3f896255a98dd766d73fa534951bf1ef6de725` |
-| Associated GitHub Actions build | `43290423200` |
+| Published GitHub prerelease / release ID / latest status | `v0.4.0b1` / `443486663` / prerelease, not latest |
+| Source commit / build run | `0e3f896255a98dd766d73fa534951bf1ef6de725` / `43290423200` |
+| Verified installer SHA256 | `4edeea8b08f667795fe0a1323cdcd79bd20f982af5f467d955c2577578666166` |
 | Reported package version / `doctor` native status | NOT RUN |
 | Researcher / date | NOT RUN |
 | Ubuntu release / architecture / desktop (X11 or Wayland) | NOT RUN |
 | Python / Qt / native backend version | NOT RUN |
 | CPU / RAM / display | NOT RUN |
-| Install route / dependency network available? | NOT RUN |
-| Test shell activated with `source .venv/bin/activate`? | NOT RUN |
+| Install route (release wheel or separate source build) / dependency network available? | NOT RUN |
+| Installer SHA256 verified before execution? | NOT RUN |
+| Installed prefix / executable path | NOT RUN |
+| Chosen release prefix activated with `source PREFIX/bin/activate` (or source route `.venv/bin/activate`)? | NOT RUN |
 | Local input identifiers and SHA256s (keep private unless authorized) | NOT RUN |
 | Fresh output directory | NOT RUN |
 
@@ -43,3 +47,6 @@ Mark each **PASS / FAIL / NOT RUN**, explain evidence and deviations. Do not omi
 **Follow-up required before relying on this workflow:** NOT RUN.
 
 Keep raw data local. Share only results and metadata permitted by the researcher/data owner.
+
+
+
