@@ -6,8 +6,14 @@ import sysconfig
 import zipfile
 
 
-REVIEWED_WHEEL_SHA256 = "836b50d4dcda5f5b543256a20aae5edaa46c7172de37da8da108f4e333058cba"
-REVIEWED_WHEEL_NAME = "spinflow-0.3.0b3-cp312-cp312-linux_x86_64.whl"
+REVIEWED_WHEELS = (
+    ("spinflow-0.3.0b3-cp312-cp312-linux_x86_64.whl",
+     "836b50d4dcda5f5b543256a20aae5edaa46c7172de37da8da108f4e333058cba"),
+    ("spinflow-0.4.0b1-cp312-cp312-linux_x86_64.whl",
+     "226459e86b5dbe914f9fb160f455503b09cf1808b94ab57e7987ca456aba2cd3"),
+    ("spinflow-0.4.0b1-cp313-cp313-linux_x86_64.whl",
+     "24092ef909ccae21e449173d97b4f0436df237ec98686d5070a52dbfb7afa3a0"),
+)
 _authority = None
 
 
@@ -26,8 +32,8 @@ def _sha256(path):
 
 def _verify(authority):
     wheel, expected, pins = authority
-    _require(wheel.name == REVIEWED_WHEEL_NAME, "Wrong reviewed wheel filename")
-    _require(expected == REVIEWED_WHEEL_SHA256 and _sha256(wheel) == expected,
+    _require((wheel.name, expected) in REVIEWED_WHEELS, "Unreviewed wheel filename/SHA pair")
+    _require(_sha256(wheel) == expected,
              "Reviewed wheel SHA differs")
     purelib = Path(sysconfig.get_path("purelib")).resolve(strict=True)
     package = purelib / "nmrnext"
