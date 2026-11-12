@@ -1,0 +1,491 @@
+{
+  "A": {
+    "installed_file_count": 31,
+    "native_sha256": "a7f91a4cb82d472b0bc25dab5c3d9fd6fa671b75f1ba799805182b292abbe99b",
+    "reader": "nmrnext.io.read_dataset(format=nmrpipe-real)",
+    "release": "v0.4.0b1",
+    "source_commit": "0e3f896255a98dd766d73fa534951bf1ef6de725",
+    "wheel_sha256": "226459e86b5dbe914f9fb160f455503b09cf1808b94ab57e7987ca456aba2cd3"
+  },
+  "B": {
+    "reader": "nmrglue.pipe.read",
+    "source_revision": "unreported in shareable timing record",
+    "version": "0.12"
+  },
+  "all_98_record_hashes_and_timing_values_rechecked": true,
+  "comparison_scope": "reader calls only; no full NMRPipe program, full workflow, FFT, phase, processing parity, or consumer benchmark",
+  "context": {
+    "affinity_cpu_id": 0,
+    "external_OS_global_idle": "not asserted",
+    "fresh_retained_disk_budget_bytes": 536870912,
+    "guest": "Ubuntu 24.04 x86-64; same 1-vCPU/4-GiB VM for both cohorts",
+    "per_child_AS_limit_bytes": 2147483648,
+    "per_child_CPU_seconds": 60,
+    "per_child_file_bytes": 67108864,
+    "per_child_wall_seconds": 60,
+    "warm_retained_disk_budget_bytes": 3221225472,
+    "configured_library_thread_environment": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1"
+    },
+    "runtime_threadpool_count": "not measured"
+  },
+  "counts": {
+    "fresh": {
+      "calls": 14,
+      "journal_sha256": "eec7744bfc1d4ef3bf91e8dae4d950976d15a467397048da1999d83b04493bc5",
+      "workers": 14
+    },
+    "warm": {
+      "calls": 84,
+      "journal_sha256": "4d79460913d5dbddaba43db2c263f633c0d2939d4a1f5c67aeb253ade08f9cc4",
+      "workers": 14
+    }
+  },
+  "data_bytes": 33554432,
+  "dtype": "<f4",
+  "figure": "Paired B time reduction distribution, PNG and SVG; rendered with preinstalled Matplotlib 3.11.2; no package installation.",
+  "fresh_freeze_sha256": "a928f664ffd0276fa20a29aa2d35bffe9fcdb85d054dcd12c6268ba2b8f29044",
+  "fresh_journal_sha256": "eec7744bfc1d4ef3bf91e8dae4d950976d15a467397048da1999d83b04493bc5",
+  "identity_receipt_sha256": {
+    "A": "a72e643a48b3e6f478b596a892575e7d0d0d8989dd390631b0d90c64b5e2c7c1",
+    "B": "6b7206463ada4c23fdf2043e255668ace01d23aaa29dc2f6cca10d5e722e5cbe",
+    "installed31_and_dependencies": "dd30ca77160b68cf8669c0f8900aa96ac0fb874a4f5e7173dbd58e8676736a8b"
+  },
+  "input_f32_sample_sha256": "709b199b07ede1a972092dc22de0c633cff69d95c9d4babecaa00d3909261784",
+  "input_file_bytes": 33556480,
+  "input_file_sha256": "172884f2d6e88e14b1d50b2b458f86690fa55d075ae544f7934a34d14572021d",
+  "memory_scope": "wait4 waited-shell lifetime max RSS only; not aggregate cgroup memory; matched cgroup memory gate UNVERIFIED; no ranked memory winner",
+  "metadata": "complete metadata and 6144 grid-coordinate checks preserved; coordinate check does not establish absolute chemical ppm",
+  "paired_percentage_definition": "Per worker pair: 100*(A_seconds-B_seconds)/A_seconds; positive means B took less time. Median is across seven paired percentages.",
+  "predeclared_statistics_sha256": "8c1a809952106e24950930dc12cd95f63b72550b29558916dd90da232a76bb55",
+  "predeclared_summary_verified": true,
+  "protocol": "df0ac5; clock endpoints are read_elapsed and parent-dispatch-to-return as described in report",
+  "raw_cohort_freeze_sha256": "c60dfac42a299b36e367f9b4bd470034ecffdf2cec4129db66d00f5f1d9497c5",
+  "reader_and_protocol_source_sha256": {
+    "load_cohort_py": "ace80972708fc8668850536fcf69066cf01cc511b9c91ad0c8b57db5961a2b98",
+    "sealed_fresh_manifest": "bc928fc96e70a7d1fec2689b92c1a270b56fa6336ea3407eaadf618ceb3736bc",
+    "sealed_warm_manifest": "0f017e48594a7ac3d3005947d85d80c72d80388cfd9271d2523de85fab1a2550"
+  },
+  "recomputed_panels": {
+    "fresh_dispatch_to_return": {
+      "A_seconds": {
+        "mad_unscaled": 0.07839175400000009,
+        "max": 0.751182537,
+        "median": 0.672790783,
+        "min": 0.49153249,
+        "n": 7
+      },
+      "B_seconds": {
+        "mad_unscaled": 0.0016461180000000297,
+        "max": 0.439891544,
+        "median": 0.438245426,
+        "min": 0.432401814,
+        "n": 7
+      },
+      "d_seconds": {
+        "mad_unscaled": 0.0852055980000001,
+        "max": 0.31810483700000003,
+        "median": 0.23289923899999992,
+        "min": 0.053148154999999975,
+        "n": 7
+      },
+      "g_percent": {
+        "mad_unscaled": 7.730319678693959,
+        "max": 42.34720874508296,
+        "median": 34.616889066389,
+        "min": 10.812745053739983,
+        "n": 7
+      },
+      "pairs": [
+        {
+          "A": 0.751182537,
+          "B": 0.4330777,
+          "d_seconds": 0.31810483700000003,
+          "g_percent": 42.34720874508296,
+          "pair": 1
+        },
+        {
+          "A": 0.708684242,
+          "B": 0.438245426,
+          "d_seconds": 0.270438816,
+          "g_percent": 38.16069272780585,
+          "pair": 2
+        },
+        {
+          "A": 0.49153249,
+          "B": 0.438384335,
+          "d_seconds": 0.053148154999999975,
+          "g_percent": 10.812745053739983,
+          "pair": 3
+        },
+        {
+          "A": 0.672790783,
+          "B": 0.439891544,
+          "d_seconds": 0.23289923899999992,
+          "g_percent": 34.616889066389,
+          "pair": 4
+        },
+        {
+          "A": 0.49719233,
+          "B": 0.432401814,
+          "d_seconds": 0.06479051600000002,
+          "g_percent": 13.031278258053582,
+          "pair": 5
+        },
+        {
+          "A": 0.684704655,
+          "B": 0.43918435,
+          "d_seconds": 0.245520305,
+          "g_percent": 35.8578407795402,
+          "pair": 6
+        },
+        {
+          "A": 0.494724827,
+          "B": 0.435745541,
+          "d_seconds": 0.058979285999999964,
+          "g_percent": 11.92163456959478,
+          "pair": 7
+        }
+      ],
+      "strict_B_lt_A": 7,
+      "winner_claim": false
+    },
+    "fresh_native_API": {
+      "A_seconds": {
+        "mad_unscaled": 0.07528834099999993,
+        "max": 0.688914136,
+        "median": 0.613625795,
+        "min": 0.432583503,
+        "n": 7
+      },
+      "B_seconds": {
+        "mad_unscaled": 0.001849725999999996,
+        "max": 0.380570955,
+        "median": 0.378035534,
+        "min": 0.374750017,
+        "n": 7
+      },
+      "d_seconds": {
+        "mad_unscaled": 0.08110927899999992,
+        "max": 0.31416411899999996,
+        "median": 0.23305484000000004,
+        "min": 0.05334195599999997,
+        "n": 7
+      },
+      "g_percent": {
+        "mad_unscaled": 7.622836201969328,
+        "max": 45.60279758869689,
+        "median": 37.97996138672756,
+        "min": 12.33101947486887,
+        "n": 7
+      },
+      "pairs": [
+        {
+          "A": 0.688914136,
+          "B": 0.374750017,
+          "d_seconds": 0.31416411899999996,
+          "g_percent": 45.60279758869689,
+          "pair": 1
+        },
+        {
+          "A": 0.650089557,
+          "B": 0.378035534,
+          "d_seconds": 0.27205402300000003,
+          "g_percent": 41.84869916315238,
+          "pair": 2
+        },
+        {
+          "A": 0.432583503,
+          "B": 0.379241547,
+          "d_seconds": 0.05334195599999997,
+          "g_percent": 12.33101947486887,
+          "pair": 3
+        },
+        {
+          "A": 0.613625795,
+          "B": 0.380570955,
+          "d_seconds": 0.23305484000000004,
+          "g_percent": 37.97996138672756,
+          "pair": 4
+        },
+        {
+          "A": 0.438107741,
+          "B": 0.374946333,
+          "d_seconds": 0.06316140799999997,
+          "g_percent": 14.41686646664387,
+          "pair": 5
+        },
+        {
+          "A": 0.623603556,
+          "B": 0.37988526,
+          "d_seconds": 0.24371829599999995,
+          "g_percent": 39.08224923592321,
+          "pair": 6
+        },
+        {
+          "A": 0.435482237,
+          "B": 0.376286349,
+          "d_seconds": 0.059195887999999974,
+          "g_percent": 13.593180839658444,
+          "pair": 7
+        }
+      ],
+      "strict_B_lt_A": 7,
+      "winner_claim": false
+    },
+    "warm_first_API": {
+      "A_seconds": {
+        "mad_unscaled": 0.081694125,
+        "max": 0.633947684,
+        "median": 0.550967125,
+        "min": 0.425542032,
+        "n": 7
+      },
+      "B_seconds": {
+        "mad_unscaled": 0.011365966000000005,
+        "max": 0.445229473,
+        "median": 0.389829792,
+        "min": 0.377053426,
+        "n": 7
+      },
+      "d_seconds": {
+        "mad_unscaled": 0.08123951200000001,
+        "max": 0.244117892,
+        "median": 0.10573765200000002,
+        "min": -0.011714477000000001,
+        "n": 7
+      },
+      "g_percent": {
+        "mad_unscaled": 13.853576801355434,
+        "max": 38.50757691229297,
+        "median": 19.19128151248589,
+        "min": -2.75283664575818,
+        "n": 7
+      },
+      "pairs": [
+        {
+          "A": 0.633947684,
+          "B": 0.389829792,
+          "d_seconds": 0.244117892,
+          "g_percent": 38.50757691229297,
+          "pair": 1
+        },
+        {
+          "A": 0.576000646,
+          "B": 0.378463826,
+          "d_seconds": 0.19753682,
+          "g_percent": 34.29454834326697,
+          "pair": 2
+        },
+        {
+          "A": 0.435941087,
+          "B": 0.377053426,
+          "d_seconds": 0.05888766099999998,
+          "g_percent": 13.508169510987154,
+          "pair": 3
+        },
+        {
+          "A": 0.469273,
+          "B": 0.400920176,
+          "d_seconds": 0.06835282399999998,
+          "g_percent": 14.565684367095482,
+          "pair": 4
+        },
+        {
+          "A": 0.425542032,
+          "B": 0.437256509,
+          "d_seconds": -0.011714477000000001,
+          "g_percent": -2.75283664575818,
+          "pair": 5
+        },
+        {
+          "A": 0.565828312,
+          "B": 0.378851148,
+          "d_seconds": 0.18697716400000003,
+          "g_percent": 33.044858313841324,
+          "pair": 6
+        },
+        {
+          "A": 0.550967125,
+          "B": 0.445229473,
+          "d_seconds": 0.10573765200000002,
+          "g_percent": 19.19128151248589,
+          "pair": 7
+        }
+      ],
+      "strict_B_lt_A": 6,
+      "winner_claim": false
+    },
+    "warm_worker_median_later5_API": {
+      "A_seconds": {
+        "mad_unscaled": 0.009656460999999998,
+        "max": 0.108588376,
+        "median": 0.035002517,
+        "min": 0.024962354,
+        "n": 7
+      },
+      "B_seconds": {
+        "mad_unscaled": 0.00015390100000000012,
+        "max": 0.013614983,
+        "median": 0.00315742,
+        "min": 0.002698416,
+        "n": 7
+      },
+      "d_seconds": {
+        "mad_unscaled": 0.010857168999999996,
+        "max": 0.105535557,
+        "median": 0.031811297999999995,
+        "min": 0.011347370999999998,
+        "n": 7
+      },
+      "g_percent": {
+        "mad_unscaled": 5.810113812614418,
+        "max": 97.18863186608482,
+        "median": 90.88288707923489,
+        "min": 45.45793637891683,
+        "n": 7
+      },
+      "pairs": [
+        {
+          "A": 0.036051221,
+          "B": 0.002698416,
+          "d_seconds": 0.033352805,
+          "g_percent": 92.51504962897096,
+          "pair": 1
+        },
+        {
+          "A": 0.024962354,
+          "B": 0.013614983,
+          "d_seconds": 0.011347370999999998,
+          "g_percent": 45.45793637891683,
+          "pair": 2
+        },
+        {
+          "A": 0.025346056,
+          "B": 0.004391927,
+          "d_seconds": 0.020954129,
+          "g_percent": 82.67214828216272,
+          "pair": 3
+        },
+        {
+          "A": 0.02761177,
+          "B": 0.003003519,
+          "d_seconds": 0.024608251,
+          "g_percent": 89.12232355984423,
+          "pair": 4
+        },
+        {
+          "A": 0.035002517,
+          "B": 0.003191219,
+          "d_seconds": 0.031811297999999995,
+          "g_percent": 90.88288707923489,
+          "pair": 5
+        },
+        {
+          "A": 0.095476893,
+          "B": 0.00315742,
+          "d_seconds": 0.092319473,
+          "g_percent": 96.69300089184931,
+          "pair": 6
+        },
+        {
+          "A": 0.108588376,
+          "B": 0.003052819,
+          "d_seconds": 0.105535557,
+          "g_percent": 97.18863186608482,
+          "pair": 7
+        }
+      ],
+      "strict_B_lt_A": 7,
+      "winner_claim": false
+    }
+  },
+  "recomputed_wait4_RSS_KiB": {
+    "fresh": {
+      "A": {
+        "mad_unscaled": 24,
+        "max": 181128,
+        "median": 180884,
+        "min": 180860,
+        "n": 7
+      },
+      "B": {
+        "mad_unscaled": 24,
+        "max": 135420,
+        "median": 135360,
+        "min": 135188,
+        "n": 7
+      }
+    },
+    "warm": {
+      "A": {
+        "mad_unscaled": 120,
+        "max": 189288,
+        "median": 189128,
+        "min": 188828,
+        "n": 7
+      },
+      "B": {
+        "mad_unscaled": 24,
+        "max": 135464,
+        "median": 135412,
+        "min": 135276,
+        "n": 7
+      }
+    }
+  },
+  "report_date": "2026-11-12",
+  "runtime": {
+    "h5py": "3.16.0",
+    "installed_dependencies": {
+      "PySide6_Essentials": "6.12.0",
+      "Pygments": "2.21.0",
+      "colorama": "0.4.6",
+      "contourpy": "1.4.0",
+      "cycler": "0.12.1",
+      "fonttools": "4.68.0",
+      "h5py": "3.16.0",
+      "iniconfig": "2.3.1",
+      "kiwisolver": "1.5.1",
+      "matplotlib": "3.11.2",
+      "nmrglue": "0.12",
+      "numpy": "2.5.4",
+      "packaging": "26.3",
+      "pillow": "13.0.0",
+      "pluggy": "1.7.0",
+      "pyparsing": "3.3.3",
+      "pyqtgraph": "0.14.0",
+      "pytest": "9.2.0",
+      "python-dateutil": "4.0.0",
+      "scipy": "1.18.1",
+      "shiboken6": "6.12.0",
+      "spinflow": "0.4.0b1",
+      "tzdata": "2026.6"
+    },
+    "nmrglue": "0.12",
+    "numpy": "2.5.4",
+    "python": "CPython 3.12; patch level not stated in shareable timing records",
+    "python_patch": "not stated in shareable timing record",
+    "spinflow": "0.4.0b1"
+  },
+  "shape": [
+    2048,
+    4096
+  ],
+  "timed_call_count": 98,
+  "timing_definitions": {
+    "filesystem_cache": "not forced cold; no OS-cold claim",
+    "fresh_dispatch_to_read": "parent dispatch timestamp to reader return; startup and pre-API work included, post-return adaptation/persistence/validation and total process lifetime excluded",
+    "read_elapsed": "monotonic clock begins immediately before read_one and stops immediately after native reader return; worker imports NumPy before clock, reader API lazy imports are included",
+    "warm_first": "call index 0, reported separately",
+    "warm_steady": "per-worker median of call indexes 1–5; seven worker medians are paired, no pooling"
+  },
+  "values": 8388608,
+  "warm_freeze_sha256": "2a31f0034deec14daf2a92f54b97f1088cbfe31bc5e495e4332c0101ec68d8ea",
+  "warm_journal_sha256": "4d79460913d5dbddaba43db2c263f633c0d2939d4a1f5c67aeb253ade08f9cc4",
+  "worker_receipt_count": 28
+}
