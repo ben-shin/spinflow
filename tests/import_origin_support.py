@@ -17,6 +17,10 @@ REVIEWED_WHEELS = (
      "1933ea7a702bb30de7352a950bd0696b43e606757cd0ebfa9895f954e9d9254c"),
     ("spinflow-0.4.0b2-cp313-cp313-linux_x86_64.whl",
      "b4f7558e6f77f9aea3f83208bf125f27df6cdbbdd75f792e77ef7453400bd13f"),
+    ("spinflow-0.4.0b2-cp312-cp312-linux_x86_64.whl",
+     "b6106203841b0f9d2e3d592c1817b5ca4012fc10da7b8532df9a96c5a20b01b4"),
+    ("spinflow-0.4.0b2-cp313-cp313-linux_x86_64.whl",
+     "40e2879706a92a41a4369280f09c03fbfecd202ea23a6d05efcfdf2b60cb09d5"),
 )
 _authority = None
 
