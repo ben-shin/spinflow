@@ -107,6 +107,26 @@ class Dataset:
         self._axes, self._complex_axes = axes, bits
         self._set_metadata(metadata, provenance)
 
+    @classmethod
+    def _from_owned_pipe_bytes(cls, owner, axes, complex_axes, metadata, provenance):
+        """Private exact-F32 view into immutable whole-file NMRPipe bytes."""
+        if cls is not Dataset or type(owner) is not bytes:
+            raise NMRNextError("INVALID_STORAGE", "Trusted immutable file bytes required")
+        axes, bits, expected = cls._layout(axes, complex_axes)
+        if any(type(axis) is not Axis for axis in axes) or len(owner) != 2048 + math.prod(expected) * 4:
+            raise NMRNextError("INVALID_STORAGE", "Trusted file layout changed")
+        body = memoryview(owner)[2048:]
+        array = np.frombuffer(body, dtype=np.dtype('=f4')).reshape(expected)
+        if not body.readonly or array.flags.writeable or not array.flags.c_contiguous:
+            raise NMRNextError("INVALID_STORAGE", "Trusted bytes are not immutable contiguous storage")
+        if not np.isfinite(array).all():
+            raise NMRNextError("NONFINITE_DATA", "Dataset contains NaN or infinity")
+        result = Dataset.__new__(Dataset)
+        result._data, result._dtype, result._shape = body, np.dtype('float32'), expected
+        result._axes, result._complex_axes = axes, bits
+        result._set_metadata(metadata, provenance)
+        return result
+
     @staticmethod
     def _layout(axes, complex_axes):
         try:

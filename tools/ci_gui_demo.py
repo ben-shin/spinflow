@@ -49,7 +49,7 @@ def main(checkout, wheel, root):
     expected = {path.removeprefix("src/"): path for path in files if path.endswith(".py")}
     dist = importlib.metadata.distribution("spinflow")
     pkg = Path(dist.locate_file("nmrnext")).resolve(strict=True)
-    assert pkg.is_relative_to(Path(sys.prefix).resolve()) and dist.version == "0.4.0b1"
+    assert pkg.is_relative_to(Path(sys.prefix).resolve()) and dist.version == "0.4.0b2"
     with ZipFile(wheel) as archive:
         members = [name for name in archive.namelist() if name.startswith("nmrnext/") and not name.endswith("/")]
         assert len(members) == len(set(members))

@@ -49,10 +49,11 @@ jobs:
         run: |
           # Restrict executable lookup to the selected Python directory. This
           # consumer check cannot find a C/C++ compiler or build executable.
+          candidate_version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
           export PATH="$(dirname "$(command -v python)")"
           python -c "import shutil; assert all(shutil.which(name) is None for name in ('cc', 'c++', 'gcc', 'g++', 'clang', 'cmake', 'ninja'))"
-          python tools/install.py --asset-dir dist --prefix "$RUNNER_TEMP/Spin Flow core"
-          python tools/install.py --asset-dir dist --prefix "$RUNNER_TEMP/Spin Flow core"
+          python tools/install.py --version "$candidate_version" --asset-dir dist --prefix "$RUNNER_TEMP/Spin Flow core"
+          python tools/install.py --version "$candidate_version" --asset-dir dist --prefix "$RUNNER_TEMP/Spin Flow core"
           python tools/release_assets.py smoke --prefix "$RUNNER_TEMP/Spin Flow core"
           "$RUNNER_TEMP/Spin Flow core/bin/python" -I -c "import importlib.util; assert all(importlib.util.find_spec(name) is None for name in ('PySide6', 'matplotlib', 'pytest', 'pybind11', 'cmake', 'ninja'))"
       - name: Install Qt runtime libraries for optional viewer check
@@ -61,9 +62,10 @@ jobs:
       - name: Add and smoke optional GUI and figure dependencies
         if: matrix.python == '3.13'
         run: |
+          candidate_version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
           export PATH="$(dirname "$(command -v python)")"
-          python tools/install.py --asset-dir dist --prefix "$RUNNER_TEMP/Spin Flow core" --gui --plot
-          python tools/install.py --asset-dir dist --prefix "$RUNNER_TEMP/Spin Flow core"
+          python tools/install.py --version "$candidate_version" --asset-dir dist --prefix "$RUNNER_TEMP/Spin Flow core" --gui --plot
+          python tools/install.py --version "$candidate_version" --asset-dir dist --prefix "$RUNNER_TEMP/Spin Flow core"
           "$RUNNER_TEMP/Spin Flow core/bin/python" -I -c "import importlib.metadata as m; import PySide6; assert m.version('PySide6-Essentials') == m.version('shiboken6') == PySide6.__version__ == '6.12.0'; installed={d.metadata['Name'].lower().replace('-','_') for d in m.distributions()}; assert not installed.intersection({'pyside6','pyside6_addons','pyside6_webengine','pyside6_pdf'})"
           "$RUNNER_TEMP/Spin Flow core/bin/python" -I -m pip check
           python tools/release_assets.py smoke --prefix "$RUNNER_TEMP/Spin Flow core" --gui --plot

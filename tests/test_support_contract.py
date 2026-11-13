@@ -45,12 +45,12 @@ def test_canonical_registry_matches_runtime_and_profile_inventories():
     assert block["processing_v1_target"] is None
     distribution = declared["distribution"]
     assert distribution == {
-        "version": "0.4.0b1",
-        "release_status": "experimental beta",
-        "previous_release": "v0.3.0b3",
+        "version": "0.4.0b2",
+        "release_status": "unreleased experimental candidate",
+        "previous_release": "v0.4.0b1",
         "qualification": "S19 scientific qualification FAIL (six of 18 fixed peak targets); broader profile qualification and independent researcher acceptance UNVERIFIED",
     }
-    assert "unreleased" not in json.dumps(distribution).lower()
+    assert "unreleased" in json.dumps(distribution).lower()
     assert "latest published" not in json.dumps(distribution).lower()
     assert all(item["candidate_status"] == (
         f'{distribution["release_status"]}; {distribution["qualification"]}'
@@ -73,7 +73,9 @@ def test_source_candidate_identity_and_notice_packaging_are_consistent():
     version = project["project"]["version"]
     assert version == nmrnext.__version__ == support_capabilities()["distribution"]["version"]
     assert f'VERSION_INFO="{version}"' in (ROOT / "CMakeLists.txt").read_text(encoding="utf-8")
-    assert f'DEFAULT_VERSION = "{version}"' in (ROOT / "tools" / "install.py").read_text(encoding="utf-8")
+    published = support_capabilities()["distribution"]["previous_release"].removeprefix("v")
+    assert published == "0.4.0b1" and version != published
+    assert f'DEFAULT_VERSION = "{published}"' in (ROOT / "tools" / "install.py").read_text(encoding="utf-8")
     assert "THIRD_PARTY_NOTICES" in project["project"]["license-files"]
     assert "/THIRD_PARTY_NOTICES" in project["tool"]["scikit-build"]["sdist"]["include"]
     assert "/compatibility/support.json" in project["tool"]["scikit-build"]["sdist"]["include"]

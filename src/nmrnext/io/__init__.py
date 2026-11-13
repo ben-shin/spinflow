@@ -13,6 +13,7 @@ import math
 import os
 from pathlib import Path
 import re
+import stat
 import struct
 import tempfile
 import warnings
@@ -165,6 +166,71 @@ def _hash_file(path):
         for block in iter(lambda: handle.read(1 << 20), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _file_identity(value):
+    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns)
+
+
+def _require_pipe_identity(path, before, start, end):
+    named = path.stat()
+    if (_file_identity(end) != _file_identity(start) or end.st_ctime_ns != start.st_ctime_ns or
+            _file_identity(named) != _file_identity(before) or named.st_ctime_ns != before.st_ctime_ns or
+            not stat.S_ISREG(named.st_mode)):
+        raise NMRNextError('INPUT_CHANGED', 'Input changed during read')
+
+
+def _pipe_owned_bytes(path, head, max_bytes, before):
+    """Read one eligible native-endian real file from a checked, bounded fd."""
+    if before is None or head['format'] != 'nmrpipe-real' or os.sys.byteorder != 'little':
+        return None
+    h = head['header']
+    if h.get('FDTRANSPOSED') != 0 or h.get('FDPIPEFLAG') != 0:
+        return None
+    dims = ('FDF2',) if len(head['shape']) == 2 else ('FDF1', 'FDF2')
+    if any(h.get(dim+'FTFLAG') != 1 or h.get(dim+'QUADFLAG') != 1 for dim in dims):
+        return None
+    expected = 2048 + math.prod(head['shape'][1:]) * 4
+    # Private eligibility ceiling, not a new public read budget. Account for
+    # bytes owner, a possible read staging buffer, and the finite-check mask.
+    if expected > 64 << 20 or expected * 3 > max_bytes:
+        return None
+    flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(path, flags)
+    with os.fdopen(fd, 'rb') as stream:
+        start = os.fstat(stream.fileno())
+        if not stat.S_ISREG(start.st_mode) or _file_identity(start) != _file_identity(before):
+            raise NMRNextError('INPUT_CHANGED', 'Input changed during header inspection')
+        if start.st_size != expected:
+            raise NMRNextError('INPUT_CHANGED', 'Input extent changed during header inspection')
+        header = stream.read(2048)
+        if len(header) != 2048:
+            raise NMRNextError('INPUT_CHANGED', 'Input header shortened during read')
+        ng = _nmrglue()
+        current = ng.pipe.fdata2dic(ng.pipe.get_fdata(header))
+        if _jsonable_header(current) != h:
+            raise NMRNextError('INPUT_CHANGED', 'Input header changed during read')
+        if header[8:12] != np.float32(2.345).tobytes():
+            # Only a stable pre-existing BE/unsupported marker can fall back.
+            _require_pipe_identity(path, before, start, os.fstat(stream.fileno()))
+            return None
+        stream.seek(0)
+        owner = stream.read(expected)
+        if len(owner) != expected or stream.read(1):
+            raise NMRNextError('INPUT_CHANGED', 'Input extent changed during read')
+        end = os.fstat(stream.fileno())
+    _require_pipe_identity(path, before, start, end)
+    dic, data = ng.pipe.read(owner)
+    if (_jsonable_header(dic) != h or tuple(data.shape) != tuple(head['shape'][1:]) or
+            np.iscomplexobj(data)):
+        raise NMRNextError('INPUT_CHANGED', 'Input decoding changed during read')
+    view = np.frombuffer(owner, dtype=np.dtype('=f4'), offset=2048).reshape(data.shape)
+    if data.dtype != np.dtype('float32') or not np.shares_memory(data, view):
+        _require_pipe_identity(path, before, start, end)
+        return None
+    from .headers import normalized_description
+    axes, bits, metadata, provenance = normalized_description(head, hashlib.sha256(owner).hexdigest())
+    return Dataset._from_owned_pipe_bytes(owner, axes, bits, metadata, provenance)
 
 
 def _check_budget(size, max_bytes):
@@ -524,6 +590,15 @@ def read_dataset(path, *, format=None, max_bytes=MAX_BYTES, expected_header=None
 def _read_dataset(path, *, format=None, max_bytes=MAX_BYTES):
     """Read one supported exact profile into the canonical component layout."""
     path = Path(path)
+    candidate = ((isinstance(format, str) and format in ('nmrpipe-real', 'nmrpipe', 'pipe')) or
+                 (format is None and path.suffix.lower() in ('.ft1', '.ft2')))
+    before = None
+    if candidate and not path.is_symlink():
+        try:
+            if path.is_file():
+                before = path.stat()
+        except OSError:
+            pass  # Original inspection reports the public file error.
     head = inspect_dataset(path, format=format, max_bytes=max_bytes)
     fmt = head["format"]
     try:
@@ -558,6 +633,9 @@ def _read_dataset(path, *, format=None, max_bytes=MAX_BYTES):
             data=np.stack((raw[:n].real.astype('float64'),raw[:n].imag.astype('float64')))
             return Dataset(data,axes,bits,metadata,provenance)
         if fmt == "nmrpipe-real":
+            owned = _pipe_owned_bytes(path, head, max_bytes, before)
+            if owned is not None:
+                return owned
             dic, data = ng.pipe.read(str(path))
             if tuple(data.shape) != tuple(head["shape"][1:]) or np.iscomplexobj(data):
                 raise NMRNextError("INVALID_SHAPE", "NMRPipe reader disagrees with inspected real shape")
