@@ -3,6 +3,7 @@ import gc
 import hashlib
 import importlib.util
 import json
+import sys
 import weakref
 
 import numpy as np
@@ -345,6 +346,7 @@ def test_two_checkpoint_capacity_preserves_final_hit_and_failed_suffix_keeps_pre
     assert cache.entry_count == 2
     assert cache.retained_bytes <= cache.capacity_bytes
 
+
     cache.capacity_bytes = 100_000
     large = Dataset(np.full((2, 4096), np.finfo(np.float64).max * .8),
                     [Axis('h', 4096, domain='frequency', unit='Hz')], ['h'])
@@ -362,3 +364,30 @@ def test_two_checkpoint_capacity_preserves_final_hit_and_failed_suffix_keeps_pre
     assert_replay(result, run_operations(large, phase_ops))
     assert cache.entry_count == 1
     assert cache.retained_bytes <= cache.capacity_bytes
+
+
+def test_borrowed_immutable_file_owner_counts_against_recipe_capacity():
+    payload = np.ones((1, 16384), dtype=np.float32).tobytes()
+    owner = bytes(2048) + payload
+    axis = Axis('h', 16384, domain='frequency', unit='Hz')
+    borrowed = Dataset._from_owned_pipe_bytes(owner, (axis,), (), {}, [])
+    public = Dataset(np.ones((1, 16384), dtype=np.float32), (axis,))
+    ops = [{'op': 'reference', 'axis': 'h', 'reference_ppm': 4.7,
+            'reference_hz': 0, 'observation_mhz': 500}]
+    for dataset in (borrowed, public):
+        cache = cache_type()(capacity_bytes=66000)
+        result, _ = cache.run(dataset, ops)
+        np.testing.assert_array_equal(result.data, dataset.data)
+        assert cache.entry_count == 0
+        assert cache.retained_bytes == 0
+    from nmrnext._identity import _retained_size
+    first, second = memoryview(owner)[2048:], memoryview(owner)[2048:]
+    size = _retained_size([first, second])
+    assert size >= sys.getsizeof(owner)
+    assert size < 2 * sys.getsizeof(owner)
+    cycle = [first]
+    cycle.append(cycle)
+    assert _retained_size(cycle) >= sys.getsizeof(owner)
+    released = memoryview(owner)
+    released.release()
+    assert _retained_size(released) >= 0

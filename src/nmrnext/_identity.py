@@ -41,6 +41,13 @@ def _retained_size(value, seen=None):
     elif isinstance(value, np.ndarray):
         if value.base is not None:
             total += _retained_size(value.base, seen)
+    elif isinstance(value, memoryview):
+        try:
+            owner = value.obj
+        except ValueError:  # An already released view retains no buffer owner.
+            pass
+        else:
+            total += _retained_size(owner, seen)
     elif type(value).__module__.startswith('nmrnext.'):
         for cls in type(value).__mro__:
             for slot in getattr(cls, '__slots__', ()):

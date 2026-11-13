@@ -16,7 +16,9 @@ def _fake_install(tmp_path, monkeypatch, selected=0):
     rows=[]
     names=("spinflow-0.3.0b3-cp312-cp312-linux_x86_64.whl",
            "spinflow-0.4.0b1-cp312-cp312-linux_x86_64.whl",
-           "spinflow-0.4.0b1-cp313-cp313-linux_x86_64.whl")
+           "spinflow-0.4.0b1-cp313-cp313-linux_x86_64.whl",
+           "spinflow-0.4.0b2-cp312-cp312-linux_x86_64.whl",
+           "spinflow-0.4.0b2-cp313-cp313-linux_x86_64.whl")
     wheel=tmp_path/names[selected]
     with zipfile.ZipFile(wheel,"w") as archive:
         for index in range(31):
@@ -34,7 +36,7 @@ def _fake_install(tmp_path, monkeypatch, selected=0):
     return origin,wheel,pin,rows,package
 
 
-@pytest.mark.parametrize("selected",[0,1,2])
+@pytest.mark.parametrize("selected",[0,1,2,3,4])
 def test_each_pinned_artifact_pair_can_register(tmp_path,monkeypatch,selected):
     origin,wheel,pin,rows,package=_fake_install(tmp_path,monkeypatch,selected)
     origin.register_installed_origin(wheel,pin,rows)
@@ -96,3 +98,26 @@ def test_installed_witness_refuses_wrong_authority(tmp_path,monkeypatch,defect):
         rows[0]["path"]=str(tmp_path/"elsewhere.py")
     with pytest.raises(AssertionError):
         origin.register_installed_origin(wheel,pin,rows)
+
+
+def test_actual_reviewed_registry_retains_old_and_adds_exact_b2_pairs():
+    import import_origin_support as origin
+    assert origin.REVIEWED_WHEELS == (
+        ("spinflow-0.3.0b3-cp312-cp312-linux_x86_64.whl", "836b50d4dcda5f5b543256a20aae5edaa46c7172de37da8da108f4e333058cba"),
+        ("spinflow-0.4.0b1-cp312-cp312-linux_x86_64.whl", "226459e86b5dbe914f9fb160f455503b09cf1808b94ab57e7987ca456aba2cd3"),
+        ("spinflow-0.4.0b1-cp313-cp313-linux_x86_64.whl", "24092ef909ccae21e449173d97b4f0436df237ec98686d5070a52dbfb7afa3a0"),
+        ("spinflow-0.4.0b2-cp312-cp312-linux_x86_64.whl", "1933ea7a702bb30de7352a950bd0696b43e606757cd0ebfa9895f954e9d9254c"),
+        ("spinflow-0.4.0b2-cp313-cp313-linux_x86_64.whl", "b4f7558e6f77f9aea3f83208bf125f27df6cdbbdd75f792e77ef7453400bd13f"),
+    )
+
+
+@pytest.mark.parametrize("name,digest", [
+    ("spinflow-0.4.0b2-cp312-cp312-linux_x86_64.whl", "b4f7558e6f77f9aea3f83208bf125f27df6cdbbdd75f792e77ef7453400bd13f"),
+    ("spinflow-0.4.0b2-cp313-cp313-linux_x86_64.whl", "1933ea7a702bb30de7352a950bd0696b43e606757cd0ebfa9895f954e9d9254c"),
+    ("spinflow-0.4.0b2-cp312-cp312-linux_x86_64.whl", "0" * 64),
+    ("spinflow-0.4.0b2-unlisted.whl", "1933ea7a702bb30de7352a950bd0696b43e606757cd0ebfa9895f954e9d9254c"),
+])
+def test_actual_b2_authority_refuses_crossed_hash_or_unlisted_pair(name,digest):
+    import import_origin_support as origin
+    with pytest.raises(AssertionError, match="Unreviewed wheel filename/SHA pair"):
+        origin._verify((Path(name),digest,()))

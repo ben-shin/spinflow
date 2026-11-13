@@ -23,11 +23,14 @@ def _source(tmp_path, shape):
 
 
 def test_real_reader_hashes_same_bytes_without_second_file_scan(tmp_path):
+    import nmrnext
     import nmrnext.io as io_module
     import nmrnext.model as model_module
-    root = Path(__file__).resolve().parents[2]
-    assert Path(io_module.__file__).resolve() == root / 'src/nmrnext/io/__init__.py'
-    assert Path(model_module.__file__).resolve() == root / 'src/nmrnext/model.py'
+    import import_origin_support as origin_helper
+    origin_helper.assert_package_origin(nmrnext.__file__, origin_helper.__file__)
+    package = Path(nmrnext.__file__).resolve().parent
+    assert Path(io_module.__file__).resolve() == package / 'io/__init__.py'
+    assert Path(model_module.__file__).resolve() == package / 'model.py'
     path = _source(tmp_path, (8, 16))
     original = read_dataset(path, format='nmrpipe-real')
     full_hash = hashlib.sha256(path.read_bytes()).hexdigest()
